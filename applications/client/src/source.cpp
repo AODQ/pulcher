@@ -5,6 +5,11 @@
 #include <pulcher-gfx/context.hpp>
 
 #include <cxxopts.hpp>
+#include <glad/glad.hpp>
+#include <GLFW/glfw3.h>
+#include <imgui/imgui.hpp>
+#include <imgui/imgui_impl_glfw.hpp>
+#include <imgui/imgui_impl_opengl3.hpp>
 
 #include <iostream>
 #include <string>
@@ -57,7 +62,7 @@ auto CreateUserConfig(cxxopts::ParseResult const & userResults)
       static_cast<uint16_t>(std::stoi(windowResolution.substr(0ul, xLen)));
     config.windowHeight =
       static_cast<uint16_t>(
-        std::stoi(windowResolution.substr(xLen, windowResolution.size()))
+        std::stoi(windowResolution.substr(xLen+1ul, windowResolution.size()))
       );
   } else {
     spdlog::error("window resolution incorrect format, must use WxH");
@@ -69,10 +74,29 @@ auto CreateUserConfig(cxxopts::ParseResult const & userResults)
 void PrintUserConfig(pulcher::core::Config const & config) {
   if (config.networkIpAddress != "") {
     spdlog::info(
-      "will connect to '{}:{}'"
+      "ip address '{}:{}'"
     , config.networkIpAddress, config.networkPortAddress
     );
   }
+
+  spdlog::info(
+    "window dimensions {}x{}", config.windowWidth, config.windowHeight
+  );
+}
+
+void InitializeImGui() {
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO & io = ImGui::GetIO();
+  io.ConfigFlags =
+    0
+  | ImGuiConfigFlags_DockingEnable
+  ;
+
+  ImGui::StyleColorsDark();
+
+  ImGui_ImplGlfw_InitForOpenGL(pulcher::gfx::DisplayWindow(), true);
+  ImGui_ImplOpenGL3_Init("#version 330 core");
 }
 
 } // -- anon namespace
@@ -95,10 +119,55 @@ int main(int argc, char const ** argv) {
   }
 
   spdlog::info("initializing pulcher");
+  // -- initialize relevant components
+  pulcher::gfx::InitializeContext(userConfig);
+  ::InitializeImGui();
 
   ::PrintUserConfig(userConfig);
 
-  pulcher::gfx::InitializeContext(userConfig);
+  while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
+
+    glfwPollEvents();
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Test");
+    ImGui::Text("hello");
+    ImGui::End();
+
+    ImGui::Render();
+
+    // -- validate display size in case of resize
+    glfwGetFramebufferSize(
+      pulcher::gfx::DisplayWindow()
+    , &pulcher::gfx::DisplayWidth()
+    , &pulcher::gfx::DisplayHeight()
+    );
+    glViewport(
+      0, 0, pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
+    );
+
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+      ImGui::UpdatePlatformWindows();
+      ImGui::RenderPlatformWindowsDefault();
+      glfwMakeContextCurrent(pulcher::gfx::DisplayWindow());
+    }
+
+    glfwSwapBuffers(pulcher::gfx::DisplayWindow());
+  }
+
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+
+  glfwDestroyWindow(pulcher::gfx::DisplayWindow());
+  glfwTerminate();
 
   return 0;
 }
