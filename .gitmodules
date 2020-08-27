@@ -1,3 +1,6 @@
 [submodule "third-party"]
 	path = third-party
 	url = https://github.com/aodq/pulcher-thirdparty
+[submodule "assets"]
+	path = assets
+	url = https://github.com/aodq/pulcher-assets
