@@ -13,9 +13,7 @@
 
 namespace {
 
-auto StartupOptions(int argc, char ** argv)
-  -> std::pair<cxxopts::Options, cxxopts::ParseResult>
-{
+auto StartupOptions() -> cxxopts::Options {
   auto options = cxxopts::Options("core-of-pulcher", "2D shooter game");
   options.add_options()
     (
@@ -32,7 +30,7 @@ auto StartupOptions(int argc, char ** argv)
     )
   ;
 
-  return {options, options.parse(argc, argv)};
+  return options;
 }
 
 auto CreateUserConfig(cxxopts::ParseResult const & userResults)
@@ -46,7 +44,7 @@ auto CreateUserConfig(cxxopts::ParseResult const & userResults)
     config.networkIpAddress   = userResults["ip-address"].as<std::string>();
     config.networkPortAddress = userResults["port"].as<uint16_t>();
     windowResolution = userResults["resolution"].as<std::string>();
-  } catch (cxxopts::OptionException parseException) {
+  } catch (cxxopts::OptionException & parseException) {
     spdlog::critical("{}", parseException.what());
   }
 
@@ -79,12 +77,14 @@ void PrintUserConfig(pulcher::core::Config const & config) {
 
 } // -- anon namespace
 
-int main(int argc, char ** argv) {
+int main(int argc, char const ** argv) {
 
   pulcher::core::Config userConfig;
 
   { // -- collect user options
-    auto [options, userResults] = ::StartupOptions(argc, argv);
+    auto options = ::StartupOptions();
+
+    auto userResults = options.parse(argc, argv);
 
     if (userResults.count("help")) {
       printf("%s\n", options.help().c_str());
