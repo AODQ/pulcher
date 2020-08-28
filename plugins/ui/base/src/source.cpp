@@ -10,7 +10,12 @@ extern "C" {
 void Dispatch(
 ) {
   ImGui::Begin("Diagnostics");
-  ImGui::Text("diagnostic plugins");
+
+  ImGuiIO & io = ImGui::GetIO();
+
+  ImGui::Text(
+    "imgui %.2f ms/frame (%.0f FPS)", 1000.0f/io.Framerate, io.Framerate
+  );
   ImGui::End();
 }
 
