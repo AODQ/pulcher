@@ -3,6 +3,7 @@
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/log.hpp>
 #include <pulcher-gfx/context.hpp>
+#include <pulcher-plugin/plugin.hpp>
 
 #include <cxxopts.hpp>
 #include <glad/glad.hpp>
@@ -122,6 +123,12 @@ int main(int argc, char const ** argv) {
   // -- initialize relevant components
   pulcher::gfx::InitializeContext(userConfig);
   ::InitializeImGui();
+  pulcher::plugin::Info plugin;
+
+  pulcher::plugin::LoadPlugin(
+    plugin, pulcher::plugin::Type::UserInterface
+  , "plugins/ui-base.pulcher-plugin"
+  );
 
   ::PrintUserConfig(userConfig);
 
@@ -135,7 +142,12 @@ int main(int argc, char const ** argv) {
 
     ImGui::Begin("Test");
     ImGui::Text("hello");
+    if (ImGui::Button("Reload plugins")) {
+      pulcher::plugin::UpdatePlugins(plugin);
+    }
     ImGui::End();
+
+    plugin.userInterface.Dispatch();
 
     ImGui::Render();
 

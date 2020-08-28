@@ -13,7 +13,7 @@ set_target_properties(
       COMPILE_FLAGS
         "-Wshadow -Wdouble-promotion -Wall -Wformat=2 -Wextra -Wpedantic \
          -Wundef"
-      SUFFIX ".mt-plugin"
+      SUFFIX ".pulcher-plugin"
       PREFIX ""
 )
 

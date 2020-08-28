@@ -9,6 +9,9 @@ extern "C" {
 
 void Dispatch(
 ) {
+  ImGui::Begin("Diagnostics");
+  ImGui::Text("diagnostic plugins");
+  ImGui::End();
 }
 
 }
