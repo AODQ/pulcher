@@ -12,7 +12,6 @@
 #include <imgui/imgui_impl_glfw.hpp>
 #include <imgui/imgui_impl_opengl3.hpp>
 
-#include <iostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -125,6 +124,7 @@ int main(int argc, char const ** argv) {
   #elif _WIN32
     spdlog::info("-- running on Windows 32 platform --");
   #endif
+
   spdlog::info("initializing pulcher");
   // -- initialize relevant components
   pulcher::gfx::InitializeContext(userConfig);

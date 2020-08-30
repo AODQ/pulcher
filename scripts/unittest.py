@@ -5,6 +5,8 @@
 if __name__ == "__main__":
   import sys, os
 
+  os.system("killall -9 pulcher-client pulcher-client.exe")
+
   if (not os.path.exists(sys.argv[1])):
     print("error: install directory does not yet exist, use ./configure.py")
 
@@ -15,10 +17,6 @@ if __name__ == "__main__":
   strBuildWin64 = sys.argv[1] + "/build-release-win64"
   strBuildWin32 = sys.argv[1] + "/build-release-win32"
   strBuildLinux = sys.argv[1] + "/build-release-linux"
-
-  strNinjaWin64 = "ninja -C " + strBuildWin64 + " install"
-  strNinjaWin32 = "ninja -C " + strBuildWin32 + " install"
-  strNinjaLinux = "ninja -C " + strBuildLinux + " install"
 
   for i in [strInstallWin64, strInstallWin32, strInstallLinux]:
     if (not os.path.exists(i)):
@@ -52,10 +50,6 @@ if __name__ == "__main__":
         + "sleep 1.5"
       + "' 2> /dev/null &"
   )
-
-  os.system(strNinjaLinux)
-  os.system(strNinjaWin64)
-  #os.system(strNinjaWin32)
 
   print()
   print()

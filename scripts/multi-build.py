@@ -19,9 +19,9 @@ if __name__ == "__main__":
   strBuildWin32 = sys.argv[1] + "/build-release-win32"
   strBuildLinux = sys.argv[1] + "/build-release-linux"
 
-  strNinjaWin64 = "ninja -C " + strBuildWin64
-  strNinjaWin32 = "ninja -C " + strBuildWin32
-  strNinjaLinux = "ninja -C " + strBuildLinux
+  strNinjaWin64 = "ninja -C " + strBuildWin64 + " install"
+  strNinjaWin32 = "ninja -C " + strBuildWin32 + " install"
+  strNinjaLinux = "ninja -C " + strBuildLinux + " install"
 
   for i in [strBuildWin64, strBuildWin32, strBuildLinux]:
     if (not os.path.exists(i)):
