@@ -63,10 +63,16 @@ bool pulcher::gfx::InitializeContext(pulcher::core::Config & config) {
     config.windowHeight = ::displayHeight;
   }
 
+  #ifdef __unix__
+    char const * windowTitle = "Pulcher (Linux)";
+  #elif _WIN64
+    char const * windowTitle = "Pulcher (Win64)";
+  #endif
+
   ::displayWindow =
     glfwCreateWindow(
       ::displayWidth, ::displayHeight
-    , "pulcher", nullptr, nullptr
+    , windowTitle, nullptr, nullptr
     );
 
   if (!::displayWindow) {

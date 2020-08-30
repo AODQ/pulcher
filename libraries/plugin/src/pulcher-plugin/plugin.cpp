@@ -11,18 +11,26 @@
 #if defined(__unix__)
   #include <dlfcn.h>
 #elif defined(_WIN32) || defined(_WIN64)
+  #include <errhandlingapi.h>
+  #include <libloaderapi.h>
 #else
   #error "Unsupported operating system"
 #endif
 
 namespace {
 
+#ifdef __unix__
+  using PluginHandle = void *;
+#elif defined(_WIN64) || defined(_WIN32)
+  using PluginHandle = ::HMODULE;
+#endif
+
 struct Plugin {
   Plugin(char const * filename, pulcher::plugin::Type type);
   ~Plugin();
 
   std::string filename;
-  void * data = nullptr;
+  PluginHandle data = nullptr;
   pulcher::plugin::Type type;
 
   template <typename T> void LoadFunction(T & fn, char const * label);
@@ -43,11 +51,19 @@ Plugin::~Plugin() {
 
 template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
   #if defined(__unix__)
-    fn = reinterpret_cast<T>(dlsym(this->data, label));
-    spdlog::critical(
-      "Failed to load function '{}' for plugin '{}'", label, dlerror()
-    );
+    fn = reinterpret_cast<T>(::dlsym(this->data, label));
+    if (!fn) {
+      spdlog::critical(
+        "Failed to load function '{}' for plugin '{}'", label, ::dlerror()
+      );
+    }
   #elif defined(_WIN32) || defined(_WIN64)
+    fn = reinterpret_cast<T>(::GetProcAddress(this->data, label));
+    if (!fn) {
+      spdlog::critical(
+        "Failed to load function '{}' for plugin '{}'", label, ::GetLastError()
+      );
+    }
   #endif
 
   spdlog::debug("Loaded function '{}'", reinterpret_cast<void*>(fn));
@@ -62,16 +78,30 @@ void Plugin::Reload() {
 void Plugin::Close() {
   if (!this->data) { return; }
   #if defined(__unix__)
-    dlclose(this->data);
+    ::dlclose(this->data);
   #elif defined(_WIN32) || defined(_WIN64)
+    ::FreeLibrary(this->data);
   #endif
   this->data = nullptr;
 }
 
 void Plugin::Open() {
   #if defined(__unix__)
-    this->data = dlopen(this->filename.c_str(), RTLD_NOW);
+    this->data = ::dlopen(this->filename.c_str(), RTLD_NOW);
+    if (!this->data) {
+      spdlog::critical(
+        "Failed to load plugin '{}'; {}", this->filename, ::dlerror()
+      );
+    }
   #elif defined(_WIN32) || defined(_WIN64)
+    spdlog::info("Attempting to open library");
+    this->data = ::LoadLibraryA(this->filename.c_str());
+    if (!this->data) {
+      spdlog::critical(
+        "Failed to load plugin '{}'; {}", this->filename, ::GetLastError()
+      );
+    }
+    spdlog::info("attempt ended");
   #endif
 }
 

@@ -21,6 +21,6 @@ install(
   TARGETS ui-base
   LIBRARY NAMELINK_SKIP
   LIBRARY
-    DESTINATION plugins/
+    DESTINATION lib/
     COMPONENT plugin
 )

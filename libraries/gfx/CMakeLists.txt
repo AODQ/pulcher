@@ -16,13 +16,10 @@ set_target_properties(
     POSITION_INDEPENDENT_CODE ON
 )
 
-find_package(glfw3 REQUIRED)
-find_package(OpenGL REQUIRED)
-
 target_link_libraries(
   pulcher-gfx
   PUBLIC
-    glfw OpenGL::OpenGL glad imgui
+    glfw glad imgui
   PRIVATE
     pulcher-core
 )

@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 cmake_policy(VERSION 3.0)
 
+if (PULCHER_PLATFORM STREQUAL "Win64")
+  message("*-- compiling for Windows 64-bit platform")
+  include(CMakeModules/win64.cmake)
+elseif (PULCHER_PLATFORM STREQUAL "Linux")
+  message("*-- compiling for Linux 64-bit platform")
+else()
+  message("*-- defaulting to compile for Linux 64-bit platform")
+  set(PULCHER_PLATFORM "Linux")
+endif()
+
 # silence OpenGL legacy warning
 cmake_policy(SET CMP0072 NEW)
 

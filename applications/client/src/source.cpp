@@ -103,7 +103,6 @@ void InitializeImGui() {
 } // -- anon namespace
 
 int main(int argc, char const ** argv) {
-
   pulcher::core::Config userConfig;
 
   { // -- collect user options
@@ -119,6 +118,13 @@ int main(int argc, char const ** argv) {
     userConfig = ::CreateUserConfig(userResults);
   }
 
+  #ifdef __unix__
+    spdlog::info("-- running on Linux platform --");
+  #elif _WIN64
+    spdlog::info("-- running on Windows 64 platform --");
+  #elif _WIN32
+    spdlog::info("-- running on Windows 32 platform --");
+  #endif
   spdlog::info("initializing pulcher");
   // -- initialize relevant components
   pulcher::gfx::InitializeContext(userConfig);
@@ -127,7 +133,7 @@ int main(int argc, char const ** argv) {
 
   pulcher::plugin::LoadPlugin(
     plugin, pulcher::plugin::Type::UserInterface
-  , "plugins/ui-base.pulcher-plugin"
+  , "ui-base.pulcher-plugin"
   );
 
   ::PrintUserConfig(userConfig);
@@ -142,34 +148,34 @@ int main(int argc, char const ** argv) {
 
     ImGui::Begin("Test");
     ImGui::Text("hello");
-    if (ImGui::Button("Reload plugins")) {
-      pulcher::plugin::UpdatePlugins(plugin);
-    }
+  /*   if (ImGui::Button("Reload plugins")) { */
+  /*     pulcher::plugin::UpdatePlugins(plugin); */
+  /*   } */
     ImGui::End();
 
     plugin.userInterface.Dispatch();
 
     ImGui::Render();
 
-    // -- validate display size in case of resize
-    glfwGetFramebufferSize(
-      pulcher::gfx::DisplayWindow()
-    , &pulcher::gfx::DisplayWidth()
-    , &pulcher::gfx::DisplayHeight()
-    );
-    glViewport(
-      0, 0, pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
-    );
+  /*   // -- validate display size in case of resize */
+  /*   glfwGetFramebufferSize( */
+  /*     pulcher::gfx::DisplayWindow() */
+  /*   , &pulcher::gfx::DisplayWidth() */
+  /*   , &pulcher::gfx::DisplayHeight() */
+  /*   ); */
+  /*   glViewport( */
+  /*     0, 0, pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight() */
+  /*   ); */
 
     glClear(GL_COLOR_BUFFER_BIT);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-      ImGui::UpdatePlatformWindows();
-      ImGui::RenderPlatformWindowsDefault();
-      glfwMakeContextCurrent(pulcher::gfx::DisplayWindow());
-    }
+  /*   if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) { */
+  /*     ImGui::UpdatePlatformWindows(); */
+  /*     ImGui::RenderPlatformWindowsDefault(); */
+  /*     glfwMakeContextCurrent(pulcher::gfx::DisplayWindow()); */
+  /*   } */
 
     glfwSwapBuffers(pulcher::gfx::DisplayWindow());
   }

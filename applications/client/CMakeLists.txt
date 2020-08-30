@@ -19,8 +19,6 @@ target_link_libraries(
   pulcher-client
   PRIVATE
     cxxopts pulcher-core pulcher-gfx pulcher-plugin
-    #glfw OpenGL::OpenGL glad imgui
-    #nlohmann_json::nlohmann_json
 )
 
 install(
