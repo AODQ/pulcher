@@ -147,35 +147,34 @@ int main(int argc, char const ** argv) {
     ImGui::NewFrame();
 
     ImGui::Begin("Test");
-    ImGui::Text("hello");
-  /*   if (ImGui::Button("Reload plugins")) { */
-  /*     pulcher::plugin::UpdatePlugins(plugin); */
-  /*   } */
+    if (ImGui::Button("Reload plugins")) {
+      pulcher::plugin::UpdatePlugins(plugin);
+    }
     ImGui::End();
 
     plugin.userInterface.Dispatch();
 
     ImGui::Render();
 
-  /*   // -- validate display size in case of resize */
-  /*   glfwGetFramebufferSize( */
-  /*     pulcher::gfx::DisplayWindow() */
-  /*   , &pulcher::gfx::DisplayWidth() */
-  /*   , &pulcher::gfx::DisplayHeight() */
-  /*   ); */
-  /*   glViewport( */
-  /*     0, 0, pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight() */
-  /*   ); */
+    // -- validate display size in case of resize
+    glfwGetFramebufferSize(
+      pulcher::gfx::DisplayWindow()
+    , &pulcher::gfx::DisplayWidth()
+    , &pulcher::gfx::DisplayHeight()
+    );
+    glViewport(
+      0, 0, pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
+    );
 
     glClear(GL_COLOR_BUFFER_BIT);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-  /*   if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) { */
-  /*     ImGui::UpdatePlatformWindows(); */
-  /*     ImGui::RenderPlatformWindowsDefault(); */
-  /*     glfwMakeContextCurrent(pulcher::gfx::DisplayWindow()); */
-  /*   } */
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+      ImGui::UpdatePlatformWindows();
+      ImGui::RenderPlatformWindowsDefault();
+      glfwMakeContextCurrent(pulcher::gfx::DisplayWindow());
+    }
 
     glfwSwapBuffers(pulcher::gfx::DisplayWindow());
   }

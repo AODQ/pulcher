@@ -21,7 +21,7 @@ void Dispatch(
   #endif
 
   ImGui::Text(
-    "imgui %.2f ms/frame (%.0f FPS)", 1000.0f/io.Framerate, io.Framerate
+    "%.2f ms/frame (%.0f FPS)", 1000.0f/io.Framerate, io.Framerate
   );
   ImGui::End();
 }
