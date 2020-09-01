@@ -1,14 +1,14 @@
-add_library(pulcher-core STATIC)
+add_library(pulcher-network STATIC)
 
-target_include_directories(pulcher-core PUBLIC "include/")
+target_include_directories(pulcher-network PUBLIC "include/")
 target_sources(
-  pulcher-core
+  pulcher-network
   PRIVATE
-    src/pulcher-core/log.cpp
+    src/pulcher-network/shared.cpp
 )
 
 set_target_properties(
-  pulcher-core
+  pulcher-network
     PROPERTIES
       COMPILE_FLAGS
         "-Wshadow -Wdouble-promotion -Wall -Wformat=2 -Wextra -Wpedantic \
@@ -17,9 +17,9 @@ set_target_properties(
 )
 
 target_link_libraries(
-  pulcher-core
+  pulcher-network
   PUBLIC
-    glm spdlog::spdlog
-    nlohmann_json::nlohmann_json
+    yojimbo
+  PRIVATE
     pulcher-util
 )

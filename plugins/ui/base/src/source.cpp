@@ -21,7 +21,9 @@ void Dispatch(
   #endif
 
   ImGui::Text(
-    "%.2f ms/frame (%.0f FPS)", 1000.0f/io.Framerate, io.Framerate
+    "%.2f ms/frame (%.0f FPS)"
+  , static_cast<double>(1000.0f/io.Framerate)
+  , static_cast<double>(io.Framerate)
   );
   ImGui::End();
 }

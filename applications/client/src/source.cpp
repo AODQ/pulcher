@@ -3,7 +3,9 @@
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/log.hpp>
 #include <pulcher-gfx/context.hpp>
+#include <pulcher-network/shared.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/enum.hpp>
 
 #include <cxxopts.hpp>
 #include <glad/glad.hpp>
@@ -12,7 +14,9 @@
 #include <imgui/imgui_impl_glfw.hpp>
 #include <imgui/imgui_impl_opengl3.hpp>
 
+#include <chrono>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -84,6 +88,23 @@ void PrintUserConfig(pulcher::core::Config const & config) {
   );
 }
 
+void CreateNetworkClient(
+  pulcher::core::Config const & config
+, yojimbo::Client & client
+, pulcher::network::Adapter &
+) {
+  auto serverAddress = yojimbo::Address("127.0.0.1", config.networkPortAddress);
+
+  std::array<uint8_t, yojimbo::KeyBytes> privateKey;
+  std::fill(privateKey.begin(), privateKey.end(), 0u);
+
+  uint64_t clientId = 0;
+  yojimbo::random_bytes(reinterpret_cast<uint8_t *>(&clientId), 8);
+  spdlog::info("client id is {}", clientId);
+
+  client.InsecureConnect(privateKey.data(), clientId, serverAddress);
+}
+
 void InitializeImGui() {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -133,14 +154,54 @@ int main(int argc, char const ** argv) {
 
   pulcher::plugin::LoadPlugin(
     plugin, pulcher::plugin::Type::UserInterface
-  , "ui-base.pulcher-plugin"
+  , "plugins/ui-base.pulcher-plugin"
   );
 
   ::PrintUserConfig(userConfig);
 
+  InitializeYojimbo();
+  yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
+
+  static pulcher::network::Adapter adapter;
+  yojimbo::Client networkClient =
+    yojimbo::Client(
+      yojimbo::GetDefaultAllocator()
+    , yojimbo::Address("0.0.0.0")
+    , pulcher::network::CreateClientServerConfig(), adapter, 100.0
+    );
+
+  ::CreateNetworkClient(userConfig, networkClient, adapter);
+
+  double time = 100.0;
+
+  if (networkClient.ConnectionFailed()) {
+    spdlog::error("failed to connect to server");
+  }
+
   while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
 
     glfwPollEvents();
+
+    time += 0.01;
+    networkClient.AdvanceTime(time);
+    networkClient.ReceivePackets();
+
+    if (networkClient.IsConnected())
+    { // network update
+
+      if (networkClient.CanSendMessage(Idx(pulcher::network::Channel::Reliable))) {
+        auto message =
+          reinterpret_cast<pulcher::network::TestMessage *>(
+            networkClient.CreateMessage(Idx(pulcher::network::MessageType::Test))
+          );
+
+        message->sequence = 42u;
+
+        networkClient.SendMessage(Idx(pulcher::network::Channel::Reliable), message);
+      }
+    }
+
+    networkClient.SendPackets();
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -185,6 +246,9 @@ int main(int argc, char const ** argv) {
 
   glfwDestroyWindow(pulcher::gfx::DisplayWindow());
   glfwTerminate();
+
+  networkClient.Disconnect();
+  ShutdownYojimbo();
 
   return 0;
 }

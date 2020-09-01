@@ -94,14 +94,12 @@ void Plugin::Open() {
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
-    spdlog::info("Attempting to open library");
     this->data = ::LoadLibraryA(this->filename.c_str());
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}", this->filename, ::GetLastError()
       );
     }
-    spdlog::info("attempt ended");
   #endif
 }
 
