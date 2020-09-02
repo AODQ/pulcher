@@ -22,41 +22,6 @@ extern "C" {
   }
 }
 
-void ProcessTestMessage(
-  size_t clientIdx,
-  pulcher::network::TestMessage & message
-) {
-  spdlog::info("idx: {} Message: {}", clientIdx, message.sequence);
-}
-
-void ProcessMessage(size_t clientIdx, yojimbo::Message & message) {
-  switch (message.GetType()) {
-    case static_cast<int>(pulcher::network::MessageType::Test):
-      ProcessTestMessage(
-        clientIdx
-      , dynamic_cast<pulcher::network::TestMessage &>(message)
-      );
-    break;
-  }
-}
-
-void ProcessMessages(yojimbo::Server & server) {
-  for (size_t clientIdx = 0ul; clientIdx < 64ul; ++ clientIdx) {
-    if (server.IsClientConnected(clientIdx)) { continue; }
-
-    for (
-        size_t channelIdx = 0ul;
-        channelIdx < Idx(pulcher::network::Channel::Size);
-        ++ channelIdx
-    ) {
-      while (auto message = server.ReceiveMessage(clientIdx, channelIdx)) {
-        ProcessMessage(clientIdx, *message);
-        server.ReleaseMessage(channelIdx, message);
-      }
-    }
-  }
-}
-
 } // -- anon namespace
 
 
@@ -65,64 +30,82 @@ int main(int argc, char const ** argv) {
 
   spdlog::info("initializing pulcher server");
 
-  if (!InitializeYojimbo()) {
-    spdlog::error("failed to initialize Yojimbo");
-    return 0;
-  }
-
-  yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
-  srand(static_cast<uint32_t>(time(nullptr)));
-
-  std::array<uint8_t, yojimbo::KeyBytes> privateKey;
-  std::fill(privateKey.begin(), privateKey.end(), 0u);
-
-  pulcher::network::Adapter adapter;
-
-  auto server =
-    yojimbo::Server(
-      yojimbo::GetDefaultAllocator()
-    , privateKey.data()
-    , yojimbo::Address("127.0.0.1", 40000u)
-    , pulcher::network::CreateClientServerConfig(), adapter, 100.0
-    );
-
-  server.Start(64u);
-
-  if (!server.IsRunning()) {
-    spdlog::critical("Failed to start server");
-    return 0;
-  }
-
   auto time = 100.0;
+
+  if (enet_initialize()) {
+    spdlog::critical("could not initialize enet");
+    return 0;
+  }
+
+  ENetAddress address;
+  enet_address_set_host(&address, "localhost");
+  address.port = 6599u;
+
+  ENetHost * host =
+    enet_host_create(
+      &address
+    , 64u // max connections
+    , 2 // max channels (reliable / unreliable)
+    , 0, 0 // incoming/outgoing bandwidth assumptions
+    );
+  std::map<uint32_t, ENetPeer*> clients;
 
   // allow ctrl-c to end process properly by shutting server down
   signal(SIGINT, ::InterruptHandler);
 
-  while (!::quit && server.IsRunning())
-  {
+  while (!::quit) {
     time += 0.01;
 
     // update server
-    server.AdvanceTime(time);
-    server.ReceivePackets();
+    ENetEvent event;
+    if (enet_host_service(host, &event, 0) > 0) {
+      switch (event.type) {
+        default: break;
+        case ENET_EVENT_TYPE_CONNECT:
+          spdlog::info(
+            "user connected from {}:{}"
+          , event.peer->address.host
+          , event.peer->address.port
+          );
+          event.peer->data = nullptr;
+        break;
+
+        case ENET_EVENT_TYPE_RECEIVE:
+          spdlog::info(
+            "received patch length {} data '{}' from {}:{} channel {}"
+          , event.packet->dataLength
+          , event.packet->data
+          , event.peer->address.host, event.peer->address.port
+          , event.channelID
+          );
+
+
+          enet_packet_destroy(event.packet);
+        break;
+
+        case ENET_EVENT_TYPE_DISCONNECT:
+          spdlog::info(
+            "{}:{} disconnected"
+          , event.peer->address.host, event.peer->address.port
+          );
+          // TODO free data if applicable
+          event.peer->data = nullptr;
+        break;
+      }
+    }
 
     // process messages
-    ::ProcessMessages(server);
 
     // process client inputs
 
     // send info out to clients
 
-    server.SendPackets();
-
-    /* std::this_thread::sleep_for(std::chrono::milliseconds(10u)); */
-    yojimbo_sleep(0.01);
+    std::this_thread::sleep_for(std::chrono::milliseconds(11u));
   }
 
   printf("\n");
   spdlog::info("shutting server down");
 
-  server.Stop();
-
-  ShutdownYojimbo();
+  enet_host_destroy(host);
+  enet_deinitialize();
 }

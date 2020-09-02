@@ -19,7 +19,7 @@ set_target_properties(
 target_link_libraries(
   pulcher-network
   PUBLIC
-    yojimbo
+    enet
   PRIVATE
     pulcher-util
 )

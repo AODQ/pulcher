@@ -40,7 +40,7 @@ endif()
 project (
   pulcher
   VERSION 0.0
-  LANGUAGES CXX
+  LANGUAGES C CXX
   DESCRIPTION "2D cross-platform shooter game"
 )
 
