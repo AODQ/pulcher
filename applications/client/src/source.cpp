@@ -88,37 +88,31 @@ void PrintUserConfig(pulcher::core::Config const & config) {
   );
 }
 
-ENetHost * client;
-ENetPeer * peer;
-
-void CreateNetworkClient(
+pulcher::network::ClientHost CreateNetworkClient(
   pulcher::core::Config const & config
 ) {
-  ENetAddress address;
-  ENetEvent event;
-  enet_address_set_host(&address, config.networkIpAddress.c_str());
-  address.port = config.networkPortAddress;
-
-  client =
-    enet_host_create(
-      nullptr
-    , 1 // outgoing connection
-    , 2 // channels
-    , 0, 0 // incoming/outgoing bandwidths
+  auto client =
+    pulcher::network::ClientHost::Construct(
+      config.networkIpAddress.c_str()
+    , config.networkPortAddress
     );
 
-  peer = enet_host_connect(client, &address, 2, 0);
+  if (!client.Valid()) { return client; }
 
-  // wait 5 seconds for connection attempt
-  if (
-      enet_host_service(client, &event, 5000) > 0
-   && event.type == ENET_EVENT_TYPE_CONNECT
-  ) {
-    spdlog::info("connected to server succesfully");
-  } else {
-    enet_peer_reset(peer);
-    spdlog::info("connection failed");
+  // send which type of operating system this is
+  {
+    pulcher::network::PacketSystemInfo systemInfo;
+    systemInfo.operatingSystem = pulcher::network::currentOperatingSystem;
+
+    pulcher::network::OutgoingPacket::Construct(
+      systemInfo
+    , pulcher::network::ChannelType::Reliable
+    ).Send(client);
+
+    client.host.Flush();
   }
+
+  return client;
 }
 
 void InitializeImGui() {
@@ -175,15 +169,12 @@ int main(int argc, char const ** argv) {
 
   ::PrintUserConfig(userConfig);
 
-  ::CreateNetworkClient(userConfig);
-
-  double time = 100.0;
+  auto network = pulcher::network::Network::Construct();
+  auto networkClient = ::CreateNetworkClient(userConfig);
 
   while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
 
     glfwPollEvents();
-
-    time += 0.01;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -228,8 +219,6 @@ int main(int argc, char const ** argv) {
 
   glfwDestroyWindow(pulcher::gfx::DisplayWindow());
   glfwTerminate();
-
-  enet_host_destroy(::client);
 
   return 0;
 }

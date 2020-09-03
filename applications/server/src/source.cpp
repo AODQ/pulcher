@@ -22,6 +22,44 @@ extern "C" {
   }
 }
 
+void EventConnect(pulcher::network::Event & event) {
+  spdlog::info(
+    "user connected from {}:{}"
+  , event.peer->address.host
+  , event.peer->address.port
+  );
+  event.peer->data = nullptr;
+}
+
+void EventDisconnect(pulcher::network::Event & event) {
+  spdlog::info(
+    "{}:{} disconnected"
+  , event.peer->address.host, event.peer->address.port
+  );
+  // TODO free data if applicable
+  event.peer->data = nullptr;
+}
+
+void EventReceive(pulcher::network::Event & event) {
+  spdlog::info(
+    "received packet from {}:{}"
+  , event.peer->address.host, event.peer->address.port
+  );
+
+  spdlog::info(" -- get type {}", ToString(event.type));
+
+  switch (event.type) {
+    default: break;
+    case pulcher::network::PacketType::SystemInfo:
+      auto systemInfo =
+        *reinterpret_cast<pulcher::network::PacketSystemInfo*>(
+          event.data
+        );
+      spdlog::info(" -- OS: {}", ToString(systemInfo.operatingSystem));
+    break;
+  }
+}
+
 } // -- anon namespace
 
 
@@ -30,71 +68,27 @@ int main(int argc, char const ** argv) {
 
   spdlog::info("initializing pulcher server");
 
-  auto time = 100.0;
+  auto network = pulcher::network::Network::Construct();
 
-  if (enet_initialize()) {
-    spdlog::critical("could not initialize enet");
-    return 0;
+  pulcher::network::ServerHost server;
+
+  { // -- construct server
+    pulcher::network::ServerHost::ConstructInfo ci;
+    ci.addressHost = "localhost";
+    ci.port = 6599u;
+    ci.fnConnect = ::EventConnect;
+    ci.fnDisconnect = ::EventDisconnect;
+    ci.fnReceive = ::EventReceive;
+    server = std::move(pulcher::network::ServerHost::Construct(ci));
   }
-
-  ENetAddress address;
-  enet_address_set_host(&address, "localhost");
-  address.port = 6599u;
-
-  ENetHost * host =
-    enet_host_create(
-      &address
-    , 64u // max connections
-    , 2 // max channels (reliable / unreliable)
-    , 0, 0 // incoming/outgoing bandwidth assumptions
-    );
-  std::map<uint32_t, ENetPeer*> clients;
 
   // allow ctrl-c to end process properly by shutting server down
   signal(SIGINT, ::InterruptHandler);
 
   while (!::quit) {
-    time += 0.01;
 
     // update server
-    ENetEvent event;
-    if (enet_host_service(host, &event, 0) > 0) {
-      switch (event.type) {
-        default: break;
-        case ENET_EVENT_TYPE_CONNECT:
-          spdlog::info(
-            "user connected from {}:{}"
-          , event.peer->address.host
-          , event.peer->address.port
-          );
-          event.peer->data = nullptr;
-        break;
-
-        case ENET_EVENT_TYPE_RECEIVE:
-          spdlog::info(
-            "received patch length {} data '{}' from {}:{} channel {}"
-          , event.packet->dataLength
-          , event.packet->data
-          , event.peer->address.host, event.peer->address.port
-          , event.channelID
-          );
-
-
-          enet_packet_destroy(event.packet);
-        break;
-
-        case ENET_EVENT_TYPE_DISCONNECT:
-          spdlog::info(
-            "{}:{} disconnected"
-          , event.peer->address.host, event.peer->address.port
-          );
-          // TODO free data if applicable
-          event.peer->data = nullptr;
-        break;
-      }
-    }
-
-    // process messages
+    server.host.PollEvents();
 
     // process client inputs
 
@@ -105,7 +99,4 @@ int main(int argc, char const ** argv) {
 
   printf("\n");
   spdlog::info("shutting server down");
-
-  enet_host_destroy(host);
-  enet_deinitialize();
 }

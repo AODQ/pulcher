@@ -21,5 +21,5 @@ target_link_libraries(
   PUBLIC
     enet
   PRIVATE
-    pulcher-util
+    pulcher-util spdlog
 )
