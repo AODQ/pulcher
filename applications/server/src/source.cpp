@@ -85,16 +85,37 @@ int main(int argc, char const ** argv) {
   // allow ctrl-c to end process properly by shutting server down
   signal(SIGINT, ::InterruptHandler);
 
-  while (!::quit) {
+  while (true) {
+    while (!::quit) {
 
-    // update server
-    server.host.PollEvents();
+      // update server
+      server.host.PollEvents();
 
-    // process client inputs
+      std::this_thread::sleep_for(std::chrono::milliseconds(11u));
+    }
 
-    // send info out to clients
+    spdlog::info("Input a command (quit, force-client-restart)");
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(11u));
+    std::string operation;
+    std::cin >> operation;
+
+    if (operation == "quit") { break; }
+    else if (operation == "force-client-restart") {
+      pulcher::network::PacketNetworkClientUpdate clientUpdate;
+      clientUpdate.type =
+        pulcher::network::PacketNetworkClientUpdate::Type::ForceRestart;
+
+      pulcher::network::OutgoingPacket::Construct(
+        clientUpdate
+      , pulcher::network::ChannelType::Reliable
+      ).Broadcast(server);
+
+      server.host.Flush();
+
+      ::quit = false;
+    } else {
+      spdlog::error("unknown command");
+    }
   }
 
   printf("\n");

@@ -208,26 +208,27 @@ pulcher::network::ClientHostConnection::Construct(
 }
 
 pulcher::network::ClientHost pulcher::network::ClientHost::Construct(
-  char const * addressHost, uint32_t port
+  pulcher::network::ClientHost::ConstructInfo const & ci
 ) {
   pulcher::network::ClientHost client;
 
-  auto address = pulcher::network::Address::Construct(addressHost, port);
-
   { // -- construct host
     pulcher::network::Host::ConstructInfo constructInfo;
-    constructInfo.address = address;
+    constructInfo.address = ci.address;
     constructInfo.isServer = false;
     constructInfo.maxConnections = 1ul;
     constructInfo.maxChannels = 2ul;
     constructInfo.incomingBandwidth = constructInfo.outgoingBandwidth = 0ul;
+    constructInfo.fnConnect    = ci.fnConnect;
+    constructInfo.fnDisconnect = ci.fnDisconnect;
+    constructInfo.fnReceive    = ci.fnReceive;
     client.host = std::move(pulcher::network::Host::Construct(constructInfo));
   }
 
   if (!client.host.Valid()) { return client; }
 
   client.connection =
-    pulcher::network::ClientHostConnection::Construct(client.host, address);
+    pulcher::network::ClientHostConnection::Construct(client.host, ci.address);
 
   if (!client.connection.Valid()) { return client; }
 
@@ -302,6 +303,12 @@ pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
 , pulcher::network::ChannelType channelType
 );
 
+template
+pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
+  pulcher::network::PacketNetworkClientUpdate const & data
+, pulcher::network::ChannelType channelType
+);
+
 void pulcher::network::OutgoingPacket::Send(
   pulcher::network::ClientHost & client
 ) {
@@ -312,6 +319,19 @@ void pulcher::network::OutgoingPacket::Send(
 
   enet_peer_send(
     client.connection.enetPeer, Idx(this->channel), this->enetPacket
+  );
+}
+
+void pulcher::network::OutgoingPacket::Broadcast(
+  pulcher::network::ServerHost & server
+) {
+  if (!this->enetPacket) {
+    spdlog::error("Trying to send nullptr / unconstructed packet");
+    return;
+  }
+
+  enet_host_broadcast(
+    server.host.enetHost, Idx(this->channel), this->enetPacket
   );
 }
 
@@ -328,8 +348,22 @@ char const * ToString(pulcher::network::OperatingSystem os) {
 }
 
 char const * ToString(pulcher::network::PacketType packetType) {
+  using PT = pulcher::network::PacketType;
   switch (packetType) {
     default: return "N/A";
-    case pulcher::network::PacketType::SystemInfo: return "SystemInfo";
+    case PT::SystemInfo:          return "SystemInfo";
+    case PT::NetworkClientUpdate: return "NetworkClientUpdate";
+  }
+}
+
+char const * ToString(pulcher::network::PacketNetworkClientUpdate::Type type) {
+  using PT = pulcher::network::PacketNetworkClientUpdate::Type;
+  switch (type) {
+    default: return "N/A";
+    case PT::ApplicationUpdate: return "ApplicationUpdate";
+    case PT::AssetUpdate:       return "AssetUpdate";
+    case PT::ForceRestart:      return "ForceRestart";
+    case PT::FullUpdate:        return "FullUpdate";
+    case PT::LibraryUpdate:     return "LibraryUpdate";
   }
 }

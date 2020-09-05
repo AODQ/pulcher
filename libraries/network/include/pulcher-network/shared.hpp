@@ -14,8 +14,9 @@ namespace pulcher::network {
     Linux, Win32, Win64
   };
 
-  enum struct PQHacketType : uint16_t {
+  enum struct PacketType : uint16_t {
     SystemInfo
+  , NetworkClientUpdate
   };
 
   struct Network {
@@ -113,9 +114,13 @@ namespace pulcher::network {
     Host host;
     ClientHostConnection connection;
 
-    static pulcher::network::ClientHost Construct(
-      char const * addressHost, uint32_t port
-    );
+    struct ConstructInfo {
+      Address address;
+      std::function<void(pulcher::network::Event & event)>
+        fnConnect, fnReceive, fnDisconnect;
+    };
+
+    static pulcher::network::ClientHost Construct(ConstructInfo const & ci);
 
     bool Valid() const {
       return this->host.Valid() && this->connection.Valid();
@@ -147,6 +152,7 @@ namespace pulcher::network {
     );
 
     void Send(ClientHost & client);
+    void Broadcast(ServerHost & server);
   };
 
   constexpr OperatingSystem currentOperatingSystem =
@@ -166,7 +172,22 @@ namespace pulcher::network {
     PacketType const packetType = PacketType::SystemInfo;
     pulcher::network::OperatingSystem operatingSystem;
   };
+
+  struct PacketNetworkClientUpdate {
+    PacketType const packetType = PacketType::NetworkClientUpdate;
+
+    enum struct Type : uint8_t {
+      ApplicationUpdate
+    , AssetUpdate
+    , ForceRestart
+    , FullUpdate
+    , LibraryUpdate
+    };
+
+    Type type;
+  };
 }
 
 char const * ToString(pulcher::network::OperatingSystem os);
 char const * ToString(pulcher::network::PacketType packetType);
+char const * ToString(pulcher::network::PacketNetworkClientUpdate::Type type);

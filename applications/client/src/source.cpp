@@ -3,7 +3,6 @@
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/log.hpp>
 #include <pulcher-gfx/context.hpp>
-#include <pulcher-network/shared.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/enum.hpp>
 
@@ -26,14 +25,8 @@ auto StartupOptions() -> cxxopts::Options {
   auto options = cxxopts::Options("core-of-pulcher", "2D shooter game");
   options.add_options()
     (
-      "i,ip-address", "ip address to connect to"
-    , cxxopts::value<std::string>()->default_value("69.243.92.93")
-    ) (
       "r,resolution", "window resolution (0x0 means display resolution)"
     , cxxopts::value<std::string>()->default_value("0x0")
-    ) (
-      "p,port", "port number to connect to"
-    , cxxopts::value<uint16_t>()->default_value("6599")
     ) (
       "h,help", "print usage"
     )
@@ -50,8 +43,6 @@ auto CreateUserConfig(cxxopts::ParseResult const & userResults)
   std::string windowResolution;
 
   try {
-    config.networkIpAddress   = userResults["ip-address"].as<std::string>();
-    config.networkPortAddress = userResults["port"].as<uint16_t>();
     windowResolution = userResults["resolution"].as<std::string>();
   } catch (cxxopts::OptionException & parseException) {
     spdlog::critical("{}", parseException.what());
@@ -76,43 +67,9 @@ auto CreateUserConfig(cxxopts::ParseResult const & userResults)
 }
 
 void PrintUserConfig(pulcher::core::Config const & config) {
-  if (config.networkIpAddress != "") {
-    spdlog::info(
-      "ip address '{}:{}'"
-    , config.networkIpAddress, config.networkPortAddress
-    );
-  }
-
   spdlog::info(
     "window dimensions {}x{}", config.windowWidth, config.windowHeight
   );
-}
-
-pulcher::network::ClientHost CreateNetworkClient(
-  pulcher::core::Config const & config
-) {
-  auto client =
-    pulcher::network::ClientHost::Construct(
-      config.networkIpAddress.c_str()
-    , config.networkPortAddress
-    );
-
-  if (!client.Valid()) { return client; }
-
-  // send which type of operating system this is
-  {
-    pulcher::network::PacketSystemInfo systemInfo;
-    systemInfo.operatingSystem = pulcher::network::currentOperatingSystem;
-
-    pulcher::network::OutgoingPacket::Construct(
-      systemInfo
-    , pulcher::network::ChannelType::Reliable
-    ).Send(client);
-
-    client.host.Flush();
-  }
-
-  return client;
 }
 
 void InitializeImGui() {
@@ -168,9 +125,6 @@ int main(int argc, char const ** argv) {
   );
 
   ::PrintUserConfig(userConfig);
-
-  auto network = pulcher::network::Network::Construct();
-  auto networkClient = ::CreateNetworkClient(userConfig);
 
   while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
 
