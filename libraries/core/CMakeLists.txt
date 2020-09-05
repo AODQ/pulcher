@@ -19,7 +19,7 @@ set_target_properties(
 target_link_libraries(
   pulcher-core
   PUBLIC
-    glm spdlog::spdlog
+    glm spdlog
     nlohmann_json::nlohmann_json
     pulcher-util
 )
