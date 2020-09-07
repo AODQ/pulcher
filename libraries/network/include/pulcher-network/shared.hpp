@@ -7,7 +7,8 @@
 namespace pulcher::network {
 
   enum struct ChannelType : uint8_t {
-    Reliable, Unreliable
+    Reliable, Unreliable, Streaming
+  , Size
   };
 
   enum struct OperatingSystem : uint8_t {
@@ -17,6 +18,8 @@ namespace pulcher::network {
   enum struct PacketType : uint16_t {
     SystemInfo
   , NetworkClientUpdate
+  , StreamStart
+  , StreamBlock
   };
 
   struct Network {
@@ -88,7 +91,7 @@ namespace pulcher::network {
 
     bool Valid() const { return static_cast<bool>(this->enetHost); }
 
-    void PollEvents(size_t timeout = 0ul, size_t maxEventPoll = 5ul);
+    void PollEvents(size_t timeout = 0ul, size_t maxEventPoll = 20ul);
 
     pulcher::network::Event ManualPollEvent(size_t timeout = 0ul);
 
@@ -131,7 +134,6 @@ namespace pulcher::network {
     Host host;
 
     struct ConstructInfo {
-      char const * addressHost;
       uint32_t port;
       std::function<void(pulcher::network::Event & event)>
         fnConnect, fnReceive, fnDisconnect;
@@ -185,6 +187,22 @@ namespace pulcher::network {
     };
 
     Type type;
+  };
+
+  struct PacketFileStreamStart {
+    PacketType const packetType = PacketType::StreamStart;
+
+    std::array<char, 1024ul> filename;
+    size_t incomingPacketLength;
+    uint16_t lastPacketLength;
+  };
+
+  constexpr size_t StreamBlockByteLength = 4096ul;
+
+  struct PacketFileStreamBlock {
+    PacketType const packetType = PacketType::StreamBlock;
+
+    std::array<uint8_t, StreamBlockByteLength> data;
   };
 }
 

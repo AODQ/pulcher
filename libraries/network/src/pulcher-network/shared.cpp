@@ -39,7 +39,11 @@ pulcher::network::Address pulcher::network::Address::Construct(
 ) {
   pulcher::network::Address address;
 
-  enet_address_set_host(&address.enetAddress, addressHost);
+  if (addressHost) {
+    enet_address_set_host(&address.enetAddress, addressHost);
+  } else {
+    address.enetAddress.host = ENET_HOST_ANY;
+  }
   address.enetAddress.port = port;
 
   return address;
@@ -217,7 +221,7 @@ pulcher::network::ClientHost pulcher::network::ClientHost::Construct(
     constructInfo.address = ci.address;
     constructInfo.isServer = false;
     constructInfo.maxConnections = 1ul;
-    constructInfo.maxChannels = 2ul;
+    constructInfo.maxChannels = Idx(pulcher::network::ChannelType::Size);
     constructInfo.incomingBandwidth = constructInfo.outgoingBandwidth = 0ul;
     constructInfo.fnConnect    = ci.fnConnect;
     constructInfo.fnDisconnect = ci.fnDisconnect;
@@ -251,14 +255,14 @@ pulcher::network::ServerHost pulcher::network::ServerHost::Construct(
 ) {
   pulcher::network::ServerHost server;
 
-  auto address = pulcher::network::Address::Construct(ci.addressHost, ci.port);
+  auto address = pulcher::network::Address::Construct(ENET_HOST_ANY, ci.port);
 
   { // -- construct host
     pulcher::network::Host::ConstructInfo constructInfo;
     constructInfo.address = address;
     constructInfo.isServer = true;
     constructInfo.maxConnections = 1ul;
-    constructInfo.maxChannels = 2ul;
+    constructInfo.maxChannels = Idx(pulcher::network::ChannelType::Size);
     constructInfo.incomingBandwidth = constructInfo.outgoingBandwidth = 0ul;
     constructInfo.fnConnect = ci.fnConnect;
     constructInfo.fnDisconnect = ci.fnDisconnect;
@@ -281,6 +285,9 @@ pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
   ENetPacketFlag flag = ENET_PACKET_FLAG_UNSEQUENCED;
   switch (channelType) {
     default: break;
+    case pulcher::network::ChannelType::Streaming:
+      flag = ENET_PACKET_FLAG_UNSEQUENCED;
+    break;
     case pulcher::network::ChannelType::Reliable:
       flag = ENET_PACKET_FLAG_RELIABLE;
     break;
@@ -306,6 +313,18 @@ pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
 template
 pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
   pulcher::network::PacketNetworkClientUpdate const & data
+, pulcher::network::ChannelType channelType
+);
+
+template
+pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
+  pulcher::network::PacketFileStreamStart const & data
+, pulcher::network::ChannelType channelType
+);
+
+template
+pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
+  pulcher::network::PacketFileStreamBlock const & data
 , pulcher::network::ChannelType channelType
 );
 
@@ -353,6 +372,8 @@ char const * ToString(pulcher::network::PacketType packetType) {
     default: return "N/A";
     case PT::SystemInfo:          return "SystemInfo";
     case PT::NetworkClientUpdate: return "NetworkClientUpdate";
+    case PT::StreamStart:         return "StreamStart";
+    case PT::StreamBlock:         return "StreamBlock";
   }
 }
 

@@ -21,7 +21,7 @@ if (PULCHER_PLATFORM STREQUAL "Linux")
   target_link_libraries(
     pulcher-server
     PRIVATE
-      cxxopts pulcher-core pulcher-plugin pulcher-network
+      pulcher-network
   )
 
   install(
