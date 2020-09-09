@@ -20,6 +20,5 @@ target_link_libraries(
   pulcher-core
   PUBLIC
     glm spdlog
-    nlohmann_json::nlohmann_json
     pulcher-util
 )
