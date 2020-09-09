@@ -189,7 +189,12 @@ void FileStreamBlock(pulcher::network::PacketFileStreamBlock stream) {
 
     #ifdef __unix__
       spdlog::info("setting file permission");
-      chmod(streamFilename.c_str(), 755);
+      chmod(
+        streamFilename.c_str()
+      ,
+        S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH
+      | S_IWOTH | S_IXOTH
+      );
     #endif
 
     if (streamFilename == launcherExecutableFilename+"-emit") {
