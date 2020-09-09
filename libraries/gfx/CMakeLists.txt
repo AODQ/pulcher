@@ -5,6 +5,7 @@ target_sources(
   pulcher-gfx
   PRIVATE
     src/pulcher-gfx/context.cpp
+    src/pulcher-gfx/spritesheet.cpp
 )
 
 set_target_properties(

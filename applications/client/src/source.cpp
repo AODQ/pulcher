@@ -3,6 +3,7 @@
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/log.hpp>
 #include <pulcher-gfx/context.hpp>
+#include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/enum.hpp>
 
@@ -124,8 +125,11 @@ int main(int argc, char const ** argv) {
     bufferVertex = sg_make_buffer(&desc);
   }
 
+  auto testImage = pulcher::gfx::Spritesheet::Construct("base/tiletest.png");
+
   sg_bindings bindings = {};
   bindings.vertex_buffers[0] = bufferVertex;
+  bindings.fs_images[0] = testImage.Image();
 
   sg_shader shader;
   {
