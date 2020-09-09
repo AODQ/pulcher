@@ -8,10 +8,29 @@
 
 #include <sokol/gfx.hpp>
 
+
+pulcher::gfx::Spritesheet::~Spritesheet() {
+  this->Destroy();
+}
+
+pulcher::gfx::Spritesheet::Spritesheet(Spritesheet && other) {
+  this->handle = other.handle;
+  other.handle = 0ul;
+}
+
+pulcher::gfx::Spritesheet &
+pulcher::gfx::Spritesheet::operator=(Spritesheet && other) {
+  this->handle = other.handle;
+  other.handle = 0ul;
+  return *this;
+}
+
 pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
   char const * filename
 ) {
   Spritesheet self;
+
+  self.filename = std::string{filename};
 
   // load image
   stbi_set_flip_vertically_on_load(true);
@@ -51,4 +70,10 @@ pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
 
 sg_image pulcher::gfx::Spritesheet::Image() const {
   return sg_image(this->handle);
+}
+
+void pulcher::gfx::Spritesheet::Destroy() {
+  if (handle)
+    { sg_destroy_image(sg_image(handle)); }
+  handle = 0ul;
 }
