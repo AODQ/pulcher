@@ -288,9 +288,17 @@ int main(int argc, char const ** argv) {
       ::quit = false;
 
       filesToUpload = {
-        "pulcher-client", "plugins/ui-base.pulcher-plugin",
-        "lib/libglad.so", "lib/libimgui.so", "lib/libspdlog.so",
-        "pulcher-launcher"
+        "pulcher-client", "plugins/ui-base.pulcher-plugin"
+      , "lib/libglad.so", "lib/libimgui.so", "lib/libspdlog.so"
+      , "base/spritesheets/player/nygelstromn.png"
+      , "base/spritesheets/player/data.json"
+      , "base/spritesheets/map/calamity.png"
+      , "base/spritesheets/map/lupanar.png"
+      , "base/spritesheets/map/lupanar.png"
+      , "base/spritesheets/map/lupanar.png"
+      , "base/map/test.json",
+      , "base/map/lupanar-tileset.json"
+      , "pulcher-launcher"
       };
 
     } else {
