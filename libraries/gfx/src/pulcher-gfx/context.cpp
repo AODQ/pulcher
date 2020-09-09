@@ -4,11 +4,53 @@
 #include <pulcher-core/config.hpp>
 
 #include <glad/glad.hpp>
-
 #include <GLFW/glfw3.h>
+#include <imgui/imgui.hpp>
+#include <imgui/imgui_impl_glfw.hpp>
 
 namespace {
 GLFWwindow * displayWindow;
+
+void InitializeSokol() {
+  sg_desc description = {};
+  sg_setup(&description);
+
+  simgui_desc_t imguiDescr = {};
+  imguiDescr.no_default_font = false;
+  imguiDescr.ini_filename = "imgui.ini";
+  simgui_setup(&imguiDescr);
+
+  /* IMGUI_CHECKVERSION(); */
+  /* ImGui::CreateContext(); */
+  ImGuiIO & io = ImGui::GetIO();
+  io.ConfigFlags =
+    0
+  | ImGuiConfigFlags_DockingEnable
+  ;
+  /* io.KeyMap[ImGuiKey_Tab]        = GLFW_KEY_TAB; */
+  /* io.KeyMap[ImGuiKey_LeftArrow]  = GLFW_KEY_LEFT; */
+  /* io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT; */
+  /* io.KeyMap[ImGuiKey_UpArrow]    = GLFW_KEY_UP; */
+  /* io.KeyMap[ImGuiKey_DownArrow]  = GLFW_KEY_DOWN; */
+  /* io.KeyMap[ImGuiKey_Home]       = GLFW_KEY_HOME; */
+  /* io.KeyMap[ImGuiKey_End]        = GLFW_KEY_END; */
+  /* io.KeyMap[ImGuiKey_Delete]     = GLFW_KEY_DELETE; */
+  /* io.KeyMap[ImGuiKey_Backspace]  = GLFW_KEY_BACKSPACE; */
+  /* io.KeyMap[ImGuiKey_Enter]      = GLFW_KEY_ENTER; */
+  /* io.KeyMap[ImGuiKey_Escape]     = GLFW_KEY_ESCAPE; */
+  /* io.KeyMap[ImGuiKey_A]          = GLFW_KEY_A; */
+  /* io.KeyMap[ImGuiKey_C]          = GLFW_KEY_C; */
+  /* io.KeyMap[ImGuiKey_V]          = GLFW_KEY_V; */
+  /* io.KeyMap[ImGuiKey_X]          = GLFW_KEY_X; */
+  /* io.KeyMap[ImGuiKey_Y]          = GLFW_KEY_Y; */
+  /* io.KeyMap[ImGuiKey_Z]          = GLFW_KEY_Z; */
+
+
+  ImGui::StyleColorsDark();
+
+  /* ImGui_ImplGlfw_InitForOpenGL(pulcher::gfx::DisplayWindow(), true); */
+  /* ImGui_ImplOpenGL3_Init("#version 330 core"); */
+}
 
 int displayWidth, displayHeight;
 } // -- namespace
@@ -90,6 +132,8 @@ bool pulcher::gfx::InitializeContext(pulcher::core::Config & config) {
   }
 
   glfwSwapInterval(0);
+
+  ::InitializeSokol();
 
   return true;
 }

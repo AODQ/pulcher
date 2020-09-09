@@ -1,5 +1,8 @@
 #pragma once
 
+#include <sokol/gfx.hpp>
+#include <sokol/imgui.hpp>
+
 struct GLFWwindow;
 
 namespace pulcher::core { struct Config; }

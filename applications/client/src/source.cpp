@@ -10,8 +10,6 @@
 #include <glad/glad.hpp>
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>
-#include <imgui/imgui_impl_glfw.hpp>
-#include <imgui/imgui_impl_opengl3.hpp>
 
 #include <chrono>
 #include <string>
@@ -72,21 +70,6 @@ void PrintUserConfig(pulcher::core::Config const & config) {
   );
 }
 
-void InitializeImGui() {
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGuiIO & io = ImGui::GetIO();
-  io.ConfigFlags =
-    0
-  | ImGuiConfigFlags_DockingEnable
-  ;
-
-  ImGui::StyleColorsDark();
-
-  ImGui_ImplGlfw_InitForOpenGL(pulcher::gfx::DisplayWindow(), true);
-  ImGui_ImplOpenGL3_Init("#version 330 core");
-}
-
 } // -- anon namespace
 
 int main(int argc, char const ** argv) {
@@ -116,7 +99,6 @@ int main(int argc, char const ** argv) {
   spdlog::info("initializing pulcher");
   // -- initialize relevant components
   pulcher::gfx::InitializeContext(userConfig);
-  ::InitializeImGui();
   pulcher::plugin::Info plugin;
 
   pulcher::plugin::LoadPlugin(
@@ -124,17 +106,85 @@ int main(int argc, char const ** argv) {
   , "plugins/ui-base.pulcher-plugin"
   );
 
+  sg_buffer bufferVertex;
+  {
+    std::array<float, 12> vertices = {{
+      -1.0f, -1.0f
+    , +1.0f, +1.0f
+    , +1.0f, -1.0f
+
+    , -1.0f, -1.0f
+    , -1.0f, +1.0f
+    , +1.0f, +1.0f
+    }};
+
+    sg_buffer_desc desc = {};
+    desc.size = sizeof(float) * vertices.size();
+    desc.content = vertices.data();
+    bufferVertex = sg_make_buffer(&desc);
+  }
+
+  sg_bindings bindings = {};
+  bindings.vertex_buffers[0] = bufferVertex;
+
+  sg_shader shader;
+  {
+    sg_shader_desc desc = {};
+    desc.vs.uniform_blocks[0].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[0].uniforms[0].name = "originOffset";
+    desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+    desc.fs.images[0].name = "baseSampler";
+    desc.fs.images[0].type = SG_IMAGETYPE_2D;
+
+    desc.vs.source =
+      "#version 330\n"
+      "uniform vec2 originOffset;\n"
+      "in layout(location = 0) vec2 inVertexOrigin;\n"
+      "out vec2 uvCoord;\n"
+      "void main() {\n"
+      "  gl_Position = vec4(inVertexOrigin, 0.5f, 1.0f);\n"
+      "  uvCoord = (inVertexOrigin + vec2(1.0f)) * 0.5f;\n"
+      "}\n"
+    ;
+
+    desc.fs.source =
+      "#version 330\n"
+      "uniform sampler2D baseSampler;\n"
+      "in vec2 uvCoord;\n"
+      "out vec4 outColor;\n"
+      "void main() {\n"
+      "  outColor = texture(baseSampler, uvCoord);\n"
+      "}\n"
+    ;
+
+    shader = sg_make_shader(&desc);
+  }
+
+  sg_pipeline pipeline;
+  {
+    sg_pipeline_desc desc = {};
+    desc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+    desc.shader = shader;
+    desc.depth_stencil.depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL;
+    desc.depth_stencil.depth_write_enabled = true;
+    desc.rasterizer.cull_mode = SG_CULLMODE_BACK;
+
+    pipeline = sg_make_pipeline(&desc);
+  }
+
   ::PrintUserConfig(userConfig);
 
   while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
 
     glfwPollEvents();
 
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    simgui_new_frame(
+      pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight(), 11.11
+    );
 
+    ImGui::ShowDemoWindow();
     ImGui::Begin("Test");
+    ImGui::Text("ahhhh");
     if (ImGui::Button("Reload plugins")) {
       pulcher::plugin::UpdatePlugins(plugin);
     }
@@ -142,34 +192,34 @@ int main(int argc, char const ** argv) {
 
     plugin.userInterface.Dispatch();
 
-    ImGui::Render();
-
     // -- validate display size in case of resize
     glfwGetFramebufferSize(
       pulcher::gfx::DisplayWindow()
     , &pulcher::gfx::DisplayWidth()
     , &pulcher::gfx::DisplayHeight()
     );
-    glViewport(
-      0, 0, pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
+
+    sg_pass_action passAction;
+    passAction.colors[0].action = SG_ACTION_CLEAR;
+    passAction.colors[0].val[0] = 0.2f;
+    sg_begin_default_pass(
+      &passAction
+    , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
     );
 
-    glClear(GL_COLOR_BUFFER_BIT);
+    sg_apply_pipeline(pipeline);
+    sg_apply_bindings(&bindings);
+    /* sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, */ 
+    sg_draw(0, 6, 1);
 
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-      ImGui::UpdatePlatformWindows();
-      ImGui::RenderPlatformWindowsDefault();
-      glfwMakeContextCurrent(pulcher::gfx::DisplayWindow());
-    }
-
+    /* simgui_render(); */
+    sg_end_pass();
+    sg_commit();
     glfwSwapBuffers(pulcher::gfx::DisplayWindow());
   }
 
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplGlfw_Shutdown();
-  ImGui::DestroyContext();
+  simgui_shutdown();
+  sg_shutdown();
 
   glfwDestroyWindow(pulcher::gfx::DisplayWindow());
   glfwTerminate();

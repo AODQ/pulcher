@@ -19,7 +19,7 @@ set_target_properties(
 target_link_libraries(
   pulcher-gfx
   PUBLIC
-    glfw glad imgui
+    glfw glad imgui sokol stb_image
   PRIVATE
     pulcher-core
 )
