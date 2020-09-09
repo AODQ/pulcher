@@ -12,4 +12,9 @@ namespace pulcher::gfx {
   int & DisplayWidth();
   int & DisplayHeight();
   GLFWwindow * DisplayWindow();
+
+  void StartFrame();
+  void EndFrame();
+
+  void Shutdown();
 }

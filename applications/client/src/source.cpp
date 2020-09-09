@@ -182,26 +182,14 @@ int main(int argc, char const ** argv) {
 
     glfwPollEvents();
 
-    simgui_new_frame(
-      pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight(), 11.11
-    );
+    pulcher::gfx::StartFrame();
 
-    ImGui::ShowDemoWindow();
-    ImGui::Begin("Test");
-    ImGui::Text("ahhhh");
     if (ImGui::Button("Reload plugins")) {
       pulcher::plugin::UpdatePlugins(plugin);
     }
     ImGui::End();
 
     plugin.userInterface.Dispatch();
-
-    // -- validate display size in case of resize
-    glfwGetFramebufferSize(
-      pulcher::gfx::DisplayWindow()
-    , &pulcher::gfx::DisplayWidth()
-    , &pulcher::gfx::DisplayHeight()
-    );
 
     sg_pass_action passAction;
     passAction.colors[0].action = SG_ACTION_CLEAR;
@@ -211,22 +199,16 @@ int main(int argc, char const ** argv) {
     , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
     );
 
-    sg_apply_pipeline(pipeline);
-    sg_apply_bindings(&bindings);
-    /* sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, */ 
-    sg_draw(0, 6, 1);
 
-    /* simgui_render(); */
+    simgui_render();
     sg_end_pass();
     sg_commit();
-    glfwSwapBuffers(pulcher::gfx::DisplayWindow());
+
+    pulcher::gfx::EndFrame();
   }
 
-  simgui_shutdown();
-  sg_shutdown();
 
-  glfwDestroyWindow(pulcher::gfx::DisplayWindow());
-  glfwTerminate();
+  pulcher::gfx::Shutdown();
 
   return 0;
 }
