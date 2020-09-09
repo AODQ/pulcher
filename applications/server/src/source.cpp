@@ -296,7 +296,7 @@ int main(int argc, char const ** argv) {
       , "base/spritesheets/map/lupanar.png"
       , "base/spritesheets/map/lupanar.png"
       , "base/spritesheets/map/lupanar.png"
-      , "base/map/test.json",
+      , "base/map/test.json"
       , "base/map/lupanar-tileset.json"
       , "pulcher-launcher"
       };
