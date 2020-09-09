@@ -2,10 +2,7 @@
 
 #include <pulcher-util/enum.hpp>
 
-#pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wshadow"
-  #include <spdlog/spdlog.h>
-#pragma GCC diagnostic pop
+#include <stdio.h>
 
 pulcher::network::Network::Network() {}
 
@@ -119,7 +116,7 @@ pulcher::network::Host::Construct(
     );
 
   if (!host.enetHost) {
-    spdlog::error("failed to create enet host");
+    printf("network error - failed to create enet host\n");
     return host;
   }
 
@@ -206,7 +203,7 @@ pulcher::network::ClientHostConnection::Construct(
     enet_host_connect(host.enetHost, &address.enetAddress, 2, 0);
 
   if (!connection.Valid())
-    { spdlog::error("could not create client peer connection"); }
+    { printf("network error - could not create client peer connection\n"); }
 
   return connection;
 }
@@ -241,10 +238,10 @@ pulcher::network::ClientHost pulcher::network::ClientHost::Construct(
     auto event = client.host.ManualPollEvent(5000u);
     event.Valid() && event.eventType == ENET_EVENT_TYPE_CONNECT
   ) {
-    spdlog::info("connection to server successful\n");
+    printf("connection to server successful\n");
   } else {
     // TODO clear host connection
-    spdlog::info("connection to server failed\n");
+    printf("network error - connection to server failed\n");
   }
 
   return client;
@@ -332,7 +329,7 @@ void pulcher::network::OutgoingPacket::Send(
   pulcher::network::ClientHost & client
 ) {
   if (!this->enetPacket) {
-    spdlog::error("Trying to send nullptr / unconstructed packet");
+    printf("network error - Trying to send nullptr / unconstructed packet\n");
     return;
   }
 
@@ -345,7 +342,7 @@ void pulcher::network::OutgoingPacket::Broadcast(
   pulcher::network::ServerHost & server
 ) {
   if (!this->enetPacket) {
-    spdlog::error("Trying to send nullptr / unconstructed packet");
+    printf("network error - Trying to send nullptr / unconstructed packet\n");
     return;
   }
 

@@ -5,11 +5,6 @@
 #include <cxxopts.hpp>
 #include <process.hpp>
 
-#pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wshadow"
-  #include <spdlog/spdlog.h>
-#pragma GCC diagnostic pop
-
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -64,7 +59,7 @@ auto StartupOptions() -> cxxopts::Options {
 void NetworkClientUpdate(
   pulcher::network::PacketNetworkClientUpdate & networkUpdate
 ) {
-  spdlog::info(" -- applying client update '{}'", ToString(networkUpdate.type));
+  printf(" -- applying client update '%s'\n", ToString(networkUpdate.type));
 
   using PT = pulcher::network::PacketNetworkClientUpdate::Type;
   switch (networkUpdate.type) {
@@ -98,15 +93,15 @@ void FileStreamStart(pulcher::network::PacketFileStreamStart stream) {
     streamFilename += "-emit";
   }
 
-  spdlog::info(
-    "streaming file '{}' using {} packets, last packet will be {} bytes"
-  , streamFilename
+  printf(
+    "streaming file '%s' using %lu packets, last packet will be %d bytes\n"
+  , streamFilename.c_str()
   , stream.incomingPacketLength
   , stream.lastPacketLength
   );
 
   if (streamRemainingBlocks != -1ul) {
-    spdlog::critical(" -- another file is already being transmitted");
+    printf("critical error -- another file is already being transmitted\n");
     return;
   }
 
@@ -124,7 +119,7 @@ void FileStreamStart(pulcher::network::PacketFileStreamStart stream) {
   lastPacketLength              = stream.lastPacketLength;
 
   if (!streamFile.good()) {
-    spdlog::critical(" -- failed to open file for writing");
+    printf("critical error -- failed to open file for writing\n");
     streamRemainingBlocks = -1ul;
     lastPacketLength      = 0u;
   }
@@ -132,7 +127,9 @@ void FileStreamStart(pulcher::network::PacketFileStreamStart stream) {
 
 void FileStreamBlock(pulcher::network::PacketFileStreamBlock stream) {
   if (!streamFile.good()) {
-    spdlog::critical(" -- file no longer in a good condition to write to");
+    printf(
+      "critical error -- file no longer in a good condition to write to\n"
+    );
     streamRemainingBlocks = -1ul;
     lastPacketLength      = 0u;
     streamFile = {};
@@ -170,7 +167,7 @@ void FileStreamBlock(pulcher::network::PacketFileStreamBlock stream) {
 
   if (streamLen == 0ul) {
     printf("\n");
-    spdlog::critical("file stream block has a length of 0");
+    printf("critical error -- file stream block has a length of 0\n");
     streamRemainingBlocks = -1ul;
     return;
   }
@@ -185,10 +182,10 @@ void FileStreamBlock(pulcher::network::PacketFileStreamBlock stream) {
     lastPacketLength      = 0u;
     streamFile            = {};
     printf("\n");
-    spdlog::info("-- finished writing to file");
+    printf("finished writing to file\n");
 
     #ifdef __unix__
-      spdlog::info("setting file permission");
+      printf("setting file permission\n");
       chmod(
         streamFilename.c_str()
       ,
@@ -198,7 +195,7 @@ void FileStreamBlock(pulcher::network::PacketFileStreamBlock stream) {
     #endif
 
     if (streamFilename == launcherExecutableFilename+"-emit") {
-      spdlog::info("renaming file");
+      printf("renaming file\n");
       std::filesystem::rename(
         launcherExecutableFilename+"-emit"
       , launcherExecutableFilename
@@ -208,11 +205,11 @@ void FileStreamBlock(pulcher::network::PacketFileStreamBlock stream) {
 }
 
 void NetworkConnect(pulcher::network::Event &) {
-  spdlog::info("Connected to server");
+  printf("Connected to server\n");
 }
 
 void NetworkDisconnect(pulcher::network::Event &) {
-  spdlog::info("Disconnected from server");
+  printf("Disconnected from server\n");
 }
 
 void NetworkReceive(pulcher::network::Event & event) {
@@ -276,7 +273,7 @@ void CreateLauncherConfig(cxxopts::ParseResult const & parseResult)
     networkIpAddress = parseResult["ip-address"].as<std::string>();
     networkPort      = parseResult["port"].as<uint16_t>();
   } catch (cxxopts::OptionException & parseException) {
-    spdlog::critical("{}", parseException.what());
+    printf("cxxopts exception %s\n", parseException.what());
   }
 }
 
@@ -284,11 +281,11 @@ void CreateLauncherConfig(cxxopts::ParseResult const & parseResult)
 
 int main(int argc, char const ** argv) {
   #ifdef __unix__
-    spdlog::info("-- running on Linux platform --");
+    printf("-- running on Linux platform --\n");
   #elif _WIN64
-    spdlog::info("-- running on Windows 64 platform --");
+    printf("-- running on Windows 64 platform --\n");
   #elif _WIN32
-    spdlog::info("-- running on Windows 32 platform --");
+    printf("-- running on Windows 32 platform --\n");
   #endif
 
   { // -- collect launcher options
@@ -329,7 +326,7 @@ int main(int argc, char const ** argv) {
 
     // check for reboot
     if (::forceRestart) {
-      spdlog::info("rebooting pulcher process");
+      printf("rebooting pulcher process\n");
 
       if (::pulcherProcess) {
         ::pulcherProcess->kill();
@@ -347,7 +344,7 @@ int main(int argc, char const ** argv) {
 
     // check for update
     if (::quitForUpdate) {
-      spdlog::info("shutting pulcher process down");
+      printf("shutting pulcher process down\n");
       if (::pulcherProcess) {
         ::pulcherProcess->kill();
         ::pulcherProcess->get_exit_status();
@@ -359,7 +356,7 @@ int main(int argc, char const ** argv) {
   }
 
   printf("\n");
-  spdlog::info("shutting pulcher process down");
+  printf("shutting pulcher process down\n");
 
   if (::pulcherProcess) {
     ::pulcherProcess->kill();
@@ -367,5 +364,5 @@ int main(int argc, char const ** argv) {
   }
 
   printf("\n");
-  spdlog::info("shutting pulcher launcher down");
+  printf("shutting pulcher launcher down\n");
 }
