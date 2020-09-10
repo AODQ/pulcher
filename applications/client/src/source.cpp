@@ -112,75 +112,6 @@ int main(int argc, char const ** argv) {
   , "plugins/plugin-map.pulcher-plugin"
   );
 
-  sg_buffer bufferVertex;
-  {
-    std::array<float, 12> vertices = {{
-      -1.0f, -1.0f
-    , +1.0f, +1.0f
-    , +1.0f, -1.0f
-
-    , -1.0f, -1.0f
-    , -1.0f, +1.0f
-    , +1.0f, +1.0f
-    }};
-
-    sg_buffer_desc desc = {};
-    desc.size = sizeof(float) * vertices.size();
-    desc.content = vertices.data();
-    bufferVertex = sg_make_buffer(&desc);
-  }
-
-  auto testImage = pulcher::gfx::Spritesheet::Construct("base/tiletest.png");
-
-  sg_bindings bindings = {};
-  bindings.vertex_buffers[0] = bufferVertex;
-  bindings.fs_images[0] = testImage.Image();
-
-  sg_shader shader;
-  {
-    sg_shader_desc desc = {};
-    desc.vs.uniform_blocks[0].size = sizeof(float) * 2;
-    desc.vs.uniform_blocks[0].uniforms[0].name = "originOffset";
-    desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
-    desc.fs.images[0].name = "baseSampler";
-    desc.fs.images[0].type = SG_IMAGETYPE_2D;
-
-    desc.vs.source =
-      "#version 330\n"
-      "uniform vec2 originOffset;\n"
-      "in layout(location = 0) vec2 inVertexOrigin;\n"
-      "out vec2 uvCoord;\n"
-      "void main() {\n"
-      "  gl_Position = vec4(inVertexOrigin, 0.5f, 1.0f);\n"
-      "  uvCoord = (inVertexOrigin + vec2(1.0f)) * 0.5f;\n"
-      "}\n"
-    ;
-
-    desc.fs.source =
-      "#version 330\n"
-      "uniform sampler2D baseSampler;\n"
-      "in vec2 uvCoord;\n"
-      "out vec4 outColor;\n"
-      "void main() {\n"
-      "  outColor = texture(baseSampler, uvCoord);\n"
-      "}\n"
-    ;
-
-    shader = sg_make_shader(&desc);
-  }
-
-  sg_pipeline pipeline;
-  {
-    sg_pipeline_desc desc = {};
-    desc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
-    desc.shader = shader;
-    desc.depth_stencil.depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL;
-    desc.depth_stencil.depth_write_enabled = true;
-    desc.rasterizer.cull_mode = SG_CULLMODE_BACK;
-
-    pipeline = sg_make_pipeline(&desc);
-  }
-
   ::PrintUserConfig(userConfig);
 
   plugin.map.Load("base/map/test.json");
@@ -201,7 +132,7 @@ int main(int argc, char const ** argv) {
     plugin.userInterface.Dispatch();
     plugin.map.UiRender();
 
-    sg_pass_action passAction;
+    sg_pass_action passAction = {};
     passAction.colors[0].action = SG_ACTION_CLEAR;
     passAction.colors[0].val[0] = 0.2f;
     sg_begin_default_pass(
