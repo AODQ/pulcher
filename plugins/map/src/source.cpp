@@ -141,8 +141,7 @@ void MapSokolPushTile(
   ) {
     renderable->origins.emplace_back();
     renderable->origins.back()[0] = (static_cast<float>(x) + v[0])*32.0f;
-    renderable->origins.back()[1] =
-      (::mapHeight - static_cast<float>(y) + v[1])*32.0f;
+    renderable->origins.back()[1] = (static_cast<float>(y) + v[1])*32.0f;
 
     // -- compute UV coords
     // compose range into 0 .. tileWidth (modulo / division | X / Y)
@@ -223,13 +222,14 @@ void MapSokolEnd() {
       "uniform vec2 framebufferResolution;\n"
       "in layout(location = 0) vec2 inVertexOrigin;\n"
       "in layout(location = 1) vec2 inVertexUvCoord;\n"
+      /* "in layout(location = 2) vec3 inOrientation;\n" */
       "out vec2 uvCoord;\n"
       "flat out uint tileId;\n"
       "void main() {\n"
       "  vec2 framebufferScale = vec2(2.0f) / framebufferResolution;\n"
       "  framebufferScale.y *= 800.0f / 600.0f;"
-      "  vec2 vertexOrigin = inVertexOrigin * framebufferScale;\n"
-      "  vertexOrigin -= originOffset * framebufferScale;\n"
+      "  vec2 vertexOrigin = inVertexOrigin*vec2(1,-1) * framebufferScale;\n"
+      "  vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;\n"
       "  gl_Position = vec4(vertexOrigin, tileDepth, 1.0f);\n"
       "  uvCoord = inVertexUvCoord;\n"
       "  tileId = uint(gl_VertexID/6);\n"
@@ -280,7 +280,7 @@ void MapSokolEnd() {
 
     desc.rasterizer.cull_mode = SG_CULLMODE_BACK;
     desc.rasterizer.alpha_to_coverage_enabled = false;
-    desc.rasterizer.face_winding = SG_FACEWINDING_CW;
+    desc.rasterizer.face_winding = SG_FACEWINDING_CCW;
     desc.rasterizer.sample_count = 1;
 
     desc.label = "map pipeline";
@@ -432,7 +432,7 @@ void Load(char const * filename) {
         ::MapSokolPushTile(
           layerLabel
         , static_cast<uint32_t>(x + localX)
-        , static_cast<uint32_t>(y + localY)
+        , ::mapHeight - static_cast<uint32_t>(y + localY)
         , flipHorizontal, flipVertical, flipDiagonal
         , tileId
         );
