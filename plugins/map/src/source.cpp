@@ -148,7 +148,7 @@ void MapSokolPushTile(
     // then bring into range 0 .. 1 by dividing by tile width/height
     float const
       uvOffsetX = (localTileId % uvTileWidth) / static_cast<float>(uvTileWidth)
-    , uvOffsetY = (localTileId / uvTileWidth) / static_cast<float>(uvTileHeight)
+    , uvOffsetY = (localTileId / uvTileWidth + 1) / static_cast<float>(uvTileHeight)
     ;
     renderable->uvCoords.emplace_back();
 
