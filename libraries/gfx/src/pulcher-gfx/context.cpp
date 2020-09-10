@@ -20,8 +20,6 @@ void InitializeSokol() {
   imguiDescr.ini_filename = "imgui.ini";
   simgui_setup(&imguiDescr);
 
-  /* IMGUI_CHECKVERSION(); */
-  /* ImGui::CreateContext(); */
   ImGuiIO & io = ImGui::GetIO();
   io.ConfigFlags =
     0

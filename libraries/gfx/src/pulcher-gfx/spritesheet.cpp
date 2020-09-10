@@ -15,12 +15,18 @@ pulcher::gfx::Spritesheet::~Spritesheet() {
 
 pulcher::gfx::Spritesheet::Spritesheet(Spritesheet && other) {
   this->handle = other.handle;
+  this->filename = std::move(other.filename);
+  this->width = other.width;
+  this->height = other.height;
   other.handle = 0ul;
 }
 
 pulcher::gfx::Spritesheet &
 pulcher::gfx::Spritesheet::operator=(Spritesheet && other) {
   this->handle = other.handle;
+  this->filename = std::move(other.filename);
+  this->width = other.width;
+  this->height = other.height;
   other.handle = 0ul;
   return *this;
 }
@@ -37,6 +43,8 @@ pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
   int width, height, channels;
   uint8_t * rawByteData =
     stbi_load(filename, &width, &height, &channels, STBI_rgb_alpha);
+  self.width  = static_cast<size_t>(width);
+  self.height = static_cast<size_t>(height);
 
   // setup image for sokol
   sg_image_desc desc = {};

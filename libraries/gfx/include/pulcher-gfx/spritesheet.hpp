@@ -7,6 +7,7 @@ struct sg_image;
 namespace pulcher::gfx {
   struct Spritesheet {
     uint32_t handle;
+    size_t width, height;
     std::string filename;
 
     Spritesheet() = default;
