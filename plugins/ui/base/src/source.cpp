@@ -1,4 +1,3 @@
-
 #include <pulcher-core/log.hpp>
 #include <pulcher-gfx/context.hpp>
 

@@ -107,6 +107,11 @@ int main(int argc, char const ** argv) {
   , "plugins/ui-base.pulcher-plugin"
   );
 
+  pulcher::plugin::LoadPlugin(
+    plugin, pulcher::plugin::Type::Map
+  , "plugins/plugin-map.pulcher-plugin"
+  );
+
   sg_buffer bufferVertex;
   {
     std::array<float, 12> vertices = {{
@@ -178,6 +183,8 @@ int main(int argc, char const ** argv) {
 
   ::PrintUserConfig(userConfig);
 
+  plugin.map.Load("base/map/test.json");
+
   while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
 
     glfwPollEvents();
@@ -185,11 +192,14 @@ int main(int argc, char const ** argv) {
     pulcher::gfx::StartFrame();
 
     if (ImGui::Button("Reload plugins")) {
+      plugin.map.Shutdown();
       pulcher::plugin::UpdatePlugins(plugin);
+      plugin.map.Load("base/map/test.json");
     }
     ImGui::End();
 
     plugin.userInterface.Dispatch();
+    plugin.map.UiRender();
 
     sg_pass_action passAction;
     passAction.colors[0].action = SG_ACTION_CLEAR;
@@ -199,6 +209,7 @@ int main(int argc, char const ** argv) {
     , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
     );
 
+    plugin.map.Render();
 
     simgui_render();
     sg_end_pass();
@@ -207,6 +218,7 @@ int main(int argc, char const ** argv) {
     pulcher::gfx::EndFrame();
   }
 
+  plugin.map.Shutdown();
 
   pulcher::gfx::Shutdown();
 

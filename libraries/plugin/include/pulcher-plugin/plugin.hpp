@@ -10,8 +10,16 @@ namespace pulcher::plugin {
     ) = nullptr;
   };
 
+  struct Map {
+    void (*Load)(char const * filename) = nullptr;
+    void (*Render)() = nullptr;
+    void (*UiRender)() = nullptr;
+    void (*Shutdown)() = nullptr;
+  };
+
   struct Info {
     pulcher::plugin::UserInterfaceInfo userInterface;
+    pulcher::plugin::Map map;
   };
 
   bool LoadPlugin(

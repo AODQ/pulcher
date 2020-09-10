@@ -52,6 +52,7 @@ Plugin::~Plugin() {
 template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
   #if defined(__unix__)
     fn = reinterpret_cast<T>(::dlsym(this->data, label));
+    spdlog::info("Loading {} : {}", label, (void*)fn);
     if (!fn) {
       spdlog::critical(
         "Failed to load function '{}' for plugin '{}'", label, ::dlerror()
@@ -70,7 +71,7 @@ template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
 }
 
 void Plugin::Reload() {
-  spdlog::debug("Reloading plugin '{}'", this->filename.c_str());
+  spdlog::info("Reloading plugin '{}'", this->filename.c_str());
   this->Close();
   this->Open();
 }
@@ -87,7 +88,8 @@ void Plugin::Close() {
 
 void Plugin::Open() {
   #if defined(__unix__)
-    this->data = ::dlopen(this->filename.c_str(), RTLD_NOW);
+    this->data = ::dlopen(this->filename.c_str(), RTLD_LAZY | RTLD_LOCAL);
+    spdlog::info("Opened plugin {}; {}", this->filename.c_str(), this->data);
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}", this->filename, ::dlerror()
@@ -108,12 +110,21 @@ void Plugin::Open() {
 std::vector<std::unique_ptr<Plugin>> plugins;
 
 void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
+  spdlog::info("Type {}", int(ctx.type));
   switch (ctx.type) {
     default: spdlog::critical("Unknown type in LoadPluginFunctions"); break;
-    case pulcher::plugin::Type::UserInterface:
+    case pulcher::plugin::Type::UserInterface: {
       auto & unit = plugin.userInterface;
       ctx.LoadFunction(unit.Dispatch, "Dispatch");
-    break;
+    } break;
+    case pulcher::plugin::Type::Map: {
+      auto & unit = plugin.map;
+      spdlog::info("ctx map unit map");
+      ctx.LoadFunction(unit.Load, "Load");
+      ctx.LoadFunction(unit.Render, "Render");
+      ctx.LoadFunction(unit.UiRender, "UiRender");
+      ctx.LoadFunction(unit.Shutdown, "Shutdown");
+    } break;
   }
 }
 
