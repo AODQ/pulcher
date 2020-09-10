@@ -147,6 +147,8 @@ int main(int argc, char const ** argv) {
     sg_commit();
 
     pulcher::gfx::EndFrame();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(11));
   }
 
   plugin.map.Shutdown();
