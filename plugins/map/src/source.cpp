@@ -151,11 +151,25 @@ void MapSokolPushTile(
     , uvOffsetY = (localTileId / uvTileWidth) / static_cast<float>(uvTileHeight)
     ;
     renderable->uvCoords.emplace_back();
+
+    auto uvCoord = v;
+
+    if (flipHorizontal) {
+      uvCoord[0] = 1.0f - uvCoord[0];
+    }
+    if (flipVertical) {
+      uvCoord[1] = 1.0f - uvCoord[1];
+    }
+    if (flipDiagonal) {
+      std::swap(uvCoord[0], uvCoord[1]);
+    }
+
     renderable->uvCoords.back()[0] =
-      uvOffsetX + v[0]/static_cast<float>(uvWidth) * 32.0f;
+      uvOffsetX + uvCoord[0]/static_cast<float>(uvWidth) * 32.0f;
 
     renderable->uvCoords.back()[1] =
-      1.0f - uvOffsetY + v[1]/static_cast<float>(uvHeight) * 32.0f;
+      1.0f - uvOffsetY + (1.0f-uvCoord[1])/static_cast<float>(uvHeight) * 32.0f;
+
 
     // TODO grab orientations
     /* layerBackgroundTileVertexOrientation.emplace_back(); */
@@ -432,7 +446,7 @@ void Load(char const * filename) {
         ::MapSokolPushTile(
           layerLabel
         , static_cast<uint32_t>(x + localX)
-        , ::mapHeight - static_cast<uint32_t>(y + localY)
+        , static_cast<uint32_t>(y + localY)
         , flipHorizontal, flipVertical, flipDiagonal
         , tileId
         );
