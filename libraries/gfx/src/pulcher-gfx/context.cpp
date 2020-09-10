@@ -120,7 +120,7 @@ int & pulcher::gfx::DisplayWidth() { return ::displayWidth; }
 int & pulcher::gfx::DisplayHeight() { return ::displayHeight; }
 GLFWwindow * pulcher::gfx::DisplayWindow() { return ::displayWindow; }
 
-void pulcher::gfx::StartFrame() {
+void pulcher::gfx::StartFrame(float deltaMs) {
 
   // -- validate display size in case of resize
   glfwGetFramebufferSize(
@@ -130,7 +130,7 @@ void pulcher::gfx::StartFrame() {
   );
 
   simgui_new_frame(
-    pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight(), 11.11
+    pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight(), deltaMs/1000.0f
   );
 
   ImGui_ImplGlfw_NewFrame();

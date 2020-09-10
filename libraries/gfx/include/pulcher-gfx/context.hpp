@@ -13,7 +13,7 @@ namespace pulcher::gfx {
   int & DisplayHeight();
   GLFWwindow * DisplayWindow();
 
-  void StartFrame();
+  void StartFrame(float deltaMs);
   void EndFrame();
 
   void Shutdown();

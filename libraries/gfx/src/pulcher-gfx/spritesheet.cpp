@@ -56,12 +56,12 @@ pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
   desc.num_mipmaps = 0;
   desc.usage = SG_USAGE_IMMUTABLE;
   desc.pixel_format = SG_PIXELFORMAT_RGBA8;
-  desc.sample_count = 1;
+  desc.sample_count = 0;
   desc.min_filter = SG_FILTER_NEAREST;
   desc.mag_filter = SG_FILTER_NEAREST;
   desc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
   desc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
-  desc.max_anisotropy = 1;
+  desc.max_anisotropy = 0;
   desc.min_lod = 0.0f;
   desc.max_lod = 0.0f;
   desc.content.subimage[0][0].ptr = rawByteData;

@@ -116,11 +116,19 @@ int main(int argc, char const ** argv) {
 
   plugin.map.Load("base/map/test.json");
 
+  auto timePreviousFrameBegin = std::chrono::high_resolution_clock::now();
+
   while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
+
+    auto timeFrameBegin = std::chrono::high_resolution_clock::now();
+    float const deltaMs =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+        timeFrameBegin - timePreviousFrameBegin
+      ).count();
 
     glfwPollEvents();
 
-    pulcher::gfx::StartFrame();
+    pulcher::gfx::StartFrame(deltaMs);
 
     if (ImGui::Button("Reload plugins")) {
       plugin.map.Shutdown();
@@ -148,7 +156,9 @@ int main(int argc, char const ** argv) {
 
     pulcher::gfx::EndFrame();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(11));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+    timePreviousFrameBegin = timeFrameBegin;
   }
 
   plugin.map.Shutdown();

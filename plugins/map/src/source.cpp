@@ -56,11 +56,11 @@ sg_shader shader;
 
 void MapSokolPushTile(
   std::string const & layer
-, uint32_t x, uint32_t y
-, [[maybe_unused]] bool flipHorizontal
-, [[maybe_unused]] bool flipVertical
-, [[maybe_unused]] bool flipDiagonal
-, size_t tileId
+, uint32_t const x, uint32_t const y
+, bool const flipHorizontal
+, bool const flipVertical
+, bool const flipDiagonal
+, size_t const tileId
 ) {
 
   if (tileId == 0ul) { return; }
@@ -82,7 +82,6 @@ void MapSokolPushTile(
     if (spritesheetsStartingGids[idx] <= tileId) {
       spritesheetIdx = idx;
       localTileId = tileId - spritesheetsStartingGids[idx];
-      break;
     }
   }
 
@@ -115,17 +114,6 @@ void MapSokolPushTile(
   , uvTileWidth  = uvWidth / 32ul
   , uvTileHeight = uvHeight / 32ul
   ;
-
-  /* spdlog::info( */
-  /*   "UV {}x{} localTileId {} tileWH {}x{} local TID {}x{} UV COORD {}x{}" */
-  /* , uvWidth, uvHeight */
-  /* , localTileId */
-  /* , uvTileWidth, uvTileHeight */
-  /* , (localTileId % uvTileWidth) */
-  /* , (localTileId / uvTileWidth) */
-  /* , (localTileId % uvTileWidth) / static_cast<float>(uvTileWidth) */
-  /* , (localTileId / uvTileWidth) / static_cast<float>(uvTileHeight) */
-  /* ); */
 
   for (
       auto const & v
@@ -169,13 +157,6 @@ void MapSokolPushTile(
 
     renderable->uvCoords.back()[1] =
       1.0f - uvOffsetY + (1.0f-uvCoord[1])/static_cast<float>(uvHeight) * 32.0f;
-
-
-    // TODO grab orientations
-    /* layerBackgroundTileVertexOrientation.emplace_back(); */
-    /* orientation = flipHorizontal ? 1.f : 0.f; */
-    /* orientation = flipVertical ? 1.f : 0.f; */
-    /* orientation = flipDiagonal ? 1.f : 0.f; */
   }
 }
 
@@ -236,7 +217,6 @@ void MapSokolEnd() {
       "uniform vec2 framebufferResolution;\n"
       "in layout(location = 0) vec2 inVertexOrigin;\n"
       "in layout(location = 1) vec2 inVertexUvCoord;\n"
-      /* "in layout(location = 2) vec3 inOrientation;\n" */
       "out vec2 uvCoord;\n"
       "flat out uint tileId;\n"
       "void main() {\n"
@@ -258,7 +238,7 @@ void MapSokolEnd() {
       "out vec4 outColor;\n"
       "void main() {\n"
       "  outColor = texture(baseSampler, uvCoord);\n"
-      "  if (outColor.a < 0.1f) { discard; }\n"
+      "  if (outColor.a < 0.01f) { discard; }\n"
       "}\n"
     ;
 
@@ -521,6 +501,7 @@ void UiRender() {
     ImGui::PushID(renderable.depth);
     ImGui::Text("draw call: %lu", renderable.drawCallCount);
     ImGui::Text("depth: %d", renderable.depth);
+    ImGui::Text("spritesheet: %lu", renderable.spritesheetPrimaryIdx);
     ImGui::Checkbox("enabled", &renderable.enabled);
     ImGui::Separator();
     ImGui::PopID();
