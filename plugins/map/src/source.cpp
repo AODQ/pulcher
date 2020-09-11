@@ -1,11 +1,6 @@
 #include <pulcher-core/log.hpp>
 #include <pulcher-gfx/context.hpp>
-
-#include <GLFW/glfw3.h>
-#include <imgui/imgui.hpp>
-
-#include <pulcher-core/log.hpp>
-#include <pulcher-gfx/context.hpp>
+#include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
 
 #include <cjson/cJSON.h>

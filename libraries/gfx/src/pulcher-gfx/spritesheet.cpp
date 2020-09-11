@@ -1,13 +1,8 @@
 #include <pulcher-gfx/spritesheet.hpp>
 
-#pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wdouble-promotion"
-  #define STB_IMAGE_IMPLEMENTATION
-  #include <stb_image.hpp>
-#pragma GCC diagnostic pop
+#include <pulcher-gfx/image.hpp>
 
 #include <sokol/gfx.hpp>
-
 
 pulcher::gfx::Spritesheet::~Spritesheet() {
   this->Destroy();
@@ -32,26 +27,20 @@ pulcher::gfx::Spritesheet::operator=(Spritesheet && other) {
 }
 
 pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
-  char const * filename
+  pulcher::gfx::Image const & image
 ) {
   Spritesheet self;
 
-  self.filename = std::string{filename};
-
-  // load image
-  stbi_set_flip_vertically_on_load(true);
-  int width, height, channels;
-  uint8_t * rawByteData =
-    stbi_load(filename, &width, &height, &channels, STBI_rgb_alpha);
-  self.width  = static_cast<size_t>(width);
-  self.height = static_cast<size_t>(height);
+  self.filename = image.filename;
+  self.width = image.width;
+  self.height = image.height;
 
   // setup image for sokol
   sg_image_desc desc = {};
   desc.type = SG_IMAGETYPE_2D;
   desc.render_target = false;
-  desc.width = width;
-  desc.height = height;
+  desc.width = image.width;
+  desc.height = image.height;
   desc.layers = 1;
   desc.num_mipmaps = 0;
   desc.usage = SG_USAGE_IMMUTABLE;
@@ -64,14 +53,11 @@ pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
   desc.max_anisotropy = 0;
   desc.min_lod = 0.0f;
   desc.max_lod = 0.0f;
-  desc.content.subimage[0][0].ptr = rawByteData;
-  desc.content.subimage[0][0].size = sizeof(float)*channels*width*height;
-  desc.label = filename;
+  desc.content.subimage[0][0].ptr = image.data.data();
+  desc.content.subimage[0][0].size = sizeof(uint8_t)*image.data.size()*4ul;
+  desc.label = self.filename.c_str();
 
   self.handle = sg_make_image(&desc).id;
-
-  // free stbi mem
-  stbi_image_free(rawByteData);
 
   return self;
 }

@@ -2,6 +2,7 @@
 
 #include <string>
 
+namespace pulcher::gfx { struct Image; }
 struct sg_image;
 
 namespace pulcher::gfx {
@@ -17,7 +18,7 @@ namespace pulcher::gfx {
     Spritesheet & operator=(Spritesheet const &) = delete;
     Spritesheet & operator=(Spritesheet &&);
 
-    static Spritesheet Construct(char const * filename);
+    static Spritesheet Construct(pulcher::gfx::Image const &);
 
     sg_image Image() const;
 
