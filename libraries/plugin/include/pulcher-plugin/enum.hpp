@@ -7,6 +7,7 @@ namespace pulcher::plugin {
   enum struct Type : size_t {
     UserInterface
   , Map
+  , Physics
   , Size
   };
 }

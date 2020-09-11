@@ -1,5 +1,6 @@
 add_subdirectory(core)
 add_subdirectory(gfx)
 add_subdirectory(network)
+add_subdirectory(physics)
 add_subdirectory(plugin)
 add_subdirectory(util)

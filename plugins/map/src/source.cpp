@@ -2,8 +2,11 @@
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
+#include <pulcher-physics/tileset.hpp>
+#include <pulcher-plugin/plugin.hpp>
 
 #include <cjson/cJSON.h>
+#include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>
 
 #include <filesystem>
@@ -26,8 +29,14 @@ void MapSokolInitialize() {
 }
 
 struct LayerRenderable {
+  // below gets destroyed when no longer used, since the data is only necessary
+  // to create the GPU buffers
   std::vector<std::array<float, 2ul>> origins;
   std::vector<std::array<float, 2ul>> uvCoords;
+
+  // kept in order to do CPU tilemap processing
+  std::vector<size_t> tileIds;
+  std::vector<glm::u32vec2> tileOrigins;
 
   sg_buffer bufferVertex;
   sg_buffer bufferUvCoords;
@@ -44,8 +53,13 @@ struct LayerRenderable {
 
 std::vector<LayerRenderable> renderables;
 
-std::vector<pulcher::gfx::Spritesheet> spritesheets;
-std::vector<size_t> spritesheetsStartingGids;
+struct MapTileset {
+  pulcher::gfx::Spritesheet spritesheet;
+  pulcher::physics::Tileset physicsTileset;
+  size_t spritesheetStartingGid;
+};
+
+std::vector<MapTileset> mapTilesets;
 sg_pipeline pipeline;
 sg_shader shader;
 
@@ -73,10 +87,10 @@ void MapSokolPushTile(
   // locate spritesheet used and the local tile ID
   size_t spritesheetIdx = -1ul;
   size_t localTileId = 0ul;
-  for (size_t idx = 0ul; idx < spritesheetsStartingGids.size(); ++ idx) {
-    if (spritesheetsStartingGids[idx] <= tileId) {
+  for (size_t idx = 0ul; idx < mapTilesets.size(); ++ idx) {
+    if (mapTilesets[idx].spritesheetStartingGid <= tileId) {
       spritesheetIdx = idx;
-      localTileId = tileId - spritesheetsStartingGids[idx];
+      localTileId = tileId - mapTilesets[idx].spritesheetStartingGid;
     }
   }
 
@@ -101,7 +115,8 @@ void MapSokolPushTile(
     renderable = &renderables.back();
   }
 
-  auto & spritesheetPrimary = ::spritesheets[renderable->spritesheetPrimaryIdx];
+  auto & spritesheetPrimary =
+    ::mapTilesets[renderable->spritesheetPrimaryIdx].spritesheet;
 
   size_t const
     uvWidth  = spritesheetPrimary.width
@@ -109,6 +124,9 @@ void MapSokolPushTile(
   , uvTileWidth  = uvWidth / 32ul
   , uvTileHeight = uvHeight / 32ul
   ;
+
+  renderable->tileOrigins.emplace_back(glm::u32vec2(x, y));
+  renderable->tileIds.emplace_back(tileId);
 
   for (
       auto const & v
@@ -130,8 +148,8 @@ void MapSokolPushTile(
     // compose range into 0 .. tileWidth (modulo / division | X / Y)
     // then bring into range 0 .. 1 by dividing by tile width/height
     float const
-      uvOffsetX = (localTileId % uvTileWidth) / static_cast<float>(uvTileWidth)
-    , uvOffsetY = (localTileId / uvTileWidth + 1) / static_cast<float>(uvTileHeight)
+      uvOffsetX = (localTileId%uvTileWidth) / static_cast<float>(uvTileWidth)
+    , uvOffsetY = (localTileId/uvTileWidth+1) / static_cast<float>(uvTileHeight)
     ;
     renderable->uvCoords.emplace_back();
 
@@ -180,7 +198,7 @@ void MapSokolEnd() {
     renderable.bindings.vertex_buffers[0] = renderable.bufferVertex;
     renderable.bindings.vertex_buffers[1] = renderable.bufferUvCoords;
     renderable.bindings.fs_images[0] =
-      ::spritesheets[renderable.spritesheetPrimaryIdx].Image();
+      ::mapTilesets[renderable.spritesheetPrimaryIdx].spritesheet.Image();
     renderable.drawCallCount = renderable.origins.size();
 
     // dealloc vectors if no longer needed
@@ -216,7 +234,6 @@ void MapSokolEnd() {
       "flat out uint tileId;\n"
       "void main() {\n"
       "  vec2 framebufferScale = vec2(2.0f) / framebufferResolution;\n"
-      "  framebufferScale.y *= 800.0f / 600.0f;"
       "  vec2 vertexOrigin = inVertexOrigin*vec2(1,-1) * framebufferScale;\n"
       "  vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;\n"
       "  gl_Position = vec4(vertexOrigin, tileDepth, 1.0f);\n"
@@ -282,7 +299,10 @@ void MapSokolEnd() {
 
 extern "C" {
 
-void Load(char const * filename) {
+void Load(
+  pulcher::plugin::Info const & plugins
+, char const * filename
+) {
   spdlog::info("Loading '{}'", filename);
 
   cJSON * map;
@@ -359,18 +379,15 @@ void Load(char const * filename) {
       continue;
     }
 
-    // construct spritesheet
-    ::spritesheets.emplace_back(
-      std::move(
-        pulcher::gfx::Spritesheet::Construct(tilesetPath.string().c_str())
-      )
-    );
-
-    // collect starting GID for spritesheet
-    ::spritesheetsStartingGids
-      .emplace_back(
-        cJSON_GetObjectItemCaseSensitive(tileset, "firstgid")->valueint
-      );
+    { // construct map tileset
+      auto image = pulcher::gfx::Image::Construct(tilesetPath.string().c_str());
+      ::mapTilesets
+        .emplace_back(
+          pulcher::gfx::Spritesheet::Construct(image)
+        , plugins.physics.ProcessTileset(image)
+        , cJSON_GetObjectItemCaseSensitive(tileset, "firstgid")->valueint
+        );
+    }
   }
 
   cJSON * layer;
@@ -433,6 +450,28 @@ void Load(char const * filename) {
 
   ::MapSokolEnd();
 
+  { // create physics geometry for map
+
+    std::vector<pulcher::physics::Tileset const *> tilesets;
+    std::vector<std::span<size_t>> mapTileIndices;
+    std::vector<std::span<glm::u32vec2>> mapTileOrigins;
+
+    for (auto & renderable : ::renderables) {
+      // only depth 0 layers can have collision
+      if (renderable.depth != 0) { continue; }
+
+      tilesets
+        .emplace_back(
+          &::mapTilesets[renderable.spritesheetPrimaryIdx].physicsTileset
+        );
+
+      mapTileIndices.emplace_back(std::span(renderable.tileIds));
+      mapTileOrigins.emplace_back(std::span(renderable.tileOrigins));
+    }
+
+    plugins.physics.LoadMapGeometry(tilesets, mapTileIndices, mapTileOrigins);
+  }
+
   cJSON_Delete(map);
 }
 
@@ -483,9 +522,9 @@ void UiRender() {
   ImGui::DragFloat2("map origin", &::mapOrigin[0]);
 
   ImGui::Separator();
-  ImGui::Text("total spritesheets: '%lu'", ::spritesheets.size());
-  for (auto const & spritesheet : ::spritesheets) {
-    ImGui::Text("filename: '%s'", spritesheet.filename.c_str());
+  ImGui::Text("total tilemap sets: '%lu'", ::mapTilesets.size());
+  for (auto const & tileset : ::mapTilesets) {
+    ImGui::Text("filename: '%s'", tileset.spritesheet.filename.c_str());
   }
 
   ImGui::Separator();
@@ -515,12 +554,12 @@ void Shutdown() {
 
   ::renderables = {};
 
-  sg_destroy_pipeline(pipeline);
-  sg_destroy_shader(shader);
+  sg_destroy_pipeline(::pipeline);
+  sg_destroy_shader(::shader);
 
-  pipeline = {};
-  shader = {};
-  spritesheets.clear();
+  ::pipeline = {};
+  ::shader = {};
+  ::mapTilesets.clear();
 }
 
 } // extern C

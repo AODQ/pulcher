@@ -1,14 +1,14 @@
-add_library(plugin-map SHARED)
-target_sources(plugin-map PRIVATE src/source.cpp)
+add_library(plugin-physics SHARED)
+target_sources(plugin-physics PRIVATE src/source.cpp)
 
 target_link_libraries(
-  plugin-map
+  plugin-physics
   PRIVATE
-    cjson pulcher-core pulcher-gfx pulcher-physics pulcher-plugin
+    pulcher-core pulcher-gfx pulcher-physics
 )
 
 set_target_properties(
-  plugin-map
+  plugin-physics
     PROPERTIES
       COMPILE_FLAGS
         "-Wshadow -Wdouble-promotion -Wall -Wformat=2 -Wextra -Wpedantic \
@@ -18,7 +18,7 @@ set_target_properties(
 )
 
 install(
-  TARGETS plugin-map
+  TARGETS plugin-physics
   LIBRARY NAMELINK_SKIP
   LIBRARY
     DESTINATION bin/plugins/

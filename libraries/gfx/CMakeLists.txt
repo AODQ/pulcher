@@ -23,5 +23,5 @@ target_link_libraries(
   PUBLIC
     glfw glad imgui sokol stb_image
   PRIVATE
-    pulcher-core
+    pulcher-core glm
 )

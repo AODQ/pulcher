@@ -119,11 +119,18 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
     } break;
     case pulcher::plugin::Type::Map: {
       auto & unit = plugin.map;
-      spdlog::info("ctx map unit map");
-      ctx.LoadFunction(unit.Load, "Load");
-      ctx.LoadFunction(unit.Render, "Render");
+      ctx.LoadFunction(unit.Load,     "Load");
+      ctx.LoadFunction(unit.Render,   "Render");
       ctx.LoadFunction(unit.UiRender, "UiRender");
       ctx.LoadFunction(unit.Shutdown, "Shutdown");
+    } break;
+    case pulcher::plugin::Type::Physics: {
+      auto & unit = plugin.physics;
+      ctx.LoadFunction(unit.ProcessTileset,   "ProcessTileset");
+      ctx.LoadFunction(unit.ClearMapGeometry, "ClearMapGeometry");
+      ctx.LoadFunction(unit.LoadMapGeometry,  "LoadMapGeometry");
+      ctx.LoadFunction(unit.ProcessPhysics,   "ProcessPhysics");
+      ctx.LoadFunction(unit.UiRender,         "UiRender");
     } break;
   }
 }

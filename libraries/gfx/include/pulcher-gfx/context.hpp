@@ -17,4 +17,9 @@ namespace pulcher::gfx {
   void EndFrame();
 
   void Shutdown();
+
+  // TODO this needs to be moved elsewhere
+  bool LeftMousePressed();
+  uint32_t MouseX();
+  uint32_t MouseY();
 }
