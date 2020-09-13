@@ -17,9 +17,6 @@ namespace pulcher::physics {
 
     // inputs
     glm::u32vec2 origin;
-
-    // outputs
-    bool outputCollision = false;
   };
 
   struct IntersectorRay {
@@ -29,10 +26,6 @@ namespace pulcher::physics {
     glm::u32vec2 origin;
     glm::vec2 direction;
     float maxDistance = -1.0f; // -1.0f indicates no max distance
-
-    // outputs
-    bool outputCollision = false;
-    glm::u32vec2 outputOrigin = glm::u32vec2(0);
   };
 
   struct IntersectionResults {
@@ -52,20 +45,8 @@ namespace pulcher::physics {
     std::vector<pulcher::physics::IntersectionResults> intersectorResultsPoints;
     std::vector<pulcher::physics::IntersectionResults> intersectorResultsRays;
 
-    // clears out intersector* storing their results into intersectorResults*
+    // Swaps buffers around
     void Submit();
   };
 
-  // buffers queries
-  struct BufferedQueries {
-    std::array<pulcher::physics::Queries, 2> queries;
-
-    pulcher::physics::Queries & Get();
-    pulcher::physics::Queries & GetComputing();
-    void Swap();
-
-    size_t QueryIdx() const { return queryIdx; }
-  private:
-    size_t queryIdx;
-  };
 }

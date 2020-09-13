@@ -2,6 +2,7 @@
 
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/log.hpp>
+#include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-physics/intersections.hpp>
@@ -122,7 +123,8 @@ int main(int argc, char const ** argv) {
 
   plugins.map.Load(plugins, "base/map/test.json");
 
-  pulcher::physics::BufferedQueries physicsBufferedQueries;
+  pulcher::core::SceneBundle sceneBundle;
+  pulcher::physics::Queries physicsQueries;
 
   auto timePreviousFrameBegin = std::chrono::high_resolution_clock::now();
 
@@ -136,7 +138,7 @@ int main(int argc, char const ** argv) {
 
     glfwPollEvents();
 
-    plugins.physics.ProcessPhysics(physicsBufferedQueries);
+    plugins.physics.ProcessPhysics(sceneBundle, physicsQueries);
 
     pulcher::gfx::StartFrame(deltaMs);
 
@@ -146,11 +148,10 @@ int main(int argc, char const ** argv) {
       pulcher::plugin::UpdatePlugins(plugins);
       plugins.map.Load(plugins, "base/map/test.json");
     }
-    ImGui::End();
 
     plugins.userInterface.Dispatch();
-    plugins.map.UiRender();
-    plugins.physics.UiRender(physicsBufferedQueries);
+    plugins.map.UiRender(sceneBundle);
+    plugins.physics.UiRender(sceneBundle, physicsQueries);
 
     sg_pass_action passAction = {};
     passAction.colors[0].action = SG_ACTION_CLEAR;
@@ -160,7 +161,7 @@ int main(int argc, char const ** argv) {
     , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
     );
 
-    plugins.map.Render();
+    plugins.map.Render(sceneBundle);
 
     simgui_render();
     sg_end_pass();

@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
+namespace pulcher::core { struct SceneBundle; }
 namespace pulcher::gfx { struct Image; }
-namespace pulcher::physics { struct BufferedQueries; }
 namespace pulcher::physics { struct Queries; }
 namespace pulcher::physics { struct Tileset; }
 namespace pulcher::plugin { struct Info; }
@@ -25,8 +25,8 @@ namespace pulcher::plugin {
       pulcher::plugin::Info const & info
     , char const * filename
     ) = nullptr;
-    void (*Render)() = nullptr;
-    void (*UiRender)() = nullptr;
+    void (*Render)(pulcher::core::SceneBundle &) = nullptr;
+    void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
     void (*Shutdown)() = nullptr;
   };
 
@@ -40,8 +40,14 @@ namespace pulcher::plugin {
     , std::vector<std::span<size_t>>                 const & mapTileIndices
     , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
     ) = nullptr;
-    void (*ProcessPhysics)(pulcher::physics::BufferedQueries &) = nullptr;
-    void (*UiRender)(pulcher::physics::BufferedQueries &) = nullptr;
+    void (*ProcessPhysics)(
+      pulcher::core::SceneBundle &
+    , pulcher::physics::Queries &
+    ) = nullptr;
+    void (*UiRender)(
+      pulcher::core::SceneBundle &
+    , pulcher::physics::Queries &
+    ) = nullptr;
   };
 
   struct Info {

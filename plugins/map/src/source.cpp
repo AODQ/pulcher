@@ -1,4 +1,5 @@
 #include <pulcher-core/log.hpp>
+#include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
@@ -16,7 +17,6 @@ namespace {
 
 int32_t constexpr tileDepthMin = -500, tileDepthMax = +500;
 
-std::array<float, 2ul> mapOrigin = {{ 0.0f, 0.0f }};
 size_t mapWidth, mapHeight;
 
 size_t constexpr
@@ -343,7 +343,7 @@ void Load(
     auto tilesetFilename =
       cJSON_GetObjectItemCaseSensitive(tileset, "source")->valuestring;
 
-    spdlog::info("loading tileset '{}'", tilesetFilename);
+    spdlog::debug("loading tileset '{}'", tilesetFilename);
 
     cJSON * tilesetJson;
     { // load file
@@ -395,7 +395,7 @@ void Load(
     auto layerLabel =
       cJSON_GetObjectItemCaseSensitive(layer, "name")->valuestring;
 
-    spdlog::info("parsing layer '{}'", layerLabel);
+    spdlog::debug("parsing layer '{}'", layerLabel);
 
     cJSON * chunk;
     cJSON_ArrayForEach(chunk, cJSON_GetObjectItemCaseSensitive(layer, "chunks"))
@@ -456,6 +456,8 @@ void Load(
     std::vector<std::span<size_t>> mapTileIndices;
     std::vector<std::span<glm::u32vec2>> mapTileOrigins;
 
+    spdlog::debug("renderable count {}", ::renderables.size());
+
     for (auto & renderable : ::renderables) {
       // only depth 0 layers can have collision
       if (renderable.depth != 0) { continue; }
@@ -475,13 +477,15 @@ void Load(
   cJSON_Delete(map);
 }
 
-void Render() {
+void Render(pulcher::core::SceneBundle & scene) {
   sg_apply_pipeline(pipeline);
+
+  glm::vec2 cameraOrigin = scene.cameraOrigin;
 
   sg_apply_uniforms(
     SG_SHADERSTAGE_VS
   , 0
-  , ::mapOrigin.data()
+  , &cameraOrigin.x
   , sizeof(float) * 2ul
   );
 
@@ -516,10 +520,10 @@ void Render() {
   }
 }
 
-void UiRender() {
+void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::Begin("Map Info");
 
-  ImGui::DragFloat2("map origin", &::mapOrigin[0]);
+  ImGui::DragInt2("map origin", &scene.cameraOrigin.x);
 
   ImGui::Separator();
   ImGui::Text("total tilemap sets: '%lu'", ::mapTilesets.size());

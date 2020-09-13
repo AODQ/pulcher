@@ -52,7 +52,6 @@ Plugin::~Plugin() {
 template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
   #if defined(__unix__)
     fn = reinterpret_cast<T>(::dlsym(this->data, label));
-    spdlog::info("Loading {} : {}", label, (void*)fn);
     if (!fn) {
       spdlog::critical(
         "Failed to load function '{}' for plugin '{}'", label, ::dlerror()
@@ -66,8 +65,6 @@ template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
       );
     }
   #endif
-
-  spdlog::debug("Loaded function '{}'", reinterpret_cast<void*>(fn));
 }
 
 void Plugin::Reload() {
@@ -89,7 +86,7 @@ void Plugin::Close() {
 void Plugin::Open() {
   #if defined(__unix__)
     this->data = ::dlopen(this->filename.c_str(), RTLD_LAZY | RTLD_LOCAL);
-    spdlog::info("Opened plugin {}; {}", this->filename.c_str(), this->data);
+    spdlog::debug("Opened plugin {}; {}", this->filename.c_str(), this->data);
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}", this->filename, ::dlerror()
@@ -110,7 +107,6 @@ void Plugin::Open() {
 std::vector<std::unique_ptr<Plugin>> plugins;
 
 void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
-  spdlog::info("Type {}", int(ctx.type));
   switch (ctx.type) {
     default: spdlog::critical("Unknown type in LoadPluginFunctions"); break;
     case pulcher::plugin::Type::UserInterface: {

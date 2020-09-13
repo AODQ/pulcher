@@ -1,4 +1,5 @@
 #include <pulcher-core/log.hpp>
+#include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-physics/intersections.hpp>
@@ -23,6 +24,8 @@ struct TilemapLayer {
     size_t imageTileIdx = -1ul;
     size_t tilesetIdx = -1ul;
     glm::vec2 origin;
+
+    bool Valid() const { return tilesetIdx != -1ul; }
   };
 
   std::vector<TileInfo> tileInfo;
@@ -96,8 +99,8 @@ void LoadMapGeometry(
   uint32_t width = 0ul, height = 0ul;
   for (auto & tileOrigins : mapTileOrigins)
   for (auto & origin : tileOrigins) {
-    width = std::max(width, origin.x);
-    height = std::max(height, origin.y);
+    width = std::max(width, origin.x+1);
+    height = std::max(height, origin.y+1);
   }
   ::tilemapLayer.width = width;
 
@@ -113,15 +116,19 @@ void LoadMapGeometry(
     auto const & tileIndices = mapTileIndices[tilesetIdx];
     auto const & tileOrigins = mapTileOrigins[tilesetIdx];
 
+    PUL_ASSERT(tilesets[tilesetIdx], continue;);
+
     for (size_t i = 0ul; i < tileIndices.size(); ++ i) {
       auto const & imageTileIdx = tileIndices[i];
       auto const & tileOrigin   = tileOrigins[i];
 
-      size_t const tileIdx = tileOrigin.y / width + tileOrigin.x;
-      if (tileIdx >= ::tilemapLayer.tileInfo.size()) {
-        spdlog::error("tile is OOB from tilemap layer");
-        continue;
-      }
+      PUL_ASSERT_CMP(
+        imageTileIdx, <, tilesets[tilesetIdx]->tiles.size(), continue;
+      );
+
+      size_t const tileIdx = tileOrigin.y * width + tileOrigin.x;
+
+      PUL_ASSERT_CMP(tileIdx, <, ::tilemapLayer.tileInfo.size(), continue;);
 
       auto & tile = ::tilemapLayer.tileInfo[tileIdx];
       if (tile.imageTileIdx != -1ul) {
@@ -136,16 +143,37 @@ void LoadMapGeometry(
   }
 }
 
-void ProcessPhysics(pulcher::physics::BufferedQueries & queries) {
+void ProcessPhysics(
+  pulcher::core::SceneBundle &
+, pulcher::physics::Queries & queries
+) {
 
-  for (auto & point : queries.GetComputing().intersectorPoints) {
+  auto computingIntersectorPoints = std::move(queries.intersectorPoints);
+  auto computingIntersectorRays = std::move(queries.intersectorRays);
+
+  queries.intersectorRays   = {};
+  queries.intersectorPoints = {};
+  queries.intersectorResultsPoints   = {};
+  queries.intersectorResultsRays = {};
+
+  for (auto & point : computingIntersectorPoints) {
     // -- get physics tile from acceleration structure
     size_t const tileIdx =
-      point.origin.y / 32ul / ::tilemapLayer.width + point.origin.x / 32ul
+      point.origin.y / 32ul * ::tilemapLayer.width + point.origin.x / 32ul
     ;
+
+    PUL_ASSERT_CMP(
+      tileIdx, <, ::tilemapLayer.tileInfo.size()
+    , queries.intersectorResultsPoints.emplace_back(false); continue;
+    );
 
     auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
     auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
+
+    if (!tileInfo.Valid()) {
+      queries.intersectorResultsPoints.emplace_back(false);
+      continue;
+    }
 
     pulcher::physics::Tile const & physicsTile =
       tileset->tiles[tileInfo.imageTileIdx];
@@ -155,50 +183,66 @@ void ProcessPhysics(pulcher::physics::BufferedQueries & queries) {
 
     // -- compute intersection SDF and accel hints
     if (physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f) {
-      point.outputCollision = true;
+      /* point.outputCollision = true; */
     }
+
+    // TODO just assume it always works
+    queries.intersectorResultsPoints.emplace_back(true);
   }
 
   /* for (auto & ray : queries.intersectorRays) { */
   /* } */
-
-  // submit results to queries (will perform copying of output intersections to
-  // results and ready it to be written to again)
-  queries.GetComputing().Submit();
-
-  // swap as buffer is ready to be used externally again
-  queries.Swap();
 }
 
-void UiRender(pulcher::physics::BufferedQueries & queries) {
+void UiRender(
+  pulcher::core::SceneBundle & scene
+, pulcher::physics::Queries & queries
+) {
   ImGui::Begin("Physics");
 
-  ImGui::Text("buffer query idx %lu", queries.QueryIdx());
+  ImGui::Text("tilemap width %u", ::tilemapLayer.width);
+  ImGui::Text("tile info size %lu", ::tilemapLayer.tileInfo.size());
+
   static bool collisionDetection = false;
   static size_t queryIdx = -1ul;
   static bool collision = false;
   static bool nextFrameCol = false;
+  static glm::uvec2 collisionOrigin;
   if (ImGui::Button("point-collision detection test")) {
     collisionDetection = true;
   }
+
+  ImGui::Text("Collision %s", (collision ? "yes" : "no"));
+  ImGui::Text("Collision Origin %ux%u", collisionOrigin.x, collisionOrigin.y);
+
+  ImGui::Text("MouseX/Y %ux%u", pulcher::gfx::MouseX(), pulcher::gfx::MouseY());
 
   if (collisionDetection) {
     ImGui::Text("OK, click the texel!");
   }
 
   if (nextFrameCol) {
-    collision = queries.Get().RetrieveQuery(queryIdx).collision;
+    collision = queries.RetrieveQuery(queryIdx).collision;
     queryIdx = -1ul;
     nextFrameCol = false;
   }
 
   if (collisionDetection && pulcher::gfx::LeftMousePressed()) {
     pulcher::physics::IntersectorPoint point;
+
     point.origin.x = pulcher::gfx::MouseX();
     point.origin.y = pulcher::gfx::MouseY();
 
-    queryIdx = queries.Get().AddQuery(point);
+    point.origin.x -= pulcher::gfx::DisplayWidth() / 2;
+    point.origin.y -= pulcher::gfx::DisplayHeight() / 2;
+
+    point.origin += scene.cameraOrigin;
+
+    collisionOrigin = point.origin ;
+
+    queryIdx = queries.AddQuery(point);
     nextFrameCol = true;
+    collisionDetection = false;
   }
 
   ImGui::End();
