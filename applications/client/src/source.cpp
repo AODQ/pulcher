@@ -28,7 +28,7 @@ auto StartupOptions() -> cxxopts::Options {
     (
       "r,resolution", "window resolution (0x0 means display resolution)"
     , cxxopts::value<std::string>()->default_value("0x0")
-    ) (
+    ) ("d,debug", "debug mode (mostly console printing)") (
       "h,help", "print usage"
     )
   ;
@@ -45,6 +45,9 @@ auto CreateUserConfig(cxxopts::ParseResult const & userResults)
 
   try {
     windowResolution = userResults["resolution"].as<std::string>();
+    if (userResults["debug"].as<bool>()) {
+      spdlog::set_level(spdlog::level::debug);
+    }
   } catch (cxxopts::OptionException & parseException) {
     spdlog::critical("{}", parseException.what());
   }
@@ -76,6 +79,9 @@ void PrintUserConfig(pulcher::core::Config const & config) {
 } // -- anon namespace
 
 int main(int argc, char const ** argv) {
+
+  spdlog::set_pattern("%^%M:%S |%$ %v");
+
   pulcher::core::Config userConfig;
 
   { // -- collect user options
