@@ -532,7 +532,7 @@ void UiRender() {
 
   ImGui::Text("map renderables: %lu", ::renderables.size());
   for (auto & renderable : ::renderables) {
-    ImGui::PushID(renderable.depth);
+    ImGui::PushID(&renderable);
     ImGui::Text("draw call: %lu", renderable.drawCallCount);
     ImGui::Text("depth: %d", renderable.depth);
     ImGui::Text("spritesheet: %lu", renderable.spritesheetPrimaryIdx);
