@@ -13,6 +13,26 @@ namespace {
   }
 }
 
+#define PUL_ASSERT(X, ...) \
+  if (!(X)) { \
+    spdlog::critical( \
+      "Assertion fail; {}@{}: '{}'" \
+    , __FILE__, __LINE__ \
+    , #X \
+    ); \
+    __VA_ARGS__ \
+  }
+
+#define PUL_ASSERT_CMP(X, CMP, Y, ...) \
+  if (!((X) CMP (Y))) { \
+    spdlog::critical( \
+      "Assertion fail; {}@{}: '{}' ({}) {} '{}' ({})" \
+    , __FILE__, __LINE__ \
+    , #X , (X) , #CMP , #Y , (Y) \
+    ); \
+    __VA_ARGS__ \
+  }
+
 ////////////////////////////////////////////////////////////////////////////////
 template<> struct fmt::formatter<glm::vec2> {
   std::string p = "{}";
