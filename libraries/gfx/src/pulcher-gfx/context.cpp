@@ -132,8 +132,9 @@ void pulcher::gfx::StartFrame(float deltaMs) {
   double xpos, ypos;
   glfwGetCursorPos(pulcher::gfx::DisplayWindow(), &xpos, &ypos);
 
-  mx = static_cast<uint32_t>(mx);
-  my = static_cast<uint32_t>(my);
+  mx = static_cast<uint32_t>(glm::max(0.0, xpos));
+  my = static_cast<uint32_t>(glm::max(0.0, ypos));
+
   mpress = glfwGetMouseButton(pulcher::gfx::DisplayWindow(), GLFW_MOUSE_BUTTON_LEFT);
 
   // -- validate display size in case of resize
