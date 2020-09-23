@@ -1,0 +1,7 @@
+the whole design of pulcher is to be plugin-driven with an ECS backend to
+facilitate entities when appropiate, however not everything is an entity. Some
+parts like map rendering exist merely as a plugin
+
+
+| ---- FRAME ----------------------------------------------------------------- |
+| Physx Swap | Entity Processing | Map Rendering | Entity Rendering | FB swap  |
