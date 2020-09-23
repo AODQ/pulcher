@@ -170,7 +170,7 @@ int main(int argc, char const ** argv) {
       plugins.map.Load(plugins, "base/map/test.json");
     }
 
-    plugins.userInterface.Dispatch();
+    plugins.userInterface.UiDispatch(plugins, sceneBundle);
     plugins.map.UiRender(sceneBundle);
     plugins.physics.UiRender(sceneBundle, physicsQueries);
 

@@ -16,7 +16,8 @@ namespace pulcher::plugin { struct Info; }
 
 namespace pulcher::plugin {
   struct UserInterfaceInfo {
-    void (*Dispatch)(
+    void (*UiDispatch)(
+      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
     ) = nullptr;
   };
 

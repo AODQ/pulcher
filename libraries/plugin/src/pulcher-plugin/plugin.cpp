@@ -118,7 +118,7 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
     } break;
     case pulcher::plugin::Type::UserInterface: {
       auto & unit = plugin.userInterface;
-      ctx.LoadFunction(unit.Dispatch, "Dispatch");
+      ctx.LoadFunction(unit.UiDispatch, "UiDispatch");
     } break;
     case pulcher::plugin::Type::Map: {
       auto & unit = plugin.map;
