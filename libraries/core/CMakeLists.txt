@@ -21,4 +21,6 @@ target_link_libraries(
   PUBLIC
     glm spdlog
     pulcher-util
+  PRIVATE
+    EnTT
 )

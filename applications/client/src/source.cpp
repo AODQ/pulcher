@@ -125,11 +125,19 @@ int main(int argc, char const ** argv) {
   , "plugins/plugin-physics.pulcher-plugin"
   );
 
+  pulcher::plugin::LoadPlugin(
+    plugins, pulcher::plugin::Type::Entity
+  , "plugins/plugin-entity.pulcher-plugin"
+  );
+
   ::PrintUserConfig(userConfig);
 
   plugins.map.Load(plugins, "base/map/test.json");
 
   pulcher::core::SceneBundle sceneBundle;
+
+  plugins.entity.StartScene(plugins, sceneBundle);
+
   pulcher::physics::Queries physicsQueries;
 
   auto timePreviousFrameBegin = std::chrono::high_resolution_clock::now();

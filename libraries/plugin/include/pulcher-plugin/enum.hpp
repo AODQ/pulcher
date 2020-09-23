@@ -8,6 +8,7 @@ namespace pulcher::plugin {
     UserInterface
   , Map
   , Physics
+  , Entity
   , Size
   };
 }

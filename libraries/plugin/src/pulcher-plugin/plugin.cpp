@@ -109,6 +109,13 @@ std::vector<std::unique_ptr<Plugin>> plugins;
 void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
   switch (ctx.type) {
     default: spdlog::critical("Unknown type in LoadPluginFunctions"); break;
+    case pulcher::plugin::Type::Entity: {
+      auto & unit = plugin.entity;
+      ctx.LoadFunction(unit.StartScene, "StartScene");
+      ctx.LoadFunction(unit.Shutdown,   "Shutdown");
+      ctx.LoadFunction(unit.Update,     "Update");
+      ctx.LoadFunction(unit.UiRender,   "UiRender");
+    } break;
     case pulcher::plugin::Type::UserInterface: {
       auto & unit = plugin.userInterface;
       ctx.LoadFunction(unit.Dispatch, "Dispatch");
