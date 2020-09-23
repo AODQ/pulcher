@@ -132,13 +132,11 @@ int main(int argc, char const ** argv) {
 
   ::PrintUserConfig(userConfig);
 
-  plugins.map.Load(plugins, "base/map/test.json");
-
   pulcher::core::SceneBundle sceneBundle;
-
-  plugins.entity.StartScene(plugins, sceneBundle);
-
   pulcher::physics::Queries physicsQueries;
+
+  plugins.map.Load(plugins, "base/map/test.json");
+  plugins.entity.StartScene(plugins, sceneBundle);
 
   auto timePreviousFrameBegin = std::chrono::high_resolution_clock::now();
 
@@ -152,27 +150,33 @@ int main(int argc, char const ** argv) {
 
     glfwPollEvents();
 
+    // -- logic
     pulcher::controls::UpdateControls(
       pulcher::gfx::DisplayWindow()
     , pulcher::gfx::DisplayWidth()
     , pulcher::gfx::DisplayHeight()
     , sceneBundle.playerController
     );
-
     plugins.physics.ProcessPhysics(sceneBundle, physicsQueries);
+    plugins.entity.Update(plugins, sceneBundle);
 
+    // -- rendering
     pulcher::gfx::StartFrame(deltaMs);
+    plugins.userInterface.UiDispatch(plugins, sceneBundle);
+    plugins.map.UiRender(sceneBundle);
+    plugins.entity.UiRender(sceneBundle);
+    plugins.physics.UiRender(sceneBundle, physicsQueries);
 
+    ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
       plugins.map.Shutdown();
       plugins.physics.ClearMapGeometry();
+      plugins.entity.Shutdown();
       pulcher::plugin::UpdatePlugins(plugins);
       plugins.map.Load(plugins, "base/map/test.json");
+      plugins.entity.StartScene(plugins, sceneBundle);
     }
-
-    plugins.userInterface.UiDispatch(plugins, sceneBundle);
-    plugins.map.UiRender(sceneBundle);
-    plugins.physics.UiRender(sceneBundle, physicsQueries);
+    ImGui::End();
 
     sg_pass_action passAction = {};
     passAction.colors[0].action = SG_ACTION_CLEAR;
