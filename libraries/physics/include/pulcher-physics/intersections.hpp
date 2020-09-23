@@ -31,6 +31,8 @@ namespace pulcher::physics {
   struct IntersectionResults {
     bool collision = false;
     glm::u32vec2 origin = glm::u32vec2(0);
+
+    size_t imageTileIdx, tilesetIdx;
   };
 
   struct Queries {

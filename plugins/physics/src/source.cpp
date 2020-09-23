@@ -42,27 +42,27 @@ pulcher::physics::Tileset ProcessTileset(
   pulcher::gfx::Image const & image
 ) {
   pulcher::physics::Tileset tileset;
-  tileset.tiles.reserve(image.width * image.height / 32ul);
+  tileset.tiles.reserve((image.width / 32ul) * (image.height / 32ul));
 
   // iterate thru every tile
-  for (size_t tileX = 0ul; tileX < image.width  / 32ul; ++ tileX)
-  for (size_t tileY = 0ul; tileY < image.height / 32ul; ++ tileY) {
+  for (size_t tileY = 0ul; tileY < image.height / 32ul; ++ tileY)
+  for (size_t tileX = 0ul; tileX < image.width  / 32ul; ++ tileX) {
     pulcher::physics::Tile tile;
 
     auto constexpr gridSize = pulcher::physics::Tile::gridSize;
 
     // iterate thru every texel of the tile, stratified by physics tile GridSize
-    for (size_t texelX = 0ul; texelX < 32ul; texelX += 32ul/gridSize)
-    for (size_t texelY = 0ul; texelY < 32ul; texelY += 32ul/gridSize) {
+    for (size_t texelY = 0ul; texelY < 32ul; texelY += 32ul/gridSize)
+    for (size_t texelX = 0ul; texelX < 32ul; texelX += 32ul/gridSize) {
 
       size_t const
-        localTexelX = tileX*32ul + texelX
-      , localTexelY = tileY*32ul + texelY
+        imageTexelX = tileX*32ul + texelX
+      , imageTexelY = tileY*32ul + texelY
       , gridTexelX = static_cast<size_t>(texelX*(gridSize/32.0f))
       , gridTexelY = static_cast<size_t>(texelY*(gridSize/32.0f))
       ;
 
-      float const alpha = image.data[image.Idx(localTexelX, localTexelY)].a;
+      float const alpha = image.data[(image.height-imageTexelY)*image.width + imageTexelX].a;
 
       tile.signedDistanceField[gridTexelX][gridTexelY] = alpha;
     }
@@ -183,11 +183,20 @@ void ProcessPhysics(
 
     // -- compute intersection SDF and accel hints
     if (physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f) {
-      /* point.outputCollision = true; */
+      /* queries */
+        /* .intersectorResultsPoints */
+        /* .emplace_back( */
+          /* true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx */
+        /* ); */
+    } else {
+      /* queries.intersectorResultsPoints.emplace_back(false); */
     }
 
-    // TODO just assume it always works
-    queries.intersectorResultsPoints.emplace_back(true);
+    queries
+      .intersectorResultsPoints
+      .emplace_back(
+        true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
+      );
   }
 
   /* for (auto & ray : queries.intersectorRays) { */
