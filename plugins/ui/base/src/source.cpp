@@ -57,49 +57,30 @@ void UiDispatch(
 
     // render keys in this format:
     /*
-          ^    _jump_
-        <   >  >dash>
-          v    VcrouchV
+          ^    | jump
+        <   >  | dash
+          v    | crouch
 
             <0.32, 0.83>
     */
 
-    // up
-    ::RenderKey(
-      current.movementVertical == Movement::Up
-    , "  ^", "   "
-    );
+    ImGui::Columns(2);
 
-    // jump
+    ::RenderKey(current.movementVertical == Movement::Up , "  ^", "   ");
+
+    ::RenderKey(current.movementHorizontal == Movement::Left , "<", " ");
     ImGui::SameLine();
-    ::RenderKey(current.jump, "   _jump_", "");
+    ::RenderKey(current.movementHorizontal == Movement::Right , "  >", "   ");
 
-    // left
-    ::RenderKey(
-      current.movementHorizontal == Movement::Left
-    , "<", " "
-    );
+    ::RenderKey(current.movementVertical == Movement::Down , "  v", "   ");
 
-    // right
-    ImGui::SameLine();
-    ::RenderKey(
-      current.movementHorizontal == Movement::Right
-    , "  >", "   "
-    );
+    ImGui::NextColumn();
 
-    // dash
-    ImGui::SameLine();
-    ::RenderKey(current.dash, " >dash>", "");
+    ::RenderKey(current.jump, "jump", "");
+    ::RenderKey(current.dash, "dash", "");
+    ::RenderKey(current.crouch, "crouch", "");
 
-    // down
-    ::RenderKey(
-      current.movementVertical == Movement::Down
-    , "  v", "   "
-    );
-
-    // crouch
-    ImGui::SameLine();
-    ::RenderKey(current.crouch, "   VcrouchV", "");
+    ImGui::NextColumn();
 
   ImGui::End();
 }
