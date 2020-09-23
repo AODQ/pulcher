@@ -1,3 +1,4 @@
+add_subdirectory(controls)
 add_subdirectory(core)
 add_subdirectory(gfx)
 add_subdirectory(network)

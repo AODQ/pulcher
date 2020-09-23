@@ -120,23 +120,7 @@ int & pulcher::gfx::DisplayWidth() { return ::displayWidth; }
 int & pulcher::gfx::DisplayHeight() { return ::displayHeight; }
 GLFWwindow * pulcher::gfx::DisplayWindow() { return ::displayWindow; }
 
-static uint32_t mx, my;
-bool mpress;
-
-  bool pulcher::gfx::LeftMousePressed() { return mpress; }
-  uint32_t pulcher::gfx::MouseX() { return mx; }
-  uint32_t pulcher::gfx::MouseY() { return my; }
-
 void pulcher::gfx::StartFrame(float deltaMs) {
-
-  double xpos, ypos;
-  glfwGetCursorPos(pulcher::gfx::DisplayWindow(), &xpos, &ypos);
-
-  mx = static_cast<uint32_t>(glm::max(0.0, xpos));
-  my = static_cast<uint32_t>(glm::max(0.0, ypos));
-
-  mpress = glfwGetMouseButton(pulcher::gfx::DisplayWindow(), GLFW_MOUSE_BUTTON_LEFT);
-
   // -- validate display size in case of resize
   glfwGetFramebufferSize(
     pulcher::gfx::DisplayWindow()

@@ -152,6 +152,13 @@ int main(int argc, char const ** argv) {
 
     glfwPollEvents();
 
+    pulcher::controls::UpdateControls(
+      pulcher::gfx::DisplayWindow()
+    , pulcher::gfx::DisplayWidth()
+    , pulcher::gfx::DisplayHeight()
+    , sceneBundle.playerController
+    );
+
     plugins.physics.ProcessPhysics(sceneBundle, physicsQueries);
 
     pulcher::gfx::StartFrame(deltaMs);

@@ -1,14 +1,14 @@
-add_library(pulcher-core STATIC)
+add_library(pulcher-controls STATIC)
 
-target_include_directories(pulcher-core PUBLIC "include/")
+target_include_directories(pulcher-controls PUBLIC "include/")
 target_sources(
-  pulcher-core
+  pulcher-controls
   PRIVATE
-    src/pulcher-core/log.cpp
+    src/pulcher-controls/controls.cpp
 )
 
 set_target_properties(
-  pulcher-core
+  pulcher-controls
     PROPERTIES
       COMPILE_FLAGS
         "-Wshadow -Wdouble-promotion -Wall -Wformat=2 -Wextra -Wpedantic \
@@ -17,11 +17,9 @@ set_target_properties(
 )
 
 target_link_libraries(
-  pulcher-core
+  pulcher-controls
   PUBLIC
-    glm spdlog
-    pulcher-util
-    pulcher-controls
+    glm
   PRIVATE
-    EnTT
+    glfw
 )
