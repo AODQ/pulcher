@@ -44,7 +44,7 @@ struct LayerRenderable {
 
   size_t spritesheetPrimaryIdx;
 
-  size_t drawCallCount;
+  size_t tileCount;
 
   int32_t depth; // tileDepthMin .. tileDepthMax
 
@@ -62,6 +62,10 @@ struct MapTileset {
 std::vector<MapTileset> mapTilesets;
 sg_pipeline pipeline;
 sg_shader shader;
+
+// TODO this should goto a debug plugin or something
+sg_pipeline tileHighlightPipeline;
+sg_shader tileHighlightShader;
 
 void MapSokolPushTile(
   std::string const & layer
@@ -126,7 +130,7 @@ void MapSokolPushTile(
   ;
 
   renderable->tileOrigins.emplace_back(glm::u32vec2(x, y));
-  renderable->tileIds.emplace_back(tileId);
+  renderable->tileIds.emplace_back(localTileId);
 
   for (
       auto const & v
@@ -199,14 +203,14 @@ void MapSokolEnd() {
     renderable.bindings.vertex_buffers[1] = renderable.bufferUvCoords;
     renderable.bindings.fs_images[0] =
       ::mapTilesets[renderable.spritesheetPrimaryIdx].spritesheet.Image();
-    renderable.drawCallCount = renderable.origins.size();
+    renderable.tileCount = renderable.origins.size();
 
     // dealloc vectors if no longer needed
     renderable.origins = {};
     renderable.uvCoords = {};
   }
 
-  { // -- shared shader
+  { // -- tilemap shader
     sg_shader_desc desc = {};
     desc.vs.uniform_blocks[0].size = sizeof(float) * 2;
     desc.vs.uniform_blocks[0].uniforms[0].name = "originOffset";
@@ -223,46 +227,47 @@ void MapSokolEnd() {
     desc.fs.images[0].name = "baseSampler";
     desc.fs.images[0].type = SG_IMAGETYPE_2D;
 
-    desc.vs.source =
-      "#version 330 core\n"
-      "uniform vec2 originOffset;\n"
-      "uniform float tileDepth;\n"
-      "uniform vec2 framebufferResolution;\n"
-      "in layout(location = 0) vec2 inVertexOrigin;\n"
-      "in layout(location = 1) vec2 inVertexUvCoord;\n"
-      "out vec2 uvCoord;\n"
-      "flat out uint tileId;\n"
-      "void main() {\n"
-      "  vec2 framebufferScale = vec2(2.0f) / framebufferResolution;\n"
-      "  vec2 vertexOrigin = inVertexOrigin*vec2(1,-1) * framebufferScale;\n"
-      "  vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;\n"
-      "  gl_Position = vec4(vertexOrigin, tileDepth, 1.0f);\n"
-      "  uvCoord = inVertexUvCoord;\n"
-      "  tileId = uint(gl_VertexID/6);\n"
-      "}\n"
-    ;
+    desc.vs.source = PUL_SHADER(
+      in layout(location = 0) vec2 inVertexOrigin;
+      in layout(location = 1) vec2 inVertexUvCoord;
 
-    desc.fs.source =
-      "#version 330 core\n"
-      "uniform sampler2D baseSampler;\n"
-      "in vec2 uvCoord;\n"
-      "flat in uint tileId;\n"
-      "out vec4 outColor;\n"
-      "void main() {\n"
-      "  outColor = texture(baseSampler, uvCoord);\n"
-      "  if (outColor.a < 0.01f) { discard; }\n"
-      "}\n"
-    ;
+      out vec2 uvCoord;
+      flat out uint tileId;
+
+      uniform vec2 originOffset;
+      uniform float tileDepth;
+      uniform vec2 framebufferResolution;
+
+      void main() {
+        vec2 framebufferScale = vec2(2.0f) / framebufferResolution;
+        vec2 vertexOrigin = (inVertexOrigin)*vec2(1,-1) * framebufferScale;
+        vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;
+        gl_Position = vec4(vertexOrigin, tileDepth, 1.0f);
+        uvCoord = inVertexUvCoord;
+        tileId = uint(gl_VertexID/6);
+      }
+    );
+
+    desc.fs.source = PUL_SHADER(
+      uniform sampler2D baseSampler;
+      in vec2 uvCoord;
+      flat in uint tileId;
+      out vec4 outColor;
+      void main() {
+        outColor = texture(baseSampler, uvCoord);
+        if (outColor.a < 0.01f) { discard; }
+      }
+    );
 
     shader = sg_make_shader(&desc);
   }
 
-  { // -- shared pipeline
+  { // -- tilemap pipeline
     sg_pipeline_desc desc = {};
 
     desc.layout.buffers[0].stride = 0u;
     desc.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
-    desc.layout.buffers[0].step_rate = 1u;
+    desc.layout.buffers[0].step_rate = 6u;
     desc.layout.attrs[0].buffer_index = 0;
     desc.layout.attrs[0].offset = 0;
     desc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
@@ -292,6 +297,93 @@ void MapSokolEnd() {
     desc.label = "map pipeline";
 
     pipeline = sg_make_pipeline(&desc);
+  }
+
+  { // -- tile highlight shader
+    sg_shader_desc desc = {};
+    desc.vs.uniform_blocks[0].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[0].uniforms[0].name = "mouseOffset";
+    desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
+    desc.vs.uniform_blocks[1].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[1].uniforms[0].name = "framebufferResolution";
+    desc.vs.uniform_blocks[1].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
+    desc.vs.uniform_blocks[2].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[2].uniforms[0].name = "originOffset";
+    desc.vs.uniform_blocks[2].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
+    desc.vs.source = PUL_SHADER(
+      uniform vec2 mouseOffset;
+      uniform vec2 framebufferResolution;
+      uniform vec2 originOffset;
+
+      vec2 origins[6] = vec2[6](
+        vec2(0.0f,  0.0f)
+      , vec2(1.0f,  1.0f)
+      , vec2(1.0f,  0.0f)
+
+      , vec2(0.0f,  0.0f)
+      , vec2(0.0f,  1.0f)
+      , vec2(1.0f,  1.0f)
+      );
+      out vec2 uvCoord;
+
+      void main() {
+        vec2 origin = origins[gl_VertexID];
+        vec2 applyFb = vec2(2.0f) / framebufferResolution;
+
+        // calculate centered mouse origin w/ vertex origin, offset by inverse
+        // of camera position to keep centered
+        vec2 mouseOrigin = mouseOffset;
+        mouseOrigin.y = framebufferResolution.y * 0.5f - mouseOrigin.y;
+        mouseOrigin.x -= framebufferResolution.x * 0.5f;
+        mouseOrigin += mod(originOffset, 32.0f);
+        vec2 vertexOrigin = 32.0f * origin + mouseOrigin;
+
+        // floor vertex origin to get it to stick to 32x32, then offset it by
+        // current camera position
+        vertexOrigin = floor(vertexOrigin/vec2(32.0f))*vec2(32.0f);
+        vertexOrigin -= mod(originOffset, 32.0f);
+
+        gl_Position = vec4(vertexOrigin * applyFb, 0.5f, 1.0f);
+        uvCoord = origin;
+      }
+    );
+
+    desc.fs.source = PUL_SHADER(
+      uniform sampler2D baseSampler;
+      in vec2 uvCoord;
+      out vec4 outColor;
+      void main() {
+        if (length(abs(uvCoord - vec2(0.5f))) <= 0.49f) { discard; }
+        outColor = vec4(uvCoord, 0.2f, 1.0f);
+      }
+    );
+
+    tileHighlightShader = sg_make_shader(&desc);
+  }
+
+  { // -- tile highlight pipeline
+    sg_pipeline_desc desc = {};
+
+    desc.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
+    desc.index_type = SG_INDEXTYPE_NONE;
+
+    desc.shader = tileHighlightShader;
+    desc.depth_stencil.depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL;
+    desc.depth_stencil.depth_write_enabled = true;
+
+    desc.blend.enabled = false;
+
+    desc.rasterizer.cull_mode = SG_CULLMODE_FRONT;
+    desc.rasterizer.alpha_to_coverage_enabled = false;
+    desc.rasterizer.face_winding = SG_FACEWINDING_CCW;
+    desc.rasterizer.sample_count = 1;
+
+    desc.label = "tile highlight pipeline";
+
+    tileHighlightPipeline = sg_make_pipeline(&desc);
   }
 }
 
@@ -516,8 +608,37 @@ void Render(pulcher::core::SceneBundle & scene) {
     , sizeof(float)
     );
 
-    sg_draw(0, renderable.drawCallCount, 1);
+    sg_draw(0, renderable.tileCount, 1);
   }
+
+  sg_apply_pipeline(tileHighlightPipeline);
+  sg_bindings bindings = {};
+  sg_apply_bindings(&bindings);
+
+  auto mouseOffset = glm::vec2(pulcher::gfx::MouseX(), pulcher::gfx::MouseY());
+
+  sg_apply_uniforms(
+    SG_SHADERSTAGE_VS
+  , 0
+  , &mouseOffset.x
+  , sizeof(float) * 2ul
+  );
+
+  sg_apply_uniforms(
+    SG_SHADERSTAGE_VS
+  , 1
+  , windowResolution.data()
+  , sizeof(float) * 2ul
+  );
+
+  sg_apply_uniforms(
+    SG_SHADERSTAGE_VS
+  , 2
+  , &cameraOrigin.x
+  , sizeof(float) * 2ul
+  );
+
+  sg_draw(0, 6, 1);
 }
 
 void UiRender(pulcher::core::SceneBundle & scene) {
@@ -525,10 +646,55 @@ void UiRender(pulcher::core::SceneBundle & scene) {
 
   ImGui::DragInt2("map origin", &scene.cameraOrigin.x);
 
+  static size_t tileInfoTilesetIdx = -1ul;
+
   ImGui::Separator();
   ImGui::Text("total tilemap sets: '%lu'", ::mapTilesets.size());
-  for (auto const & tileset : ::mapTilesets) {
+
+  for (size_t i = 0ul; i < ::mapTilesets.size(); ++ i) {
+    auto const & tileset = ::mapTilesets[i];
+    auto & spritesheet = tileset.spritesheet;
     ImGui::Text("filename: '%s'", tileset.spritesheet.filename.c_str());
+    ImGui::Text(
+      "tile width %lu height %lu total %lu"
+    , tileset.spritesheet.width / 32ul
+    , tileset.spritesheet.height / 32ul
+    , tileset.spritesheet.height / 32ul * tileset.spritesheet.width / 32ul
+    );
+    ImGui::Text("idx: %lu", i);
+
+    auto const imMax = ImGui::GetWindowContentRegionMax();
+    auto const imMin = ImGui::GetWindowContentRegionMin();
+    auto bounds = ImVec2(imMax.x - imMin.x, imMax.y - imMin.y);
+    bounds.x = glm::min(static_cast<size_t>(bounds.x), spritesheet.width);
+    bounds.y =
+      bounds.x * (spritesheet.height / static_cast<float>(spritesheet.width));
+
+    ImGui::Image(
+      reinterpret_cast<void *>(spritesheet.Image().id)
+    , bounds, ImVec2(0, 1), ImVec2(1, 0)
+    );
+
+    if (ImGui::IsItemClicked()) {
+      tileInfoTilesetIdx = i;
+      /* point.origin.y / 32ul * ::tilemapLayer.width + point.origin.x / 32ul */
+    }
+  }
+
+  if (tileInfoTilesetIdx != -1ul) {
+    ImGui::End();
+
+    bool open = true;
+    ImGui::Begin("Tile Info", &open);
+
+    if (!open) {
+      tileInfoTilesetIdx = -1ul;
+    }
+
+    ImGui::Text("tileset clicked %lu", tileInfoTilesetIdx);
+
+    ImGui::End();
+    ImGui::Begin("Map Info");
   }
 
   ImGui::Separator();
@@ -537,10 +703,11 @@ void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::Text("map renderables: %lu", ::renderables.size());
   for (auto & renderable : ::renderables) {
     ImGui::PushID(&renderable);
-    ImGui::Text("draw call: %lu", renderable.drawCallCount);
+    ImGui::Text("draw call: %lu", renderable.tileCount);
     ImGui::Text("depth: %d", renderable.depth);
     ImGui::Text("spritesheet: %lu", renderable.spritesheetPrimaryIdx);
     ImGui::Checkbox("enabled", &renderable.enabled);
+
     ImGui::Separator();
     ImGui::PopID();
   }
@@ -561,8 +728,13 @@ void Shutdown() {
   sg_destroy_pipeline(::pipeline);
   sg_destroy_shader(::shader);
 
+  sg_destroy_pipeline(::tileHighlightPipeline);
+  sg_destroy_shader(::tileHighlightShader);
+
   ::pipeline = {};
   ::shader = {};
+  ::tileHighlightPipeline = {};
+  ::tileHighlightShader = {};
   ::mapTilesets.clear();
 }
 
