@@ -5,6 +5,7 @@ target_sources(
   pulcher-core
   PRIVATE
     src/pulcher-core/log.cpp
+    src/pulcher-core/scene-bundle.cpp
 )
 
 set_target_properties(
