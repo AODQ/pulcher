@@ -18,3 +18,7 @@ namespace pulcher::gfx {
 
   void Shutdown();
 }
+
+#define PUL_SHADER(...) \
+  "#version 330 core\n" \
+  #__VA_ARGS__
