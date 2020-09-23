@@ -63,10 +63,6 @@ std::vector<MapTileset> mapTilesets;
 sg_pipeline pipeline;
 sg_shader shader;
 
-// TODO this should goto a debug plugin or something
-sg_pipeline tileHighlightPipeline;
-sg_shader tileHighlightShader;
-
 void MapSokolPushTile(
   std::string const & layer
 , uint32_t const x, uint32_t const y
@@ -298,93 +294,6 @@ void MapSokolEnd() {
 
     pipeline = sg_make_pipeline(&desc);
   }
-
-  { // -- tile highlight shader
-    sg_shader_desc desc = {};
-    desc.vs.uniform_blocks[0].size = sizeof(float) * 2;
-    desc.vs.uniform_blocks[0].uniforms[0].name = "mouseOffset";
-    desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
-
-    desc.vs.uniform_blocks[1].size = sizeof(float) * 2;
-    desc.vs.uniform_blocks[1].uniforms[0].name = "framebufferResolution";
-    desc.vs.uniform_blocks[1].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
-
-    desc.vs.uniform_blocks[2].size = sizeof(float) * 2;
-    desc.vs.uniform_blocks[2].uniforms[0].name = "originOffset";
-    desc.vs.uniform_blocks[2].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
-
-    desc.vs.source = PUL_SHADER(
-      uniform vec2 mouseOffset;
-      uniform vec2 framebufferResolution;
-      uniform vec2 originOffset;
-
-      vec2 origins[6] = vec2[6](
-        vec2(0.0f,  0.0f)
-      , vec2(1.0f,  1.0f)
-      , vec2(1.0f,  0.0f)
-
-      , vec2(0.0f,  0.0f)
-      , vec2(0.0f,  1.0f)
-      , vec2(1.0f,  1.0f)
-      );
-      out vec2 uvCoord;
-
-      void main() {
-        vec2 origin = origins[gl_VertexID];
-        vec2 applyFb = vec2(2.0f) / framebufferResolution;
-
-        // calculate centered mouse origin w/ vertex origin, offset by inverse
-        // of camera position to keep centered
-        vec2 mouseOrigin = mouseOffset;
-        mouseOrigin.y = framebufferResolution.y * 0.5f - mouseOrigin.y;
-        mouseOrigin.x -= framebufferResolution.x * 0.5f;
-        mouseOrigin += mod(originOffset, 32.0f);
-        vec2 vertexOrigin = 32.0f * origin + mouseOrigin;
-
-        // floor vertex origin to get it to stick to 32x32, then offset it by
-        // current camera position
-        vertexOrigin = floor(vertexOrigin/vec2(32.0f))*vec2(32.0f);
-        vertexOrigin -= mod(originOffset, 32.0f);
-
-        gl_Position = vec4(vertexOrigin * applyFb, 0.5f, 1.0f);
-        uvCoord = origin;
-      }
-    );
-
-    desc.fs.source = PUL_SHADER(
-      uniform sampler2D baseSampler;
-      in vec2 uvCoord;
-      out vec4 outColor;
-      void main() {
-        if (length(abs(uvCoord - vec2(0.5f))) <= 0.49f) { discard; }
-        outColor = vec4(uvCoord, 0.2f, 1.0f);
-      }
-    );
-
-    tileHighlightShader = sg_make_shader(&desc);
-  }
-
-  { // -- tile highlight pipeline
-    sg_pipeline_desc desc = {};
-
-    desc.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
-    desc.index_type = SG_INDEXTYPE_NONE;
-
-    desc.shader = tileHighlightShader;
-    desc.depth_stencil.depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL;
-    desc.depth_stencil.depth_write_enabled = true;
-
-    desc.blend.enabled = false;
-
-    desc.rasterizer.cull_mode = SG_CULLMODE_FRONT;
-    desc.rasterizer.alpha_to_coverage_enabled = false;
-    desc.rasterizer.face_winding = SG_FACEWINDING_CCW;
-    desc.rasterizer.sample_count = 1;
-
-    desc.label = "tile highlight pipeline";
-
-    tileHighlightPipeline = sg_make_pipeline(&desc);
-  }
 }
 
 } // -- namespace
@@ -610,35 +519,6 @@ void Render(pulcher::core::SceneBundle & scene) {
 
     sg_draw(0, renderable.tileCount, 1);
   }
-
-  sg_apply_pipeline(tileHighlightPipeline);
-  sg_bindings bindings = {};
-  sg_apply_bindings(&bindings);
-
-  auto mouseOffset = glm::vec2(pulcher::gfx::MouseX(), pulcher::gfx::MouseY());
-
-  sg_apply_uniforms(
-    SG_SHADERSTAGE_VS
-  , 0
-  , &mouseOffset.x
-  , sizeof(float) * 2ul
-  );
-
-  sg_apply_uniforms(
-    SG_SHADERSTAGE_VS
-  , 1
-  , windowResolution.data()
-  , sizeof(float) * 2ul
-  );
-
-  sg_apply_uniforms(
-    SG_SHADERSTAGE_VS
-  , 2
-  , &cameraOrigin.x
-  , sizeof(float) * 2ul
-  );
-
-  sg_draw(0, 6, 1);
 }
 
 void UiRender(pulcher::core::SceneBundle & scene) {
@@ -728,13 +608,8 @@ void Shutdown() {
   sg_destroy_pipeline(::pipeline);
   sg_destroy_shader(::shader);
 
-  sg_destroy_pipeline(::tileHighlightPipeline);
-  sg_destroy_shader(::tileHighlightShader);
-
   ::pipeline = {};
   ::shader = {};
-  ::tileHighlightPipeline = {};
-  ::tileHighlightShader = {};
   ::mapTilesets.clear();
 }
 

@@ -204,55 +204,13 @@ void ProcessPhysics(
 }
 
 void UiRender(
-  pulcher::core::SceneBundle & scene
-, pulcher::physics::Queries & queries
+  pulcher::core::SceneBundle &
+, pulcher::physics::Queries &
 ) {
   ImGui::Begin("Physics");
 
   ImGui::Text("tilemap width %u", ::tilemapLayer.width);
   ImGui::Text("tile info size %lu", ::tilemapLayer.tileInfo.size());
-
-  static bool collisionDetection = false;
-  static size_t queryIdx = -1ul;
-  static bool collision = false;
-  static bool nextFrameCol = false;
-  static glm::uvec2 collisionOrigin;
-  if (ImGui::Button("point-collision detection test")) {
-    collisionDetection = true;
-  }
-
-  ImGui::Text("Collision %s", (collision ? "yes" : "no"));
-  ImGui::Text("Collision Origin %ux%u", collisionOrigin.x, collisionOrigin.y);
-
-  ImGui::Text("MouseX/Y %ux%u", pulcher::gfx::MouseX(), pulcher::gfx::MouseY());
-
-  if (collisionDetection) {
-    ImGui::Text("OK, click the texel!");
-  }
-
-  if (nextFrameCol) {
-    collision = queries.RetrieveQuery(queryIdx).collision;
-    queryIdx = -1ul;
-    nextFrameCol = false;
-  }
-
-  if (collisionDetection && pulcher::gfx::LeftMousePressed()) {
-    pulcher::physics::IntersectorPoint point;
-
-    point.origin.x = pulcher::gfx::MouseX();
-    point.origin.y = pulcher::gfx::MouseY();
-
-    point.origin.x -= pulcher::gfx::DisplayWidth() / 2;
-    point.origin.y -= pulcher::gfx::DisplayHeight() / 2;
-
-    point.origin += scene.cameraOrigin;
-
-    collisionOrigin = point.origin ;
-
-    queryIdx = queries.AddQuery(point);
-    nextFrameCol = true;
-    collisionDetection = false;
-  }
 
   ImGui::End();
 }
