@@ -225,8 +225,8 @@ void MapSokolEnd() {
     desc.fs.images[0].type = SG_IMAGETYPE_2D;
 
     desc.vs.source = PUL_SHADER(
-      in layout(location = 0) vec2 inVertexOrigin;
-      in layout(location = 1) vec2 inVertexUvCoord;
+      layout(location = 0) in vec2 inVertexOrigin;
+      layout(location = 1) in vec2 inVertexUvCoord;
 
       out vec2 uvCoord;
       flat out uint tileId;

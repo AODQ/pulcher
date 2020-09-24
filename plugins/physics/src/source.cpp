@@ -62,8 +62,8 @@ void LoadSokolInfoRay() {
     desc.vs.uniform_blocks[1].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
     desc.vs.source = PUL_SHADER(
-      in layout(location = 0) vec2 inOrigin;
-      in layout(location = 1) float inCollision;
+      layout(location = 0) in vec2 inOrigin;
+      layout(location = 1) in float inCollision;
 
       uniform vec2 originOffset;
       uniform vec2 framebufferResolution;
@@ -164,8 +164,8 @@ void LoadSokolInfoPoint() {
     desc.vs.uniform_blocks[1].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
     desc.vs.source = PUL_SHADER(
-      in layout(location = 0) vec2 inOrigin;
-      in layout(location = 1) float inCollision;
+      layout(location = 0) in vec2 inOrigin;
+      layout(location = 1) in float inCollision;
 
       uniform vec2 originOffset;
       uniform vec2 framebufferResolution;
