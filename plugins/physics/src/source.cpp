@@ -261,7 +261,7 @@ TilemapLayer tilemapLayer;
 
 } // -- namespace
 
-extern "C" {
+// -- plugin functions
 
 pulcher::physics::Tileset ProcessTileset(
   pulcher::gfx::Image const & image
@@ -390,14 +390,16 @@ void ProcessPhysics(pulcher::core::SceneBundle & scene) {
 
     PUL_ASSERT_CMP(
       tileIdx, <, ::tilemapLayer.tileInfo.size()
-    , queries.intersectorResultsPoints.emplace_back(false); continue;
+    , queries.intersectorResultsPoints.emplace_back(); continue;
     );
 
     auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
     auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
 
     if (!tileInfo.Valid()) {
-      queries.intersectorResultsPoints.emplace_back(false, point.origin);
+      queries.intersectorResultsPoints.emplace_back(
+        pulcher::physics::IntersectionResults {false, point.origin}
+      );
       continue;
     }
 
@@ -412,10 +414,16 @@ void ProcessPhysics(pulcher::core::SceneBundle & scene) {
       queries
         .intersectorResultsPoints
         .emplace_back(
-          true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
+          pulcher::physics::IntersectionResults {
+            true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
+          }
         );
     } else {
-      queries.intersectorResultsPoints.emplace_back(false, point.origin);
+      queries.intersectorResultsPoints.emplace_back(
+        pulcher::physics::IntersectionResults {
+          false, point.origin
+        }
+      );
     }
   }
 
@@ -425,7 +433,7 @@ void ProcessPhysics(pulcher::core::SceneBundle & scene) {
       ray.beginOrigin, ray.endOrigin
     , [&](int32_t x, int32_t y) {
         if (hasIntersection) { return; }
-        auto origin = glm::u32vec2(x, y);
+        auto origin = glm::i32vec2(x, y);
         // -- get physics tile from acceleration structure
         size_t const tileIdx =
           origin.y / 32ul * ::tilemapLayer.width + origin.x / 32ul
@@ -448,12 +456,16 @@ void ProcessPhysics(pulcher::core::SceneBundle & scene) {
         auto texelOrigin = glm::u32vec2(origin.x%32u, origin.y%32u);
 
         // -- compute intersection SDF and accel hints
-        if (physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f) {
+        if (
+          physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f
+        ) {
           queries
             .intersectorResultsRays
             .emplace_back(
-              true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx,
-              ray.beginOrigin
+              pulcher::physics::IntersectionResults {
+                true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx,
+                ray.beginOrigin
+              }
             );
           hasIntersection = true;
           return;
@@ -464,7 +476,11 @@ void ProcessPhysics(pulcher::core::SceneBundle & scene) {
     if (!hasIntersection) {
       queries
         .intersectorResultsRays
-        .emplace_back(false, ray.endOrigin, 0ul, 0ul, ray.beginOrigin);
+        .emplace_back(
+          pulcher::physics::IntersectionResults {
+            false, ray.endOrigin, 0ul, 0ul, ray.beginOrigin
+          }
+        );
     }
   }
 }
@@ -585,5 +601,3 @@ void UiRender(pulcher::core::SceneBundle & scene) {
 
   ImGui::End();
 }
-
-} // -- extern C

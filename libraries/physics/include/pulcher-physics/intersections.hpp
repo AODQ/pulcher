@@ -16,25 +16,25 @@ namespace pulcher::physics {
     static IntersectorType constexpr type = IntersectorType::Point;
 
     // inputs
-    glm::u32vec2 origin;
+    glm::i32vec2 origin;
   };
 
   struct IntersectorRay {
     static IntersectorType constexpr type = IntersectorType::Ray;
 
     // inputs
-    glm::u32vec2 beginOrigin;
-    glm::u32vec2 endOrigin;
+    glm::i32vec2 beginOrigin;
+    glm::i32vec2 endOrigin;
   };
 
   struct IntersectionResults {
     bool collision = false;
-    glm::u32vec2 origin = glm::u32vec2(0);
+    glm::i32vec2 origin = glm::i32vec2(0);
 
-    size_t imageTileIdx, tilesetIdx;
+    size_t imageTileIdx = -1ul, tilesetIdx = -1ul;
 
     // TODO below can be removed in release I suppose
-    glm::u32vec2 debugBeginOrigin = glm::u32vec2(0);
+    glm::i32vec2 debugBeginOrigin = glm::i32vec2(0);
   };
 
   struct Queries {

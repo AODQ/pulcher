@@ -383,11 +383,13 @@ void Load(
     { // construct map tileset
       auto image = pulcher::gfx::Image::Construct(tilesetPath.string().c_str());
       ::mapTilesets
-        .emplace_back(
-          pulcher::gfx::Spritesheet::Construct(image)
-        , plugins.physics.ProcessTileset(image)
-        , cJSON_GetObjectItemCaseSensitive(tileset, "firstgid")->valueint
-        );
+        .emplace_back(MapTileset {
+            pulcher::gfx::Spritesheet::Construct(image)
+          , plugins.physics.ProcessTileset(image)
+          , static_cast<size_t>(
+              cJSON_GetObjectItemCaseSensitive(tileset, "firstgid")->valueint
+            )
+        });
     }
   }
 

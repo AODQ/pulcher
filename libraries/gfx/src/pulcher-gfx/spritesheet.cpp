@@ -63,11 +63,13 @@ pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
 }
 
 sg_image pulcher::gfx::Spritesheet::Image() const {
-  return sg_image(this->handle);
+  sg_image image;
+  image.id = this->handle;
+  return image;
 }
 
 void pulcher::gfx::Spritesheet::Destroy() {
   if (handle)
-    { sg_destroy_image(sg_image(handle)); }
+    { sg_destroy_image(this->Image()); }
   handle = 0ul;
 }
