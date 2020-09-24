@@ -288,8 +288,13 @@ int main(int argc, char const ** argv) {
       ::quit = false;
 
       filesToUpload = {
-        "pulcher-client", "plugins/ui-base.pulcher-plugin"
+        "pulcher-client"
+      , "plugins/ui-base.pulcher-plugin"
+      , "plugins/plugin-map.pulcher-plugin"
+      , "plugins/plugin-entity.pulcher-plugin"
+      , "plugins/plugin-physics.pulcher-plugin"
       , "lib/libglad.so", "lib/libimgui.so", "lib/libspdlog.so"
+      , "lib/libsokol.so"
       , "base/spritesheets/player/nygelstromn.png"
       , "base/spritesheets/player/data.json"
       , "base/spritesheets/map/calamity.png"
@@ -298,6 +303,7 @@ int main(int argc, char const ** argv) {
       , "base/spritesheets/map/lupanar.png"
       , "base/map/test.json"
       , "base/map/lupanar-tileset.json"
+      , "base/map/calamity.json"
       , "pulcher-launcher"
       };
 
