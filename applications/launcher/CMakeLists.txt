@@ -16,7 +16,7 @@ set_target_properties(
 target_link_libraries(
   pulcher-launcher
   PRIVATE
-    cxxopts pulcher-network tiny-process-library
+    argparse pulcher-network tiny-process-library
 )
 
 install(

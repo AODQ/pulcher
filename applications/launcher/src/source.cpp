@@ -2,7 +2,7 @@
 
 #include <pulcher-network/shared.hpp>
 
-#include <cxxopts.hpp>
+#include <argparse/argparse.hpp>
 #include <process.hpp>
 
 #include <chrono>
@@ -39,18 +39,12 @@ std::string networkIpAddress = "localhost";
 uint16_t networkPort = 6599u;
 std::shared_ptr<TinyProcessLib::Process> pulcherProcess;
 
-auto StartupOptions() -> cxxopts::Options {
-  auto options = cxxopts::Options("core-of-pulcher", "2D shooter game");
-  options.add_options()
-    (
-      "i,ip-address", "ip address to connect to"
-    , cxxopts::value<std::string>()->default_value("69.243.92.93")
-    ) (
-      "p,port", "port number to connect to"
-    , cxxopts::value<uint16_t>()->default_value("6599")
-    ) (
-      "h,help", "print usage"
-    )
+auto StartupOptions() -> argparse::ArgumentParser {
+  auto options = argparse::ArgumentParser("pulcher-launcher");
+  options
+    .add_argument("-i")
+    .help("ip address to connect to")
+    .default_value(std::string("69.243.92.93"))
   ;
 
   return options;
@@ -267,14 +261,8 @@ pulcher::network::ClientHost CreateNetworkClient() {
   return client;
 }
 
-void CreateLauncherConfig(cxxopts::ParseResult const & parseResult)
-{
-  try {
-    networkIpAddress = parseResult["ip-address"].as<std::string>();
-    networkPort      = parseResult["port"].as<uint16_t>();
-  } catch (cxxopts::OptionException & parseException) {
-    printf("cxxopts exception %s\n", parseException.what());
-  }
+void CreateLauncherConfig(argparse::ArgumentParser const & parseResult) {
+  networkIpAddress = parseResult.get<std::string>("-i");
 }
 
 } // -- namespace
@@ -291,14 +279,14 @@ int main(int argc, char const ** argv) {
   { // -- collect launcher options
     auto options = ::StartupOptions();
 
-    auto userResults = options.parse(argc, argv);
+    options.parse_args(argc, argv);
 
-    if (userResults.count("help")) {
-      printf("%s\n", options.help().c_str());
-      return 0;
-    }
+    /* if (userResults.count("help")) { */
+    /*   printf("%s\n", options.help().c_str()); */
+    /*   return 0; */
+    /* } */
 
-    ::CreateLauncherConfig(userResults);
+    ::CreateLauncherConfig(options);
   }
 
   auto network = pulcher::network::Network::Construct();

@@ -8,7 +8,7 @@
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 
-#include <cxxopts.hpp>
+#include <argparse/argparse.hpp>
 #include <glad/glad.hpp>
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>
@@ -21,21 +21,25 @@
 
 namespace {
 
-auto StartupOptions() -> cxxopts::Options {
-  auto options = cxxopts::Options("core-of-pulcher", "2D shooter game");
-  options.add_options()
-    (
-      "r,resolution", "window resolution (0x0 means display resolution)"
-    , cxxopts::value<std::string>()->default_value("0x0")
-    ) ("d,debug", "debug mode (mostly console printing)") (
-      "h,help", "print usage"
-    )
+auto StartupOptions() -> argparse::ArgumentParser {
+  auto options = argparse::ArgumentParser("pulcher-client", "0.0.0");
+  options
+    .add_argument("-r")
+    .help("window resolution (0x0 means display resolution)")
+    .default_value("0x0")
+  ;
+
+  options
+    .add_argument("-d")
+    .help("debug mode (console printing)")
+    .default_value(true)
+    .implicit_value(true)
   ;
 
   return options;
 }
 
-auto CreateUserConfig(cxxopts::ParseResult const & userResults)
+auto CreateUserConfig(argparse::ArgumentParser const & userResults)
   -> pulcher::core::Config
 {
   pulcher::core::Config config;
@@ -43,12 +47,12 @@ auto CreateUserConfig(cxxopts::ParseResult const & userResults)
   std::string windowResolution;
 
   try {
-    windowResolution = userResults["resolution"].as<std::string>();
-    if (userResults["debug"].as<bool>()) {
+    windowResolution = userResults.get<std::string>("-r");
+    if (userResults.get<bool>("-d")) {
       spdlog::set_level(spdlog::level::debug);
     }
-  } catch (cxxopts::OptionException & parseException) {
-    spdlog::critical("{}", parseException.what());
+  } catch (const std::runtime_error & err) {
+    spdlog::critical("{}", err.what());
   }
 
   // -- window resolution
@@ -86,14 +90,9 @@ int main(int argc, char const ** argv) {
   { // -- collect user options
     auto options = ::StartupOptions();
 
-    auto userResults = options.parse(argc, argv);
+    options.parse_args(argc, argv);
 
-    if (userResults.count("help")) {
-      printf("%s\n", options.help().c_str());
-      return 0;
-    }
-
-    userConfig = ::CreateUserConfig(userResults);
+    userConfig = ::CreateUserConfig(options);
   }
 
   #ifdef __unix__

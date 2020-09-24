@@ -232,7 +232,7 @@ int main(int argc, char const ** argv) {
     ci.fnConnect    = ::EventConnect;
     ci.fnDisconnect = ::EventDisconnect;
     ci.fnReceive    = ::EventReceive;
-    server = pulcher::network::ServerHost::Construct(ci);
+    server          = pulcher::network::ServerHost::Construct(ci);
   }
 
   // allow ctrl-c to end process properly by shutting server down
@@ -295,6 +295,7 @@ int main(int argc, char const ** argv) {
       , "plugins/plugin-physics.pulcher-plugin"
       , "lib/libglad.so", "lib/libimgui.so", "lib/libspdlog.so"
       , "lib/libsokol.so"
+      , "lib/libglfw.so"
       , "base/spritesheets/player/nygelstromn.png"
       , "base/spritesheets/player/data.json"
       , "base/spritesheets/map/calamity.png"
