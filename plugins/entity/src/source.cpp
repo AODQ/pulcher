@@ -13,12 +13,17 @@
 
 namespace {
 
+// probably should be renamed to Player or similar
 struct ComponentMoveable {
   glm::vec2 origin = {};
   glm::vec2 velocity = {};
-  size_t frameIntersectionQuery;
-  size_t frameGravityIntersectionQuery;
+
+  size_t physxQueryGravity = -1ul;
+  size_t physxQueryVelocity = -1ul;
+  size_t physxQuerySlope = -1ul;
   bool sleeping = false;
+
+  bool jumping = false;
 
   glm::vec2 CalculateProjectedOrigin() {
     return origin + velocity;
@@ -68,22 +73,33 @@ void EntityUpdate(
     auto & moveable = view.get<ComponentMoveable>(entity);
 
     pulcher::physics::IntersectionResults previousFrameGravityIntersection;
-    if (moveable.frameGravityIntersectionQuery != 0ul) {
+    if (moveable.physxQueryGravity != -1ul) {
       previousFrameGravityIntersection =
         scene.physicsQueries.RetrieveQuery(
-          moveable.frameGravityIntersectionQuery
+          moveable.physxQueryGravity
         );
+    }
+
+    pulcher::physics::IntersectionResults intersectionSlope;
+    if (moveable.physxQuerySlope != -1ul) {
+      intersectionSlope =
+        scene.physicsQueries.RetrieveQuery(moveable.physxQuerySlope);
     }
 
     { // -- apply projected movement physics
       pulcher::physics::IntersectionResults previousFrameIntersection;
-      if (moveable.frameIntersectionQuery != 0ul) {
+      if (moveable.physxQueryVelocity != -1ul) {
         previousFrameIntersection =
-          scene.physicsQueries.RetrieveQuery(moveable.frameIntersectionQuery);
+          scene.physicsQueries.RetrieveQuery(moveable.physxQueryVelocity);
       }
 
       if (previousFrameIntersection.collision) {
-        /* moveable.origin = previousFrameIntersection.origin; */
+        if (!previousFrameGravityIntersection.collision) {
+          moveable.origin.y += moveable.velocity.y;
+        }
+        if (!intersectionSlope.collision) {
+          moveable.origin = intersectionSlope.origin;
+        }
         moveable.velocity = {};
       } else {
         moveable.origin = moveable.CalculateProjectedOrigin();
@@ -91,37 +107,58 @@ void EntityUpdate(
       }
     }
 
+    // ground player
+    if (!moveable.jumping && previousFrameGravityIntersection.collision) {
+      moveable.origin.y = previousFrameGravityIntersection.origin.y - 1.0f;
+    }
+
     // -- process inputs / events
 
     auto & current = scene.playerController.current;
-    moveable.velocity.x = static_cast<float>(current.movementHorizontal);
-    moveable.velocity.y = static_cast<float>(current.movementVertical);
+    moveable.velocity.x = static_cast<float>(current.movementHorizontal)*0.15f;
+    moveable.velocity.y = static_cast<float>(current.movementVertical)*0.15f;
     if (current.dash) { moveable.velocity *= 16.0f; }
 
-    if (current.jump) {
-      moveable.velocity.y -= 5.0f;
+    moveable.jumping = current.jump;
+    if (moveable.jumping) {
+      moveable.velocity.y -= 1.5f;
     }
 
-    /* // gravity if gravity check failed */
-    /* if (!previousFrameGravityIntersection.collision) { */
-    /*   moveable.velocity.y += 3.0f; */
-    /* } */
+    // gravity if gravity check failed
+    if (!previousFrameGravityIntersection.collision) {
+      moveable.velocity.y += 1.0f;
+    }
 
     // check for next frame physics intersection
-    moveable.frameIntersectionQuery = 0ul;
+    moveable.physxQueryVelocity = -1ul;
     if (!moveable.sleeping && !current.crouch) {
       pulcher::physics::IntersectorRay ray;
-      ray.beginOrigin = moveable.origin;
-      ray.endOrigin = moveable.CalculateProjectedOrigin();
-      moveable.frameIntersectionQuery = scene.physicsQueries.AddQuery(ray);
+      ray.beginOrigin = glm::round(moveable.origin);
+      ray.endOrigin = glm::round(moveable.CalculateProjectedOrigin());
+      moveable.physxQueryVelocity = scene.physicsQueries.AddQuery(ray);
+    }
+
+    // check for slopes
+    moveable.physxQuerySlope = -1ul;
+    if (!moveable.sleeping && !current.crouch) {
+      pulcher::physics::IntersectorRay ray;
+      ray.beginOrigin = glm::round(moveable.origin);
+      auto origin = moveable.CalculateProjectedOrigin();
+      ray.endOrigin =
+        glm::round(
+          origin
+        + glm::vec2(0, -5) * glm::max(1.0f, glm::length(moveable.velocity))
+        );
+      moveable.physxQuerySlope = scene.physicsQueries.AddQuery(ray);
     }
 
     // apply gravity intersection test
+    moveable.physxQueryGravity = -1ul;
     if (!moveable.sleeping && !current.crouch) {
       pulcher::physics::IntersectorRay ray;
-      ray.beginOrigin = moveable.origin;
-      ray.endOrigin = moveable.origin + glm::vec2(0, 1);
-      moveable.frameGravityIntersectionQuery =
+      ray.beginOrigin = glm::round(moveable.origin);
+      ray.endOrigin = glm::round(moveable.origin + glm::vec2(0, 1));
+      moveable.physxQueryGravity =
         scene.physicsQueries.AddQuery(ray);
     }
 
@@ -154,11 +191,11 @@ void UiRender(pulcher::core::SceneBundle & scene) {
       ImGui::Checkbox("sleeping", &self.sleeping);
       pul::imgui::Text(
         "physics projection query ID {}"
-      , self.frameIntersectionQuery & 0xFFFF
+      , self.physxQueryVelocity & 0xFFFF
       );
-      if (self.frameIntersectionQuery) {
+      if (self.physxQueryVelocity) {
         auto intersection =
-          scene.physicsQueries.RetrieveQuery(self.frameIntersectionQuery)
+          scene.physicsQueries.RetrieveQuery(self.physxQueryVelocity)
         ;
         pul::imgui::Text(
           " -- collision {}", intersection.collision
@@ -167,13 +204,11 @@ void UiRender(pulcher::core::SceneBundle & scene) {
 
       pul::imgui::Text(
         "physics gravity query ID {}"
-      , self.frameGravityIntersectionQuery & 0xFFFF
+      , self.physxQueryGravity & 0xFFFF
       );
-      if (self.frameGravityIntersectionQuery) {
+      if (self.physxQueryGravity) {
         auto intersection =
-          scene.physicsQueries.RetrieveQuery(
-            self.frameGravityIntersectionQuery
-          );
+          scene.physicsQueries.RetrieveQuery(self.physxQueryGravity);
         pul::imgui::Text(" -- collision {}", intersection.collision);
       }
     }
