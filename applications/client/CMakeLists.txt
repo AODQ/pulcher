@@ -19,7 +19,7 @@ target_link_libraries(
   pulcher-client
   PRIVATE
     cxxopts pulcher-core pulcher-gfx pulcher-plugin pulcher-network
-    pulcher-physics
+    pulcher-physics spdlog
 )
 
 install(

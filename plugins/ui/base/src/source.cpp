@@ -1,8 +1,8 @@
 /* pulcher | aodq.net */
 
-#include <pulcher-core/log.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
+#include <pulcher-util/log.hpp>
 
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>

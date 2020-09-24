@@ -20,6 +20,4 @@ target_link_libraries(
   pulcher-network
   PUBLIC
     enet
-  PRIVATE
-    pulcher-util
 )

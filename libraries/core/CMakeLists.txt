@@ -4,7 +4,6 @@ target_include_directories(pulcher-core PUBLIC "include/")
 target_sources(
   pulcher-core
   PRIVATE
-    src/pulcher-core/log.cpp
     src/pulcher-core/scene-bundle.cpp
 )
 
@@ -20,9 +19,11 @@ set_target_properties(
 target_link_libraries(
   pulcher-core
   PUBLIC
-    glm spdlog
+    glm
     pulcher-util
+    spdlog
     pulcher-controls
+    pulcher-physics
   PRIVATE
     EnTT
 )

@@ -9,8 +9,9 @@
 
 // file can not be included in headers
 
+#include <pulcher-util/log.hpp>
+
 #include <imgui/imgui.hpp>
-#include <pulcher-core/log.hpp>
 
 namespace pul::imgui {
   template <typename... T> void Text(char const * label, T && ... fmts) {

@@ -1,10 +1,9 @@
 #pragma once
 
 #include <pulcher-controls/controls.hpp>
+#include <pulcher-physics/intersections.hpp>
 
 #include <glm/glm.hpp>
-
-#include <memory>
 
 namespace entt { template <typename> class basic_registry; }
 namespace entt { enum class entity : std::uint32_t; }
@@ -15,6 +14,7 @@ namespace pulcher::core {
     glm::i32vec2 cameraOrigin = {};
 
     pulcher::controls::Controller playerController;
+    pulcher::physics::Queries physicsQueries;
 
     static SceneBundle Construct();
   };

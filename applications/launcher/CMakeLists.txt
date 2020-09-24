@@ -18,7 +18,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-static")
 target_link_libraries(
   pulcher-launcher
   PRIVATE
-    cxxopts pulcher-util pulcher-network tiny-process-library
+    cxxopts pulcher-network tiny-process-library
 )
 
 install(

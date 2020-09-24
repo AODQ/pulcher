@@ -5,6 +5,7 @@ target_sources(
   pulcher-util
   PRIVATE
     src/pulcher-util/enum.cpp
+    src/pulcher-util/log.cpp
 )
 
 set_target_properties(
@@ -16,4 +17,9 @@ set_target_properties(
     POSITION_INDEPENDENT_CODE ON
 )
 
-target_link_libraries(pulcher-util)
+target_link_libraries(
+  pulcher-util
+  PUBLIC
+    spdlog
+    glm
+)

@@ -1,10 +1,9 @@
-#include <pulcher-core/log.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/imgui.hpp>
-#include <pulcher-physics/intersections.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/log.hpp>
 
 #include <entt/entt.hpp>
 
@@ -16,7 +15,11 @@ namespace {
 struct ComponentMoveable {
   glm::vec2 origin = {};
   glm::vec2 velocity = {};
-  pulcher::physics::IntersectionResults previousFrameIntersectionResults = {};
+  size_t frameIntersectionQuery;
+
+  glm::vec2 CalculateProjectedOrigin() {
+    return origin + velocity;
+  }
 };
 
 struct ComponentLabel {
@@ -49,7 +52,7 @@ void Shutdown() {
   pulcher::core::Registry() = {};
 }
 
-void Update(
+void EntityUpdate(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
   auto & registry = pulcher::core::Registry();
@@ -58,10 +61,34 @@ void Update(
     registry.view<ComponentControllable, ComponentMoveable, ComponentCamera>();
 
   for (auto entity : view) {
-    // apply moveable controls
+
     auto & moveable = view.get<ComponentMoveable>(entity);
-    moveable.origin += moveable.velocity;
-    moveable.velocity = {};
+
+    { // -- apply projected movement physics
+      pulcher::physics::IntersectionResults previousFrameIntersection;
+      if (moveable.frameIntersectionQuery != 0ul) {
+        previousFrameIntersection =
+          scene.physicsQueries.RetrieveQuery(moveable.frameIntersectionQuery);
+      }
+
+      if (previousFrameIntersection.collision) {
+        moveable.origin = previousFrameIntersection.origin;
+        moveable.velocity = {};
+      } else {
+        moveable.origin = moveable.CalculateProjectedOrigin();
+        moveable.velocity = {};
+      }
+    }
+
+    // process events probably...
+
+    // check for next frame physics intersection
+    moveable.frameIntersectionQuery = 0ul;
+    if (moveable.velocity != glm::vec2(0.0f)) {
+      pulcher::physics::IntersectorPoint point;
+      point.origin = moveable.CalculateProjectedOrigin();
+      moveable.frameIntersectionQuery = scene.physicsQueries.AddQuery(point);
+    }
 
     // center camera on this
     scene.cameraOrigin = glm::i32vec2(moveable.origin);
@@ -72,7 +99,7 @@ void Update(
   }
 }
 
-void UiRender(pulcher::core::SceneBundle &) {
+void UiRender(pulcher::core::SceneBundle & scene) {
   auto & registry = pulcher::core::Registry();
 
   ImGui::Begin("Entity");
@@ -93,6 +120,14 @@ void UiRender(pulcher::core::SceneBundle &) {
       pul::imgui::Text(
         "velocity <{:2f}, {:2f}>", self.velocity.x, self.velocity.y
       );
+      pul::imgui::Text("physics query ID {}", self.frameIntersectionQuery);
+      if (self.frameIntersectionQuery) {
+        auto previousFrameIntersection =
+          scene.physicsQueries.RetrieveQuery(self.frameIntersectionQuery);
+        pul::imgui::Text(
+          " -- collision {}", previousFrameIntersection .collision
+        );
+      }
     }
 
     if (registry.has<ComponentControllable>(entity)) {

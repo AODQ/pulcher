@@ -1,9 +1,9 @@
-#include <pulcher-core/log.hpp>
 #include <pulcher-core/scene-bundle.hpp>
-#include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/context.hpp>
+#include <pulcher-gfx/image.hpp>
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-physics/tileset.hpp>
+#include <pulcher-util/log.hpp>
 
 #include <imgui/imgui.hpp>
 
@@ -143,10 +143,9 @@ void LoadMapGeometry(
   }
 }
 
-void ProcessPhysics(
-  pulcher::core::SceneBundle &
-, pulcher::physics::Queries & queries
-) {
+void ProcessPhysics(pulcher::core::SceneBundle & scene) {
+
+  auto & queries = scene.physicsQueries;
 
   auto computingIntersectorPoints = std::move(queries.intersectorPoints);
   auto computingIntersectorRays = std::move(queries.intersectorRays);
@@ -183,30 +182,21 @@ void ProcessPhysics(
 
     // -- compute intersection SDF and accel hints
     if (physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f) {
-      /* queries */
-        /* .intersectorResultsPoints */
-        /* .emplace_back( */
-          /* true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx */
-        /* ); */
+      queries
+        .intersectorResultsPoints
+        .emplace_back(
+          true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
+        );
     } else {
-      /* queries.intersectorResultsPoints.emplace_back(false); */
+      queries.intersectorResultsPoints.emplace_back(false);
     }
-
-    queries
-      .intersectorResultsPoints
-      .emplace_back(
-        true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
-      );
   }
 
   /* for (auto & ray : queries.intersectorRays) { */
   /* } */
 }
 
-void UiRender(
-  pulcher::core::SceneBundle &
-, pulcher::physics::Queries &
-) {
+void UiRender(pulcher::core::SceneBundle &) {
   ImGui::Begin("Physics");
 
   ImGui::Text("tilemap width %u", ::tilemapLayer.width);

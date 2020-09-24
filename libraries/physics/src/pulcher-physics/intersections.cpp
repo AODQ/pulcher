@@ -1,7 +1,7 @@
 #include <pulcher-physics/intersections.hpp>
 
-#include <pulcher-core/log.hpp>
 #include <pulcher-util/enum.hpp>
+#include <pulcher-util/log.hpp>
 
 size_t pulcher::physics::Queries::AddQuery(
   pulcher::physics::IntersectorPoint const & intersector

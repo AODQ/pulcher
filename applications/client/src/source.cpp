@@ -1,13 +1,12 @@
 /* pulcher | aodq.net */
 
 #include <pulcher-core/config.hpp>
-#include <pulcher-core/log.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
-#include <pulcher-physics/intersections.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/enum.hpp>
+#include <pulcher-util/log.hpp>
 
 #include <cxxopts.hpp>
 #include <glad/glad.hpp>
@@ -133,7 +132,6 @@ int main(int argc, char const ** argv) {
   ::PrintUserConfig(userConfig);
 
   pulcher::core::SceneBundle sceneBundle;
-  pulcher::physics::Queries physicsQueries;
 
   plugins.map.Load(plugins, "base/map/test.json");
   plugins.entity.StartScene(plugins, sceneBundle);
@@ -157,15 +155,15 @@ int main(int argc, char const ** argv) {
     , pulcher::gfx::DisplayHeight()
     , sceneBundle.playerController
     );
-    plugins.physics.ProcessPhysics(sceneBundle, physicsQueries);
-    plugins.entity.Update(plugins, sceneBundle);
+    plugins.physics.ProcessPhysics(sceneBundle);
+    plugins.entity.EntityUpdate(plugins, sceneBundle);
 
     // -- rendering
     pulcher::gfx::StartFrame(deltaMs);
     plugins.userInterface.UiDispatch(plugins, sceneBundle);
     plugins.map.UiRender(sceneBundle);
     plugins.entity.UiRender(sceneBundle);
-    plugins.physics.UiRender(sceneBundle, physicsQueries);
+    plugins.physics.UiRender(sceneBundle);
 
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {

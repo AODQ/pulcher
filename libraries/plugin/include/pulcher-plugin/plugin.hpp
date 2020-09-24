@@ -10,7 +10,6 @@
 
 namespace pulcher::core { struct SceneBundle; }
 namespace pulcher::gfx { struct Image; }
-namespace pulcher::physics { struct Queries; }
 namespace pulcher::physics { struct Tileset; }
 namespace pulcher::plugin { struct Info; }
 
@@ -26,7 +25,7 @@ namespace pulcher::plugin {
       pulcher::plugin::Info const &, pulcher::core::SceneBundle &
     ) = nullptr;
     void (*Shutdown)();
-    void (*Update)(
+    void (*EntityUpdate)(
       pulcher::plugin::Info const &, pulcher::core::SceneBundle &
     ) = nullptr;
     void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
@@ -52,14 +51,8 @@ namespace pulcher::plugin {
     , std::vector<std::span<size_t>>                 const & mapTileIndices
     , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
     ) = nullptr;
-    void (*ProcessPhysics)(
-      pulcher::core::SceneBundle &
-    , pulcher::physics::Queries &
-    ) = nullptr;
-    void (*UiRender)(
-      pulcher::core::SceneBundle &
-    , pulcher::physics::Queries &
-    ) = nullptr;
+    void (*ProcessPhysics)(pulcher::core::SceneBundle &) = nullptr;
+    void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
   };
 
   struct Info {

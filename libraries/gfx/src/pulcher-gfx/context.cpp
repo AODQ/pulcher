@@ -1,7 +1,7 @@
 #include <pulcher-gfx/context.hpp>
 
-#include <pulcher-core/log.hpp>
 #include <pulcher-core/config.hpp>
+#include <pulcher-util/log.hpp>
 
 #include <glad/glad.hpp>
 #include <GLFW/glfw3.h>
