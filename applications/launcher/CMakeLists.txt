@@ -13,8 +13,6 @@ set_target_properties(
       "-Wshadow -Wdouble-promotion -Wall -Wformat=2 -Wextra -Wpedantic -Wundef"
 )
 
-set(CMAKE_EXE_LINKER_FLAGS "-static")
-
 target_link_libraries(
   pulcher-launcher
   PRIVATE
