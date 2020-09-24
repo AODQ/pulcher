@@ -22,6 +22,7 @@ if (PULCHER_PLATFORM STREQUAL "Linux")
     pulcher-server
     PRIVATE
       pulcher-network
+      pulcher-util
   )
 
   install(
