@@ -382,10 +382,16 @@ void Load(
 
     { // construct map tileset
       auto image = pulcher::gfx::Image::Construct(tilesetPath.string().c_str());
+
+      // get plugin to load tileset
+      pulcher::physics::Tileset physxTileset;
+      plugins.physics.ProcessTileset(physxTileset, image);
+
+      // emplace tileset w/ spritesheet and related tilemap info
       ::mapTilesets
         .emplace_back(MapTileset {
             pulcher::gfx::Spritesheet::Construct(image)
-          , plugins.physics.ProcessTileset(image)
+          , std::move(physxTileset)
           , static_cast<size_t>(
               cJSON_GetObjectItemCaseSensitive(tileset, "firstgid")->valueint
             )

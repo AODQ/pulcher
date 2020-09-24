@@ -42,8 +42,9 @@ namespace pulcher::plugin {
   };
 
   struct Physics {
-    pulcher::physics::Tileset (*ProcessTileset)(
-      pulcher::gfx::Image const &
+    void (*ProcessTileset)(
+      pulcher::physics::Tileset &
+    , pulcher::gfx::Image const &
     ) = nullptr;
     void (*ClearMapGeometry)() = nullptr;
     void (*LoadMapGeometry)(

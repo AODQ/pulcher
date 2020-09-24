@@ -262,11 +262,13 @@ TilemapLayer tilemapLayer;
 } // -- namespace
 
 // -- plugin functions
+extern "C" {
 
-pulcher::physics::Tileset ProcessTileset(
-  pulcher::gfx::Image const & image
+void ProcessTileset(
+  pulcher::physics::Tileset & tileset
+, pulcher::gfx::Image const & image
 ) {
-  pulcher::physics::Tileset tileset;
+  tileset = {};
   tileset.tiles.reserve((image.width / 32ul) * (image.height / 32ul));
 
   // iterate thru every tile
@@ -294,8 +296,6 @@ pulcher::physics::Tileset ProcessTileset(
 
     tileset.tiles.emplace_back(tile);
   }
-
-  return tileset;
 }
 
 void ClearMapGeometry() {
@@ -600,4 +600,6 @@ void UiRender(pulcher::core::SceneBundle & scene) {
   }
 
   ImGui::End();
+}
+
 }
