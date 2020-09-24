@@ -23,9 +23,8 @@ namespace pulcher::physics {
     static IntersectorType constexpr type = IntersectorType::Ray;
 
     // inputs
-    glm::u32vec2 origin;
-    glm::vec2 direction;
-    float maxDistance = -1.0f; // -1.0f indicates no max distance
+    glm::u32vec2 beginOrigin;
+    glm::u32vec2 endOrigin;
   };
 
   struct IntersectionResults {
@@ -33,6 +32,9 @@ namespace pulcher::physics {
     glm::u32vec2 origin = glm::u32vec2(0);
 
     size_t imageTileIdx, tilesetIdx;
+
+    // TODO below can be removed in release I suppose
+    glm::u32vec2 debugBeginOrigin = glm::u32vec2(0);
   };
 
   struct Queries {

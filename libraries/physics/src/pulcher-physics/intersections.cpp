@@ -32,7 +32,7 @@ pulcher::physics::Queries::RetrieveQuery(size_t handle) {
     return intersectorResultsPoints[idx];
   } else if (handle & Idx(pulcher::physics::IntersectorType::Ray)) {
     size_t idx = handle & ~Idx(pulcher::physics::IntersectorType::Ray);
-    PUL_ASSERT_CMP(idx, <, intersectorResultsPoints.size(), return {};);
+    PUL_ASSERT_CMP(idx, <, intersectorResultsRays.size(), return {};);
     return intersectorResultsRays[idx];
   } else {
     spdlog::critical("could not retrieve query of unknown handle '{}'", handle);

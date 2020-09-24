@@ -160,10 +160,6 @@ int main(int argc, char const ** argv) {
 
     // -- rendering
     pulcher::gfx::StartFrame(deltaMs);
-    plugins.userInterface.UiDispatch(plugins, sceneBundle);
-    plugins.map.UiRender(sceneBundle);
-    plugins.entity.UiRender(sceneBundle);
-    plugins.physics.UiRender(sceneBundle);
 
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
@@ -183,6 +179,11 @@ int main(int argc, char const ** argv) {
       &passAction
     , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
     );
+
+    plugins.userInterface.UiDispatch(plugins, sceneBundle);
+    plugins.map.UiRender(sceneBundle);
+    plugins.entity.UiRender(sceneBundle);
+    plugins.physics.UiRender(sceneBundle);
 
     plugins.map.Render(sceneBundle);
 

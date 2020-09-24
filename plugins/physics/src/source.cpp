@@ -4,13 +4,238 @@
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-physics/tileset.hpp>
 #include <pulcher-util/log.hpp>
+#include <pulcher-util/math.hpp>
 
+#include <glad/glad.hpp>
 #include <imgui/imgui.hpp>
 
 #include <span>
 #include <vector>
 
 namespace {
+
+struct DebugRenderInfo {
+  sg_buffer bufferOrigin;
+  sg_buffer bufferCollision;
+  sg_bindings bindings;
+  sg_pipeline pipeline;
+  sg_shader program;
+};
+
+
+constexpr size_t debugRenderMaxPoints = 1'000;
+constexpr size_t debugRenderMaxRays = 1'000;
+DebugRenderInfo debugRenderPoint = {};
+DebugRenderInfo debugRenderRay = {};
+
+void LoadSokolInfoRay() {
+  { // -- origin buffer
+    sg_buffer_desc desc = {};
+    desc.size = debugRenderMaxRays * sizeof(float) * 4;
+    desc.usage = SG_USAGE_STREAM;
+    desc.content = nullptr;
+    desc.label = "debug-render-info-ray-origin-buffer";
+    debugRenderRay.bufferOrigin = sg_make_buffer(&desc);
+  }
+
+  { // -- collision buffer
+    sg_buffer_desc desc = {};
+    desc.size = debugRenderMaxRays * sizeof(float);
+    desc.usage = SG_USAGE_STREAM;
+    desc.content = nullptr;
+    desc.label = "debug-render-info-ray-collision-buffer";
+    debugRenderRay.bufferCollision = sg_make_buffer(&desc);
+  }
+
+  // bindings
+  debugRenderRay.bindings.vertex_buffers[0] = debugRenderRay.bufferOrigin;
+  debugRenderRay.bindings.vertex_buffers[1] = debugRenderRay.bufferCollision;
+
+  { // -- shader
+    sg_shader_desc desc = {};
+    desc.vs.uniform_blocks[0].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[0].uniforms[0].name = "originOffset";
+    desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
+    desc.vs.uniform_blocks[1].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[1].uniforms[0].name = "framebufferResolution";
+    desc.vs.uniform_blocks[1].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
+    desc.vs.source = PUL_SHADER(
+      in layout(location = 0) vec2 inOrigin;
+      in layout(location = 1) float inCollision;
+
+      uniform vec2 originOffset;
+      uniform vec2 framebufferResolution;
+
+      flat out int inoutCollision;
+
+      void main() {
+        vec2 framebufferScale = vec2(2.0f) / framebufferResolution;
+        vec2 vertexOrigin = (inOrigin)*vec2(1,-1) * framebufferScale;
+        vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;
+        gl_Position = vec4(vertexOrigin.xy, 0.0f, 1.0f);
+        inoutCollision = int(inCollision > 0.0f);
+      }
+    );
+
+    desc.fs.source = PUL_SHADER(
+      flat in int inoutCollision;
+
+      out vec4 outColor;
+
+      void main() {
+        outColor =
+            inoutCollision > 0
+          ? vec4(1.0f, 0.7f, 0.7f, 1.0f) : vec4(0.7f, 1.0f, 0.7f, 1.0f)
+        ;
+      }
+    );
+
+    debugRenderRay.program = sg_make_shader(&desc);
+  }
+
+  { // -- pipeline
+    sg_pipeline_desc desc = {};
+
+    desc.layout.buffers[0].stride = 0u;
+    desc.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
+    desc.layout.attrs[0].buffer_index = 0;
+    desc.layout.attrs[0].offset = 0;
+    desc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+
+    desc.layout.buffers[1].stride = 0u;
+    desc.layout.buffers[1].step_func = SG_VERTEXSTEP_PER_VERTEX;
+    desc.layout.attrs[1].buffer_index = 1;
+    desc.layout.attrs[1].offset = 0;
+    desc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT;
+
+    desc.primitive_type = SG_PRIMITIVETYPE_LINES;
+    desc.index_type = SG_INDEXTYPE_NONE;
+
+    desc.shader = debugRenderRay.program;
+    desc.depth_stencil.depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL;
+    desc.depth_stencil.depth_write_enabled = true;
+
+    desc.blend.enabled = false;
+
+    desc.rasterizer.alpha_to_coverage_enabled = false;
+    desc.rasterizer.face_winding = SG_FACEWINDING_CCW;
+    desc.rasterizer.sample_count = 1;
+
+    desc.label = "debug-render-ray-pipeline";
+
+    debugRenderRay.pipeline = sg_make_pipeline(&desc);
+  }
+}
+
+void LoadSokolInfoPoint() {
+  { // -- origin buffer
+    sg_buffer_desc desc = {};
+    desc.size = debugRenderMaxPoints * sizeof(float) * 2;
+    desc.usage = SG_USAGE_STREAM;
+    desc.content = nullptr;
+    desc.label = "debug-render-info-point-origin-buffer";
+    debugRenderPoint.bufferOrigin = sg_make_buffer(&desc);
+  }
+
+  { // -- collision buffer
+    sg_buffer_desc desc = {};
+    desc.size = debugRenderMaxPoints * sizeof(float);
+    desc.usage = SG_USAGE_STREAM;
+    desc.content = nullptr;
+    desc.label = "debug-render-info-point-collision-buffer";
+    debugRenderPoint.bufferCollision = sg_make_buffer(&desc);
+  }
+
+  // bindings
+  debugRenderPoint.bindings.vertex_buffers[0] = debugRenderPoint.bufferOrigin;
+  debugRenderPoint.bindings.vertex_buffers[1] =
+    debugRenderPoint.bufferCollision;
+
+  { // -- shader
+    sg_shader_desc desc = {};
+    desc.vs.uniform_blocks[0].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[0].uniforms[0].name = "originOffset";
+    desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
+    desc.vs.uniform_blocks[1].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[1].uniforms[0].name = "framebufferResolution";
+    desc.vs.uniform_blocks[1].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
+    desc.vs.source = PUL_SHADER(
+      in layout(location = 0) vec2 inOrigin;
+      in layout(location = 1) float inCollision;
+
+      uniform vec2 originOffset;
+      uniform vec2 framebufferResolution;
+
+      flat out int inoutCollision;
+
+      void main() {
+        vec2 framebufferScale = vec2(2.0f) / framebufferResolution;
+        vec2 vertexOrigin = (inOrigin)*vec2(1,-1) * framebufferScale;
+        vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;
+        gl_Position = vec4(vertexOrigin.xy, 0.0f, 1.0f);
+        inoutCollision = int(inCollision > 0.0f);
+      }
+    );
+
+    desc.fs.source = PUL_SHADER(
+      flat in int inoutCollision;
+
+      out vec4 outColor;
+
+      void main() {
+        outColor =
+            inoutCollision > 0
+          ? vec4(1.0f, 0.7f, 0.7f, 1.0f) : vec4(0.7f, 1.0f, 0.7f, 1.0f)
+        ;
+      }
+    );
+
+    debugRenderPoint.program = sg_make_shader(&desc);
+  }
+
+  { // -- pipeline
+    sg_pipeline_desc desc = {};
+
+    desc.layout.buffers[0].stride = 0u;
+    desc.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
+    desc.layout.attrs[0].buffer_index = 0;
+    desc.layout.attrs[0].offset = 0;
+    desc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+
+    desc.layout.buffers[1].stride = 0u;
+    desc.layout.buffers[1].step_func = SG_VERTEXSTEP_PER_VERTEX;
+    desc.layout.attrs[1].buffer_index = 1;
+    desc.layout.attrs[1].offset = 0;
+    desc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT;
+
+    desc.primitive_type = SG_PRIMITIVETYPE_POINTS;
+    desc.index_type = SG_INDEXTYPE_NONE;
+
+    desc.shader = debugRenderPoint.program;
+    desc.depth_stencil.depth_compare_func = SG_COMPAREFUNC_LESS_EQUAL;
+    desc.depth_stencil.depth_write_enabled = true;
+
+    desc.blend.enabled = false;
+
+    desc.rasterizer.cull_mode = SG_CULLMODE_BACK;
+    desc.rasterizer.alpha_to_coverage_enabled = false;
+    desc.rasterizer.face_winding = SG_FACEWINDING_CCW;
+    desc.rasterizer.sample_count = 1;
+
+    desc.label = "debug-render-point-pipeline";
+
+    debugRenderPoint.pipeline = sg_make_pipeline(&desc);
+  }
+}
+
+void LoadSokolInfo() {
+  ::LoadSokolInfoPoint();
+  ::LoadSokolInfoRay();
+}
 
 // basically, when doings physics, we want tile lookups to be cached / quick,
 // and we only want to do one tile intersection test per tile-grid. In other
@@ -141,6 +366,8 @@ void LoadMapGeometry(
       tile.origin       = tileOrigin;
     }
   }
+
+  ::LoadSokolInfo();
 }
 
 void ProcessPhysics(pulcher::core::SceneBundle & scene) {
@@ -170,7 +397,7 @@ void ProcessPhysics(pulcher::core::SceneBundle & scene) {
     auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
 
     if (!tileInfo.Valid()) {
-      queries.intersectorResultsPoints.emplace_back(false);
+      queries.intersectorResultsPoints.emplace_back(false, point.origin);
       continue;
     }
 
@@ -188,19 +415,173 @@ void ProcessPhysics(pulcher::core::SceneBundle & scene) {
           true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
         );
     } else {
-      queries.intersectorResultsPoints.emplace_back(false);
+      queries.intersectorResultsPoints.emplace_back(false, point.origin);
     }
   }
 
-  /* for (auto & ray : queries.intersectorRays) { */
-  /* } */
+  for (auto & ray : computingIntersectorRays) {
+    bool hasIntersection = false;
+    pulcher::physics::BresenhamLine(
+      ray.beginOrigin, ray.endOrigin
+    , [&](int32_t x, int32_t y) {
+        if (hasIntersection) { return; }
+        auto origin = glm::u32vec2(x, y);
+        // -- get physics tile from acceleration structure
+        size_t const tileIdx =
+          origin.y / 32ul * ::tilemapLayer.width + origin.x / 32ul
+        ;
+
+        PUL_ASSERT_CMP(
+          tileIdx, <, ::tilemapLayer.tileInfo.size()
+        , return;
+        );
+
+        auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
+        auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
+
+        if (!tileInfo.Valid()) { return; }
+
+        pulcher::physics::Tile const & physicsTile =
+          tileset->tiles[tileInfo.imageTileIdx];
+
+        // -- get absolute texel origin of intersection
+        auto texelOrigin = glm::u32vec2(origin.x%32u, origin.y%32u);
+
+        // -- compute intersection SDF and accel hints
+        if (physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f) {
+          queries
+            .intersectorResultsRays
+            .emplace_back(
+              true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx,
+              ray.beginOrigin
+            );
+          hasIntersection = true;
+          return;
+        }
+      }
+    );
+
+    if (!hasIntersection) {
+      queries
+        .intersectorResultsRays
+        .emplace_back(false, ray.endOrigin, 0ul, 0ul, ray.beginOrigin);
+    }
+  }
 }
 
-void UiRender(pulcher::core::SceneBundle &) {
+void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::Begin("Physics");
 
   ImGui::Text("tilemap width %u", ::tilemapLayer.width);
   ImGui::Text("tile info size %lu", ::tilemapLayer.tileInfo.size());
+
+  auto & queries = scene.physicsQueries;
+
+  static bool showPhysicsQueries = true;
+  ImGui::Checkbox("show physics queries", &showPhysicsQueries);
+  if (showPhysicsQueries && queries.intersectorResultsPoints.size() > 0ul) {
+    { // -- update buffers
+      std::vector<glm::vec2> points;
+      std::vector<float> collisions;
+      points.reserve(queries.intersectorResultsPoints.size());
+      // update queries
+      for (auto & query : queries.intersectorResultsPoints) {
+        points.emplace_back(query.origin);
+        collisions.emplace_back(static_cast<float>(query.collision));
+      }
+
+      sg_update_buffer(
+        debugRenderPoint.bufferOrigin
+      , points.data(), points.size() * sizeof(glm::vec2)
+      );
+
+      sg_update_buffer(
+        debugRenderPoint.bufferCollision
+      , collisions.data(), collisions.size() * sizeof(float)
+      );
+    }
+
+    // apply pipeline and render
+    sg_apply_pipeline(debugRenderPoint.pipeline);
+    sg_apply_bindings(&debugRenderPoint.bindings);
+    glm::vec2 cameraOrigin = scene.cameraOrigin;
+
+    sg_apply_uniforms(
+      SG_SHADERSTAGE_VS
+    , 0
+    , &cameraOrigin.x
+    , sizeof(float) * 2ul
+    );
+
+    std::array<float, 2> windowResolution {{
+      static_cast<float>(pulcher::gfx::DisplayWidth())
+    , static_cast<float>(pulcher::gfx::DisplayHeight())
+    }};
+
+    sg_apply_uniforms(
+      SG_SHADERSTAGE_VS
+    , 1
+    , windowResolution.data()
+    , sizeof(float) * 2ul
+    );
+
+    glPointSize(5);
+    sg_draw(0, queries.intersectorResultsPoints.size(), 1);
+  }
+
+  if (showPhysicsQueries && queries.intersectorResultsRays.size() > 0ul) {
+    { // -- update buffers
+      std::vector<glm::vec2> lines;
+      std::vector<float> collisions;
+      lines.reserve(queries.intersectorResultsRays.size()*2);
+      // update queries
+      for (auto & query : queries.intersectorResultsRays) {
+        lines.emplace_back(query.debugBeginOrigin);
+        lines.emplace_back(query.origin);
+        spdlog::debug("{} ; {}", lines[lines.size()-2], lines.back());
+        collisions.emplace_back(static_cast<float>(query.collision));
+        collisions.emplace_back(static_cast<float>(query.collision));
+      }
+
+      sg_update_buffer(
+        debugRenderRay.bufferOrigin
+      , lines.data(), lines.size() * sizeof(glm::vec2)
+      );
+
+      sg_update_buffer(
+        debugRenderRay.bufferCollision
+      , collisions.data(), collisions.size() * sizeof(float)
+      );
+    }
+
+    // apply pipeline and render
+    sg_apply_pipeline(debugRenderRay.pipeline);
+    sg_apply_bindings(&debugRenderRay.bindings);
+    glm::vec2 cameraOrigin = scene.cameraOrigin;
+
+    sg_apply_uniforms(
+      SG_SHADERSTAGE_VS
+    , 0
+    , &cameraOrigin.x
+    , sizeof(float) * 2ul
+    );
+
+    std::array<float, 2> windowResolution {{
+      static_cast<float>(pulcher::gfx::DisplayWidth())
+    , static_cast<float>(pulcher::gfx::DisplayHeight())
+    }};
+
+    sg_apply_uniforms(
+      SG_SHADERSTAGE_VS
+    , 1
+    , windowResolution.data()
+    , sizeof(float) * 2ul
+    );
+
+    glLineWidth(1.0f);
+
+    sg_draw(0, queries.intersectorResultsRays.size()*2, 1);
+  }
 
   ImGui::End();
 }

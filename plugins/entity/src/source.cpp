@@ -3,6 +3,7 @@
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <entt/entt.hpp>
@@ -16,6 +17,8 @@ struct ComponentMoveable {
   glm::vec2 origin = {};
   glm::vec2 velocity = {};
   size_t frameIntersectionQuery;
+  size_t frameGravityIntersectionQuery;
+  bool sleeping = false;
 
   glm::vec2 CalculateProjectedOrigin() {
     return origin + velocity;
@@ -64,6 +67,14 @@ void EntityUpdate(
 
     auto & moveable = view.get<ComponentMoveable>(entity);
 
+    pulcher::physics::IntersectionResults previousFrameGravityIntersection;
+    if (moveable.frameGravityIntersectionQuery != 0ul) {
+      previousFrameGravityIntersection =
+        scene.physicsQueries.RetrieveQuery(
+          moveable.frameGravityIntersectionQuery
+        );
+    }
+
     { // -- apply projected movement physics
       pulcher::physics::IntersectionResults previousFrameIntersection;
       if (moveable.frameIntersectionQuery != 0ul) {
@@ -72,7 +83,7 @@ void EntityUpdate(
       }
 
       if (previousFrameIntersection.collision) {
-        moveable.origin = previousFrameIntersection.origin;
+        /* moveable.origin = previousFrameIntersection.origin; */
         moveable.velocity = {};
       } else {
         moveable.origin = moveable.CalculateProjectedOrigin();
@@ -80,22 +91,42 @@ void EntityUpdate(
       }
     }
 
-    // process events probably...
-
-    // check for next frame physics intersection
-    moveable.frameIntersectionQuery = 0ul;
-    if (moveable.velocity != glm::vec2(0.0f)) {
-      pulcher::physics::IntersectorPoint point;
-      point.origin = moveable.CalculateProjectedOrigin();
-      moveable.frameIntersectionQuery = scene.physicsQueries.AddQuery(point);
-    }
-
-    // center camera on this
-    scene.cameraOrigin = glm::i32vec2(moveable.origin);
+    // -- process inputs / events
 
     auto & current = scene.playerController.current;
     moveable.velocity.x = static_cast<float>(current.movementHorizontal);
     moveable.velocity.y = static_cast<float>(current.movementVertical);
+    if (current.dash) { moveable.velocity *= 16.0f; }
+
+    if (current.jump) {
+      moveable.velocity.y -= 5.0f;
+    }
+
+    /* // gravity if gravity check failed */
+    /* if (!previousFrameGravityIntersection.collision) { */
+    /*   moveable.velocity.y += 3.0f; */
+    /* } */
+
+    // check for next frame physics intersection
+    moveable.frameIntersectionQuery = 0ul;
+    if (!moveable.sleeping && !current.crouch) {
+      pulcher::physics::IntersectorRay ray;
+      ray.beginOrigin = moveable.origin;
+      ray.endOrigin = moveable.CalculateProjectedOrigin();
+      moveable.frameIntersectionQuery = scene.physicsQueries.AddQuery(ray);
+    }
+
+    // apply gravity intersection test
+    if (!moveable.sleeping && !current.crouch) {
+      pulcher::physics::IntersectorRay ray;
+      ray.beginOrigin = moveable.origin;
+      ray.endOrigin = moveable.origin + glm::vec2(0, 1);
+      moveable.frameGravityIntersectionQuery =
+        scene.physicsQueries.AddQuery(ray);
+    }
+
+    // center camera on this
+    scene.cameraOrigin = glm::i32vec2(moveable.origin);
   }
 }
 
@@ -120,13 +151,30 @@ void UiRender(pulcher::core::SceneBundle & scene) {
       pul::imgui::Text(
         "velocity <{:2f}, {:2f}>", self.velocity.x, self.velocity.y
       );
-      pul::imgui::Text("physics query ID {}", self.frameIntersectionQuery);
+      ImGui::Checkbox("sleeping", &self.sleeping);
+      pul::imgui::Text(
+        "physics projection query ID {}"
+      , self.frameIntersectionQuery & 0xFFFF
+      );
       if (self.frameIntersectionQuery) {
-        auto previousFrameIntersection =
-          scene.physicsQueries.RetrieveQuery(self.frameIntersectionQuery);
+        auto intersection =
+          scene.physicsQueries.RetrieveQuery(self.frameIntersectionQuery)
+        ;
         pul::imgui::Text(
-          " -- collision {}", previousFrameIntersection .collision
+          " -- collision {}", intersection.collision
         );
+      }
+
+      pul::imgui::Text(
+        "physics gravity query ID {}"
+      , self.frameGravityIntersectionQuery & 0xFFFF
+      );
+      if (self.frameGravityIntersectionQuery) {
+        auto intersection =
+          scene.physicsQueries.RetrieveQuery(
+            self.frameGravityIntersectionQuery
+          );
+        pul::imgui::Text(" -- collision {}", intersection.collision);
       }
     }
 
