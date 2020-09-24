@@ -1,6 +1,7 @@
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
+#include <pulcher-gfx/imgui.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-physics/tileset.hpp>
 #include <pulcher-plugin/plugin.hpp>
@@ -537,19 +538,19 @@ void UiRender(pulcher::core::SceneBundle & scene) {
   static size_t tileInfoTilesetIdx = -1ul;
 
   ImGui::Separator();
-  ImGui::Text("total tilemap sets: '%lu'", ::mapTilesets.size());
+  pul::imgui::Text("total tilemap sets: {}", ::mapTilesets.size());
 
   for (size_t i = 0ul; i < ::mapTilesets.size(); ++ i) {
     auto const & tileset = ::mapTilesets[i];
     auto & spritesheet = tileset.spritesheet;
-    ImGui::Text("filename: '%s'", tileset.spritesheet.filename.c_str());
-    ImGui::Text(
-      "tile width %lu height %lu total %lu"
+    pul::imgui::Text("filename: '{}'", tileset.spritesheet.filename);
+    pul::imgui::Text(
+      "tile width {} height {} total {}"
     , tileset.spritesheet.width / 32ul
     , tileset.spritesheet.height / 32ul
     , tileset.spritesheet.height / 32ul * tileset.spritesheet.width / 32ul
     );
-    ImGui::Text("idx: %lu", i);
+    pul::imgui::Text("idx: {}", i);
 
     auto const imMax = ImGui::GetWindowContentRegionMax();
     auto const imMin = ImGui::GetWindowContentRegionMin();
@@ -579,7 +580,7 @@ void UiRender(pulcher::core::SceneBundle & scene) {
       tileInfoTilesetIdx = -1ul;
     }
 
-    ImGui::Text("tileset clicked %lu", tileInfoTilesetIdx);
+    pul::imgui::Text("tileset clicked {}", tileInfoTilesetIdx);
 
     ImGui::End();
     ImGui::Begin("Map Info");
@@ -588,12 +589,12 @@ void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::Separator();
   ImGui::Separator();
 
-  ImGui::Text("map renderables: %lu", ::renderables.size());
+  pul::imgui::Text("map renderables: {}", ::renderables.size());
   for (auto & renderable : ::renderables) {
     ImGui::PushID(&renderable);
-    ImGui::Text("draw call: %lu", renderable.tileCount);
-    ImGui::Text("depth: %d", renderable.depth);
-    ImGui::Text("spritesheet: %lu", renderable.spritesheetPrimaryIdx);
+    pul::imgui::Text("draw call: {}", renderable.tileCount);
+    pul::imgui::Text("depth: {}", renderable.depth);
+    pul::imgui::Text("spritesheet: {}u", renderable.spritesheetPrimaryIdx);
     ImGui::Checkbox("enabled", &renderable.enabled);
 
     ImGui::Separator();

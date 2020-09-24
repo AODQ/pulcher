@@ -58,7 +58,10 @@ template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
-    fn = reinterpret_cast<T>(::GetProcAddress(this->data, label));
+    fn =
+      reinterpret_cast<T>(
+        reinterpret_cast<void *>(::GetProcAddress(this->data, label))
+      );
     if (!fn) {
       spdlog::critical(
         "Failed to load function '{}' for plugin '{}'", label, ::GetLastError()

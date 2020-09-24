@@ -232,7 +232,7 @@ int main(int argc, char const ** argv) {
     ci.fnConnect    = ::EventConnect;
     ci.fnDisconnect = ::EventDisconnect;
     ci.fnReceive    = ::EventReceive;
-    server = std::move(pulcher::network::ServerHost::Construct(ci));
+    server = pulcher::network::ServerHost::Construct(ci);
   }
 
   // allow ctrl-c to end process properly by shutting server down

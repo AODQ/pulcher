@@ -232,7 +232,7 @@ pulcher::network::ClientHost pulcher::network::ClientHost::Construct(
     constructInfo.fnConnect    = ci.fnConnect;
     constructInfo.fnDisconnect = ci.fnDisconnect;
     constructInfo.fnReceive    = ci.fnReceive;
-    client.host = std::move(pulcher::network::Host::Construct(constructInfo));
+    client.host = pulcher::network::Host::Construct(constructInfo);
   }
 
   if (!client.host.Valid()) { return client; }
@@ -273,7 +273,7 @@ pulcher::network::ServerHost pulcher::network::ServerHost::Construct(
     constructInfo.fnConnect = ci.fnConnect;
     constructInfo.fnDisconnect = ci.fnDisconnect;
     constructInfo.fnReceive = ci.fnReceive;
-    server.host = std::move(pulcher::network::Host::Construct(constructInfo));
+    server.host = pulcher::network::Host::Construct(constructInfo);
   }
 
   if (!server.host.Valid()) { return server; }

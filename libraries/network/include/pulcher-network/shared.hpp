@@ -2,6 +2,7 @@
 
 #include <enet/enet.h>
 
+#include <cstdint>
 #include <functional>
 
 namespace pulcher::network {

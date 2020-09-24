@@ -18,5 +18,6 @@ set_target_properties(
 
 target_link_libraries(
   pulcher-plugin
-  spdlog
+  PRIVATE
+    spdlog glm
 )
