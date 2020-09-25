@@ -4,7 +4,7 @@ target_sources(plugin-physics PRIVATE src/source.cpp)
 target_link_libraries(
   plugin-physics
   PRIVATE
-    pulcher-core pulcher-gfx pulcher-physics
+    pulcher-core pulcher-gfx pulcher-physics pulcher-plugin
 )
 
 set_target_properties(

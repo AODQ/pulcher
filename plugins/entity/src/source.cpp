@@ -44,7 +44,7 @@ struct ComponentCamera {
 
 extern "C" {
 
-void StartScene(
+PUL_PLUGIN_DECL void StartScene(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle &
 ) {
   auto & registry = pulcher::core::Registry();
@@ -56,11 +56,11 @@ void StartScene(
   registry.emplace<ComponentLabel>(playerEntity, "Player");
 }
 
-void Shutdown() {
+PUL_PLUGIN_DECL void Shutdown() {
   pulcher::core::Registry() = {};
 }
 
-void EntityUpdate(
+PUL_PLUGIN_DECL void EntityUpdate(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
   auto & registry = pulcher::core::Registry();
@@ -167,12 +167,12 @@ void EntityUpdate(
   }
 }
 
-void UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
   auto & registry = pulcher::core::Registry();
 
   ImGui::Begin("Entity");
   registry.each([&](auto entity) {
-    ImGui::Text("entity ID %lu", static_cast<size_t>(entity));
+    pul::imgui::Text("entity ID {}", static_cast<size_t>(entity));
 
     ImGui::Separator();
 

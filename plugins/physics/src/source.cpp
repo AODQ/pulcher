@@ -1,8 +1,10 @@
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
+#include <pulcher-gfx/imgui.hpp>
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-physics/tileset.hpp>
+#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
 
@@ -264,7 +266,7 @@ TilemapLayer tilemapLayer;
 // -- plugin functions
 extern "C" {
 
-void ProcessTileset(
+PUL_PLUGIN_DECL void ProcessTileset(
   pulcher::physics::Tileset & tileset
 , pulcher::gfx::Image const & image
 ) {
@@ -298,11 +300,11 @@ void ProcessTileset(
   }
 }
 
-void ClearMapGeometry() {
+PUL_PLUGIN_DECL void ClearMapGeometry() {
   tilemapLayer = {};
 }
 
-void LoadMapGeometry(
+PUL_PLUGIN_DECL void LoadMapGeometry(
   std::vector<pulcher::physics::Tileset const *> const & tilesets
 , std::vector<std::span<size_t>>                 const & mapTileIndices
 , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
@@ -370,7 +372,7 @@ void LoadMapGeometry(
   ::LoadSokolInfo();
 }
 
-void ProcessPhysics(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
 
   auto & queries = scene.physicsQueries;
 
@@ -485,11 +487,11 @@ void ProcessPhysics(pulcher::core::SceneBundle & scene) {
   }
 }
 
-void UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::Begin("Physics");
 
-  ImGui::Text("tilemap width %u", ::tilemapLayer.width);
-  ImGui::Text("tile info size %lu", ::tilemapLayer.tileInfo.size());
+  pul::imgui::Text("tilemap width {}", ::tilemapLayer.width);
+  pul::imgui::Text("tile info size {}", ::tilemapLayer.tileInfo.size());
 
   auto & queries = scene.physicsQueries;
 

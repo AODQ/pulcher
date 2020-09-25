@@ -301,7 +301,7 @@ void MapSokolEnd() {
 
 extern "C" {
 
-void Load(
+PUL_PLUGIN_DECL void Load(
   pulcher::plugin::Info const & plugins
 , char const * filename
 ) {
@@ -487,7 +487,7 @@ void Load(
   cJSON_Delete(map);
 }
 
-void Render(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Render(pulcher::core::SceneBundle & scene) {
   sg_apply_pipeline(pipeline);
 
   glm::vec2 cameraOrigin = scene.cameraOrigin;
@@ -530,7 +530,7 @@ void Render(pulcher::core::SceneBundle & scene) {
   }
 }
 
-void UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::Begin("Map Info");
 
   ImGui::DragInt2("map origin", &scene.cameraOrigin.x);
@@ -604,7 +604,7 @@ void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::End();
 }
 
-void Shutdown() {
+PUL_PLUGIN_DECL void Shutdown() {
   spdlog::info("destroying map");
 
   for (auto & renderable : ::renderables) {

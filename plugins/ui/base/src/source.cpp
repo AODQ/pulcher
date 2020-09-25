@@ -2,6 +2,7 @@
 
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
+#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <GLFW/glfw3.h>
@@ -26,7 +27,7 @@ void RenderKey(
 
 extern "C" {
 
-void UiDispatch(
+PUL_PLUGIN_DECL void UiDispatch(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & sceneBundle
 ) {
   ImGui::Begin("Diagnostics");

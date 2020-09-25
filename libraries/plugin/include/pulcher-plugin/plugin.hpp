@@ -13,6 +13,12 @@ namespace pulcher::gfx { struct Image; }
 namespace pulcher::physics { struct Tileset; }
 namespace pulcher::plugin { struct Info; }
 
+#if defined(__unix__)
+#define PUL_PLUGIN_DECL
+#elif defined(_WIN32) || defined(_WIN64)
+#define PUL_PLUGIN_DECL __declspec(dllexport)
+#endif
+
 namespace pulcher::plugin {
   struct UserInterfaceInfo {
     void (*UiDispatch)(
