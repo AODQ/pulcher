@@ -545,7 +545,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
     , sizeof(float) * 2ul
     );
 
-    glPointSize(5);
+    glPointSize(2);
     sg_draw(0, queries.intersectorResultsPoints.size(), 1);
   }
 

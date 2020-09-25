@@ -21,6 +21,7 @@ struct ComponentMoveable {
   size_t physxQueryGravity = -1ul;
   size_t physxQueryVelocity = -1ul;
   size_t physxQuerySlope = -1ul;
+  size_t physxQueryCeiling = -1ul;
   bool sleeping = false;
 
   bool jumping = false;
@@ -86,6 +87,12 @@ PUL_PLUGIN_DECL void EntityUpdate(
         scene.physicsQueries.RetrieveQuery(moveable.physxQuerySlope);
     }
 
+    pulcher::physics::IntersectionResults intersectionCeiling;
+    if (moveable.physxQueryCeiling != -1ul) {
+      intersectionCeiling =
+        scene.physicsQueries.RetrieveQuery(moveable.physxQueryCeiling);
+    }
+
     { // -- apply projected movement physics
       pulcher::physics::IntersectionResults previousFrameIntersection;
       if (moveable.physxQueryVelocity != -1ul) {
@@ -108,7 +115,11 @@ PUL_PLUGIN_DECL void EntityUpdate(
     }
 
     // ground player
-    if (!moveable.jumping && previousFrameGravityIntersection.collision) {
+    if (
+         !moveable.jumping
+      && !intersectionCeiling.collision
+      && previousFrameGravityIntersection.collision
+    ) {
       moveable.origin.y = previousFrameGravityIntersection.origin.y - 1.0f;
     }
 
@@ -120,7 +131,7 @@ PUL_PLUGIN_DECL void EntityUpdate(
     if (current.dash) { moveable.velocity *= 16.0f; }
 
     moveable.jumping = current.jump;
-    if (moveable.jumping) {
+    if (moveable.jumping && !intersectionCeiling.collision) {
       moveable.velocity.y -= 1.5f;
     }
 
@@ -136,6 +147,14 @@ PUL_PLUGIN_DECL void EntityUpdate(
       ray.beginOrigin = glm::round(moveable.origin);
       ray.endOrigin = glm::round(moveable.CalculateProjectedOrigin());
       moveable.physxQueryVelocity = scene.physicsQueries.AddQuery(ray);
+    }
+
+    // check for ceiling
+    moveable.physxQueryCeiling = -1ul;
+    if (!moveable.sleeping) {
+      pulcher::physics::IntersectorPoint point;
+      point.origin = glm::round(moveable.origin + glm::vec2(0.0f, -32.0f));
+      moveable.physxQueryCeiling = scene.physicsQueries.AddQuery(point);
     }
 
     // check for slopes
