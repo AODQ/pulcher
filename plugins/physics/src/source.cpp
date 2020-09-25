@@ -291,7 +291,8 @@ PUL_PLUGIN_DECL void ProcessTileset(
       , gridTexelY = static_cast<size_t>(texelY*(gridSize/32.0f))
       ;
 
-      float const alpha = image.data[(image.height-imageTexelY)*image.width + imageTexelX].a;
+      float const alpha =
+        image.data[(image.height-imageTexelY-1)*image.width + imageTexelX].a;
 
       tile.signedDistanceField[gridTexelX][gridTexelY] = alpha;
     }
@@ -457,12 +458,6 @@ PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
 
         pulcher::physics::Tile const & physicsTile =
           tileset->tiles[tileInfo.imageTileIdx];
-
-        spdlog::debug(
-          "origin {} : tile idx {} image tile idx {}",
-          origin, tileIdx, tileInfo.imageTileIdx
-        );
-        spdlog::debug(" --- texel origin {}", texelOrigin);
 
         // -- compute intersection SDF and accel hints
         if (

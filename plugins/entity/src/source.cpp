@@ -86,29 +86,25 @@ PUL_PLUGIN_DECL void EntityUpdate(
         scene.physicsQueries.RetrieveQuery(moveable.physxQuerySlope);
     }
 
-    /* { // -- apply projected movement physics */
-    /*   pulcher::physics::IntersectionResults previousFrameIntersection; */
-    /*   if (moveable.physxQueryVelocity != -1ul) { */
-    /*     previousFrameIntersection = */
-    /*       scene.physicsQueries.RetrieveQuery(moveable.physxQueryVelocity); */
-    /*   } */
+    { // -- apply projected movement physics
+      pulcher::physics::IntersectionResults previousFrameIntersection;
+      if (moveable.physxQueryVelocity != -1ul) {
+        previousFrameIntersection =
+          scene.physicsQueries.RetrieveQuery(moveable.physxQueryVelocity);
+      }
 
-    /*   if (previousFrameIntersection.collision) { */
-    /*     if (!previousFrameGravityIntersection.collision) { */
-    /*       moveable.origin.y += moveable.velocity.y; */
-    /*     } */
-    /*     if (!intersectionSlope.collision) { */
-    /*       moveable.origin = intersectionSlope.origin; */
-    /*     } */
-    /*     moveable.velocity = {}; */
-    /*   } else { */
-    /*     moveable.origin = moveable.CalculateProjectedOrigin(); */
-    /*     moveable.velocity = {}; */
-    /*   } */
-    /* } */
-    moveable.origin.x += moveable.velocity.x;
-    if (!previousFrameGravityIntersection.collision) {
-      moveable.origin.y += moveable.velocity.y;
+      if (previousFrameIntersection.collision) {
+        if (!previousFrameGravityIntersection.collision) {
+          moveable.origin.y += moveable.velocity.y;
+        }
+        if (!intersectionSlope.collision) {
+          moveable.origin = intersectionSlope.origin;
+        }
+        moveable.velocity = {};
+      } else {
+        moveable.origin = moveable.CalculateProjectedOrigin();
+        moveable.velocity = {};
+      }
     }
 
     // ground player

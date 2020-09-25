@@ -595,6 +595,8 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
     , ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles.size()
     );
 
+    pul::imgui::Text("tile idx {} origin {}", tileIdx, origin);
+
     pulcher::physics::Tile const & physicsTile =
       ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles[tileIdx];
 
