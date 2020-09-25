@@ -386,14 +386,16 @@ PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
 
   for (auto & point : computingIntersectorPoints) {
     // -- get physics tile from acceleration structure
-    size_t const tileIdx =
-      point.origin.y / 32ul * ::tilemapLayer.width + point.origin.x / 32ul
-    ;
-
-    PUL_ASSERT_CMP(
-      tileIdx, <, ::tilemapLayer.tileInfo.size()
-    , queries.intersectorResultsPoints.emplace_back(); continue;
-    );
+    size_t tileIdx;
+    glm::u32vec2 texelOrigin;
+    if (
+      !pulcher::util::CalculateTileIndices(
+        tileIdx, texelOrigin, point.origin
+      , ::tilemapLayer.width, ::tilemapLayer.tileInfo.size()
+      )
+    ) {
+      return;
+    }
 
     auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
     auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
@@ -407,9 +409,6 @@ PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
 
     pulcher::physics::Tile const & physicsTile =
       tileset->tiles[tileInfo.imageTileIdx];
-
-    // -- get absolute texel origin of intersection
-    auto texelOrigin = glm::u32vec2(point.origin.x%32u, point.origin.y%32u);
 
     // -- compute intersection SDF and accel hints
     if (physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f) {
@@ -437,14 +436,19 @@ PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
         if (hasIntersection) { return; }
         auto origin = glm::i32vec2(x, y);
         // -- get physics tile from acceleration structure
-        size_t const tileIdx =
-          origin.y / 32ul * ::tilemapLayer.width + origin.x / 32ul
-        ;
 
-        PUL_ASSERT_CMP(
-          tileIdx, <, ::tilemapLayer.tileInfo.size()
-        , return;
-        );
+        // calculate tile indices, not for the spritesheet but for the tile in
+        // the physx map
+        size_t tileIdx;
+        glm::u32vec2 texelOrigin;
+        if (
+          !pulcher::util::CalculateTileIndices(
+            tileIdx, texelOrigin, origin
+          , ::tilemapLayer.width, ::tilemapLayer.tileInfo.size()
+          )
+        ) {
+          return;
+        }
 
         auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
         auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
@@ -454,8 +458,11 @@ PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
         pulcher::physics::Tile const & physicsTile =
           tileset->tiles[tileInfo.imageTileIdx];
 
-        // -- get absolute texel origin of intersection
-        auto texelOrigin = glm::u32vec2(origin.x%32u, origin.y%32u);
+        spdlog::debug(
+          "origin {} : tile idx {} image tile idx {}",
+          origin, tileIdx, tileInfo.imageTileIdx
+        );
+        spdlog::debug(" --- texel origin {}", texelOrigin);
 
         // -- compute intersection SDF and accel hints
         if (
@@ -556,7 +563,6 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
       for (auto & query : queries.intersectorResultsRays) {
         lines.emplace_back(query.debugBeginOrigin);
         lines.emplace_back(query.origin);
-        spdlog::debug("{} ; {}", lines[lines.size()-2], lines.back());
         collisions.emplace_back(static_cast<float>(query.collision));
         collisions.emplace_back(static_cast<float>(query.collision));
       }

@@ -2,6 +2,20 @@
 
 #include <glm/glm.hpp>
 
+namespace pulcher::util {
+  inline bool CalculateTileIndices(
+    size_t & tileIdx, glm::u32vec2 & texelOrigin
+  , glm::i32vec2 const & origin
+  , size_t const tilemapWidth, size_t const tilemapLength
+  ) {
+    tileIdx = origin.y / 32ul * tilemapWidth + origin.x / 32ul;
+    if (tileIdx >= tilemapLength) { return false; }
+
+    texelOrigin = glm::u32vec2(origin.x%32ul, origin.y%32ul);
+    return true;
+  }
+}
+
 namespace pulcher::physics {
   template <typename Fn>
   void BresenhamLine(glm::ivec2 f0, glm::ivec2 f1, Fn && fn) {

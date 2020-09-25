@@ -4,7 +4,7 @@ target_sources(plugin-map PRIVATE src/source.cpp)
 target_link_libraries(
   plugin-map
   PRIVATE
-    cjson pulcher-core pulcher-gfx pulcher-physics pulcher-plugin
+    cjson pulcher-core pulcher-gfx pulcher-physics pulcher-plugin glm
 )
 
 set_target_properties(

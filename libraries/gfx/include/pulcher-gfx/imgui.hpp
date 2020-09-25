@@ -13,10 +13,14 @@
 
 #include <imgui/imgui.hpp>
 
+#include <glm/fwd.hpp>
+
 namespace pul::imgui {
   template <typename... T> void Text(char const * label, T && ... fmts) {
     ImGui::TextUnformatted(
       fmt::format(label, std::forward<T>(fmts)...).c_str()
     );
   }
+
+  bool CheckImageClicked(glm::vec2 & pixelClicked);
 }

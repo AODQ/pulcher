@@ -6,6 +6,7 @@
 #include <pulcher-physics/tileset.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/log.hpp>
+#include <pulcher-util/math.hpp>
 
 #include <cjson/cJSON.h>
 #include <GLFW/glfw3.h>
@@ -536,6 +537,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::DragInt2("map origin", &scene.cameraOrigin.x);
 
   static size_t tileInfoTilesetIdx = -1ul;
+  static glm::vec2 tileInfoPixelClicked;
 
   ImGui::Separator();
   pul::imgui::Text("total tilemap sets: {}", ::mapTilesets.size());
@@ -564,9 +566,8 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
     , bounds, ImVec2(0, 1), ImVec2(1, 0)
     );
 
-    if (ImGui::IsItemClicked()) {
+    if (pul::imgui::CheckImageClicked(tileInfoPixelClicked)) {
       tileInfoTilesetIdx = i;
-      /* point.origin.y / 32ul * ::tilemapLayer.width + point.origin.x / 32ul */
     }
   }
 
@@ -581,6 +582,33 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
     }
 
     pul::imgui::Text("tileset clicked {}", tileInfoTilesetIdx);
+    pul::imgui::Text(
+      "pixel clicked {}x{}", tileInfoPixelClicked.x, tileInfoPixelClicked.y
+    );
+
+    // calculate tile indices for spritesheet
+    size_t tileIdx;
+    glm::u32vec2 origin;
+    pulcher::util::CalculateTileIndices(
+      tileIdx, origin, glm::u32vec2(tileInfoPixelClicked)
+    , ::mapTilesets[tileInfoTilesetIdx].spritesheet.width / 32ul
+    , ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles.size()
+    );
+
+    pulcher::physics::Tile const & physicsTile =
+      ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles[tileIdx];
+
+    std::string physxStr = "";
+    for (size_t i = 0; i < 32*32; ++ i) {
+      if (i % 32 == 0 && i > 0) {
+        physxStr += "\n";
+      }
+
+      physxStr +=
+        physicsTile.signedDistanceField[i%32][i/32] > 0.0f ? "#" : "-";
+    }
+
+    pul::imgui::Text("{}", physxStr);
 
     ImGui::End();
     ImGui::Begin("Map Info");
