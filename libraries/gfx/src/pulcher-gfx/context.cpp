@@ -129,7 +129,8 @@ void pulcher::gfx::StartFrame(float deltaMs) {
   );
 
   simgui_new_frame(
-    pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight(), deltaMs/1000.0f
+    pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
+  , static_cast<double>(deltaMs/1000.0f)
   );
 
   ImGui_ImplGlfw_NewFrame();

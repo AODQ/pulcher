@@ -25,8 +25,8 @@ auto StartupOptions() -> argparse::ArgumentParser {
   auto options = argparse::ArgumentParser("pulcher-client", "0.0.0");
   options
     .add_argument("-r")
-    .help("window resolution (0x0 means display resolution)")
-    .default_value("0x0")
+    .help(("window resolution (0x0 means display resolution)"))
+    .default_value(std::string{"0x0"})
   ;
 
   options
