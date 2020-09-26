@@ -28,7 +28,8 @@ void RenderKey(
 extern "C" {
 
 PUL_PLUGIN_DECL void UiDispatch(
-  pulcher::plugin::Info const &, pulcher::core::SceneBundle & sceneBundle
+  pulcher::plugin::Info const & plugins
+, pulcher::core::SceneBundle & sceneBundle
 ) {
   ImGui::Begin("Diagnostics");
 

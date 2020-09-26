@@ -24,6 +24,7 @@ target_link_libraries(
     spdlog
     pulcher-controls
     pulcher-physics
+    pulcher-animation
   PRIVATE
     EnTT
 )

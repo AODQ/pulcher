@@ -5,11 +5,12 @@
 
 namespace pulcher::plugin {
   enum struct Type : size_t {
-    UserInterface
+    Animation
+  , Entity
   , Map
   , Physics
-  , Entity
   , Size
+  , UserInterface
   };
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <pulcher-animation/animation.hpp>
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-physics/intersections.hpp>
 
@@ -13,6 +14,7 @@ namespace pulcher::core {
   struct SceneBundle {
     glm::i32vec2 cameraOrigin = {};
 
+    pulcher::animation::System animationSystem;
     pulcher::controls::Controller playerController;
     pulcher::physics::Queries physicsQueries;
 

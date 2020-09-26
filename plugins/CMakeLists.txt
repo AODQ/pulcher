@@ -1,4 +1,5 @@
 add_subdirectory(entity)
+add_subdirectory(animation)
 add_subdirectory(map)
 add_subdirectory(physics)
 add_subdirectory(ui)

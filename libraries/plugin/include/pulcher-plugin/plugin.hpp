@@ -26,6 +26,17 @@ namespace pulcher::plugin {
     ) = nullptr;
   };
 
+  struct Animation {
+    void (*LoadAnimations)(
+      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+    ) = nullptr;
+    void (*Shutdown)(pulcher::core::SceneBundle &) = nullptr;
+    void (*RenderAnimations)(
+      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+    ) = nullptr;
+    void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
+  };
+
   struct Entity {
     void (*StartScene)(
       pulcher::plugin::Info const &, pulcher::core::SceneBundle &
@@ -63,6 +74,7 @@ namespace pulcher::plugin {
   };
 
   struct Info {
+    pulcher::plugin::Animation animation;
     pulcher::plugin::Entity entity;
     pulcher::plugin::Map map;
     pulcher::plugin::Physics physics;

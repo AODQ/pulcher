@@ -194,12 +194,18 @@ int main(int argc, char const ** argv) {
   , "plugins/plugin-entity.pulcher-plugin"
   );
 
+  pulcher::plugin::LoadPlugin(
+    plugins, pulcher::plugin::Type::Animation
+  , "plugins/plugin-animation.pulcher-plugin"
+  );
+
   ::PrintUserConfig(userConfig);
 
   pulcher::core::SceneBundle sceneBundle;
 
   plugins.map.Load(plugins, "base/map/test.json");
   plugins.entity.StartScene(plugins, sceneBundle);
+  plugins.animation.LoadAnimations(plugins, sceneBundle);
 
   ImguiApplyColor();
 
@@ -233,9 +239,11 @@ int main(int argc, char const ** argv) {
       plugins.map.Shutdown();
       plugins.physics.ClearMapGeometry();
       plugins.entity.Shutdown();
+      plugins.animation.Shutdown(sceneBundle);
       pulcher::plugin::UpdatePlugins(plugins);
       plugins.map.Load(plugins, "base/map/test.json");
       plugins.entity.StartScene(plugins, sceneBundle);
+      plugins.animation.LoadAnimations(plugins, sceneBundle);
     }
     ImGui::End();
 
@@ -265,6 +273,8 @@ int main(int argc, char const ** argv) {
     timePreviousFrameBegin = timeFrameBegin;
   }
 
+  plugins.animation.Shutdown(sceneBundle);
+  plugins.entity.Shutdown();
   plugins.map.Shutdown();
 
   pulcher::gfx::Shutdown();
