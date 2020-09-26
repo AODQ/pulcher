@@ -36,7 +36,7 @@ auto StartupOptions() -> argparse::ArgumentParser {
   options
     .add_argument("-d")
     .help("debug mode (console printing)")
-    .default_value(true)
+    .default_value(false)
     .implicit_value(true)
   ;
 
