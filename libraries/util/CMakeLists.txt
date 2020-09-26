@@ -4,6 +4,7 @@ target_include_directories(pulcher-util PUBLIC "include/")
 target_sources(
   pulcher-util
   PRIVATE
+    src/pulcher-util/any.cpp
     src/pulcher-util/enum.cpp
     src/pulcher-util/log.cpp
 )
