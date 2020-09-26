@@ -48,7 +48,7 @@ auto StartupOptions() -> argparse::ArgumentParser {
   options
     .add_argument("-i")
     .help("ip address to connect to")
-    .default_value(std::string("69.243.92.93"))
+    .default_value(std::string("192.168.0.1"))
   ;
 
   return options;
