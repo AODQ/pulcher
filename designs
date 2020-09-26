@@ -1,7 +1,51 @@
 the whole design of pulcher is to be plugin-driven with an ECS backend to
-facilitate entities when appropiate, however not everything is an entity. Some
-parts like map rendering exist merely as a plugin
+facilitate entities when appropiate, however not everything is an entity.
+
+Almost each independent piece of the game (entities, map, physics, animations,
+etc) has a library backend (to share common functions and structs) with a
+plugin frontend to implement logic. This will allow iterative prototyping of
+features since plugins support hot-reloading; this might also allow modding in
+the future as the plugin source-code can be released and thus many components
+of the game can be easily modified.
+
+For now only Linux supports hot-reloading; Windows builds link against the
+plugins dynamically standardly through ".dll" files and not the ".plugin" (tho
+they are the same).
+
+"Logic" components are ran at 90-FPS (11.1 ms/frame), but rendering/audio
+backends can run as high as framerate as possible. Just about everything
+logic-wise will be trippled-buffered which will allow for rendering to
+interpolate between these frames
 
 
-| ---- FRAME ----------------------------------------------------------------- |
-| Physx Swap | Entity Processing | Map Rendering | Entity Rendering | FB swap  |
+            ┌─────────┐
+            │Frame N-1│
+          ⎧ └─────────┘
+Rendering ⎨
+          ⎩ ┌─────────┐
+            │Frame N  │
+            └─────────┘
+            ┌─────────┐
+Computing ⎬ │Frame N+1│
+            └─────────┘
+
+
+Example of how multi-threaded frame would look
+
+// rendering thread
+┌─────────────────────┬───────────────────────────┬────────────┐
+│ Interpolate Frames  │ Render interpolated frame │ Render UI  │
+└─────────────────────┴───────────────────────────┴────────────┘
+
+// logic threads
+┌──────────┬──────────┬─────────────────┐  ⎫
+│ Physx    │ Enemy AI │ Player control  │  ⎬ frame snapshot
+├──────────┴───┬──────┴───┬─────────────┘  ⎟
+│ Audio logic  │ UI logic │                ⎭
+└──────────────┴──────────┘
+
+Thus games can be easily recorded and replayed (very useful for debugging too)
+All a frame bundle has to do is have a JSON representation. The frame snapshot
+is not the only information in the scene though, it is merely an output per
+frame of the logic that the renderer can use to draw the scene in its own
+thread without having to worry about race issues
