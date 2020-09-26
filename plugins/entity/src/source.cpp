@@ -88,6 +88,7 @@ PUL_PLUGIN_DECL void EntityUpdate(
     }
 
     pulcher::physics::IntersectionResults intersectionCeiling;
+    moveable.physxQueryCeiling = -1ul;
     if (moveable.physxQueryCeiling != -1ul) {
       intersectionCeiling =
         scene.physicsQueries.RetrieveQuery(moveable.physxQueryCeiling);
@@ -151,7 +152,7 @@ PUL_PLUGIN_DECL void EntityUpdate(
 
     // check for ceiling
     moveable.physxQueryCeiling = -1ul;
-    if (!moveable.sleeping) {
+    if (!moveable.sleeping && !current.crouch) {
       pulcher::physics::IntersectorPoint point;
       point.origin = glm::round(moveable.origin + glm::vec2(0.0f, -32.0f));
       moveable.physxQueryCeiling = scene.physicsQueries.AddQuery(point);
@@ -212,7 +213,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
         "physics projection query ID {}"
       , self.physxQueryVelocity & 0xFFFF
       );
-      if (self.physxQueryVelocity) {
+      if (self.physxQueryVelocity != -1ul) {
         auto intersection =
           scene.physicsQueries.RetrieveQuery(self.physxQueryVelocity)
         ;
@@ -225,7 +226,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
         "physics gravity query ID {}"
       , self.physxQueryGravity & 0xFFFF
       );
-      if (self.physxQueryGravity) {
+      if (self.physxQueryGravity != -1ul) {
         auto intersection =
           scene.physicsQueries.RetrieveQuery(self.physxQueryGravity);
         pul::imgui::Text(" -- collision {}", intersection.collision);

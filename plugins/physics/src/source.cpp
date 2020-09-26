@@ -395,7 +395,12 @@ PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
       , ::tilemapLayer.width, ::tilemapLayer.tileInfo.size()
       )
     ) {
-      return;
+      queries.intersectorResultsPoints.emplace_back(
+        pulcher::physics::IntersectionResults {
+          false, point.origin
+        }
+      );
+      continue;
     }
 
     auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];

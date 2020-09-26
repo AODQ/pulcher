@@ -554,16 +554,9 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
     );
     pul::imgui::Text("idx: {}", i);
 
-    auto const imMax = ImGui::GetWindowContentRegionMax();
-    auto const imMin = ImGui::GetWindowContentRegionMin();
-    auto bounds = ImVec2(imMax.x - imMin.x, imMax.y - imMin.y);
-    bounds.x = glm::min(static_cast<size_t>(bounds.x), spritesheet.width);
-    bounds.y =
-      bounds.x * (spritesheet.height / static_cast<float>(spritesheet.width));
-
     ImGui::Image(
       reinterpret_cast<void *>(spritesheet.Image().id)
-    , bounds, ImVec2(0, 1), ImVec2(1, 0)
+    , ImVec2(spritesheet.width, spritesheet.height), ImVec2(0, 1), ImVec2(1, 0)
     );
 
     if (pul::imgui::CheckImageClicked(tileInfoPixelClicked)) {
