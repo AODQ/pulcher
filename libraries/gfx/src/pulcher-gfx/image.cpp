@@ -1,5 +1,7 @@
 #include <pulcher-gfx/image.hpp>
 
+#include <pulcher-util/log.hpp>
+
 #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wdouble-promotion"
   #define STB_IMAGE_IMPLEMENTATION
@@ -13,6 +15,13 @@ pulcher::gfx::Image pulcher::gfx::Image::Construct(char const * filename) {
   int width, height, channels;
   uint8_t * rawByteData =
     stbi_load(filename, &width, &height, &channels, STBI_rgb_alpha);
+
+  if (!rawByteData) {
+    spdlog::error(
+      "STBI could not image '{}': '{}'", filename, stbi_failure_reason()
+    );
+    return self;
+  }
 
   self.width  = static_cast<size_t>(width);
   self.height = static_cast<size_t>(height);
