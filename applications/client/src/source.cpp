@@ -8,7 +8,11 @@
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 
-#include <argparse/argparse.hpp>
+#pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wshadow"
+  #include <argparse/argparse.hpp>
+#pragma GCC diagnostic pop
+
 #include <glad/glad.hpp>
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>

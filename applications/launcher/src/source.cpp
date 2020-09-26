@@ -2,7 +2,11 @@
 
 #include <pulcher-network/shared.hpp>
 
-#include <argparse/argparse.hpp>
+#pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wshadow"
+  #include <argparse/argparse.hpp>
+#pragma GCC diagnostic pop
+
 #include <process.hpp>
 
 #include <chrono>
