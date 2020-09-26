@@ -290,12 +290,18 @@ int main(int argc, char const ** argv) {
       filesToUpload = {
         "pulcher-client"
       , "plugins/ui-base.pulcher-plugin"
+      , "plugins/plugin-animation.pulcher-plugin"
       , "plugins/plugin-map.pulcher-plugin"
       , "plugins/plugin-entity.pulcher-plugin"
       , "plugins/plugin-physics.pulcher-plugin"
-      , "lib/libglad.so", "lib/libimgui.so", "lib/libspdlog.so"
+      , "lib/libglad.so", "lib/libimgui.so", "lib/libspdlog.so.1"
       , "lib/libsokol.so"
       , "lib/libglfw.so"
+
+      , "lib/libm.so.6"
+      , "lib/libc.so.6"
+      , "lib/libdl.so.2"
+
       , "base/spritesheets/player/nygelstromn.png"
       , "base/spritesheets/player/data.json"
       , "base/spritesheets/map/calamity.png"
