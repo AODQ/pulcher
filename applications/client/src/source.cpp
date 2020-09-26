@@ -22,7 +22,7 @@
 namespace {
 
 auto StartupOptions() -> argparse::ArgumentParser {
-  auto options = argparse::ArgumentParser("pulcher-client", "0.0.0");
+  auto options = argparse::ArgumentParser("pulcher-client", "0.0.1");
   options
     .add_argument("-r")
     .help(("window resolution (0x0 means display resolution)"))
