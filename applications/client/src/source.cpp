@@ -256,9 +256,6 @@ int main(int argc, char const ** argv) {
     );
 
     plugins.userInterface.UiDispatch(plugins, sceneBundle);
-    plugins.map.UiRender(sceneBundle);
-    plugins.entity.UiRender(sceneBundle);
-    plugins.physics.UiRender(sceneBundle);
 
     plugins.map.Render(sceneBundle);
 

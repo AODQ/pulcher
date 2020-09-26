@@ -85,6 +85,11 @@ PUL_PLUGIN_DECL void UiDispatch(
     ImGui::NextColumn();
 
   ImGui::End();
+
+  plugins.animation.UiRender(sceneBundle);
+  plugins.entity.UiRender(sceneBundle);
+  plugins.map.UiRender(sceneBundle);
+  plugins.physics.UiRender(sceneBundle);
 }
 
 }
