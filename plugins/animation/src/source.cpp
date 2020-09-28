@@ -19,10 +19,12 @@
 namespace {
 
 static size_t animMsTimer = 0ul;
-static bool animLoop = false;
-static bool animPlaying = false;
+static bool animLoop = true;
+static float animShowPreviousSprite = 0.0f;
+static bool animShowZoom = false;
+static bool animPlaying = true;
 static bool animEmptyOnLoopEnd = false;
-static size_t animMaxTime = 1000ul;
+static size_t animMaxTime = 100'000ul;
 
 void JsonParseRecursiveSkeleton(
   cJSON * skeletalParentJson
@@ -334,9 +336,16 @@ void ImGuiRenderSpritesheetTile(
     imgUl + pieceDimensions * spritesheet.InvResolution()
   ;
 
+  ImVec2 dimensions = ImVec2(piece.dimensions.x, piece.dimensions.y);
+
+  if (animShowZoom) {
+    dimensions.x *= 5.0f;
+    dimensions.y *= 5.0f;
+  }
+
   ImGui::Image(
     reinterpret_cast<void *>(spritesheet.Image().id)
-  , ImVec2(piece.dimensions.x, piece.dimensions.y)
+  , dimensions
   , ImVec2(imgUl.x, 1.0f-imgUl.y)
   , ImVec2(imgLr.x, 1.0f-imgLr.y)
   , (
@@ -690,10 +699,20 @@ PUL_PLUGIN_DECL void UiRender(
     ImGui::Begin("Animation Timeline");
       ImGui::Checkbox("loop", &animLoop);
       ImGui::Checkbox("playing", &animPlaying);
-      ImGui::Checkbox("empty-on-loop-end", &animEmptyOnLoopEnd);
-      pul::imgui::InputInt("max loop time", &animMaxTime);
+      ImGui::Checkbox("empty on loop end", &animEmptyOnLoopEnd);
 
+      ImGui::Separator();
+
+      pul::imgui::InputInt("max loop time", &animMaxTime);
       pul::imgui::SliderInt("timer", &animMsTimer, 0, animMaxTime);
+
+      ImGui::Separator();
+
+      ImGui::Checkbox("sprite zoom", &animShowZoom);
+
+      ImGui::SliderFloat(
+        "previous sprite alpha", &animShowPreviousSprite, 0.0f, 1.0f
+      );
 
       if (animPlaying) {
         animMsTimer += pulcher::util::msPerFrame;
@@ -764,6 +783,19 @@ PUL_PLUGIN_DECL void UiRender(
               static_cast<size_t>(animMsTimer / statePair.second.msDeltaTime);
             componentIt %= components.size();
 
+            // render w/ previous sprite alpha if requested
+
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            if (animShowPreviousSprite > 0.0f) {
+              ::ImGuiRenderSpritesheetTile(
+                instance, piece
+              , components[
+                  (components.size() + componentIt - 1) % components.size()
+                ]
+              , animShowPreviousSprite
+              );
+            }
+            ImGui::SetCursorScreenPos(pos);
             ::ImGuiRenderSpritesheetTile(
               instance, piece, components[componentIt]
             );
@@ -796,39 +828,60 @@ PUL_PLUGIN_DECL void UiRender(
 
             ImGui::PushID(componentIt);
 
-            ImGui::Columns(2, nullptr, false);
+            // do not show columns or editor properties on sprite zoom
+            if (!::animShowZoom) {
+              ImGui::Columns(2, nullptr, false);
 
-            ImGui::SetColumnWidth(0, piece.dimensions.x + 16);
-
-            ::ImGuiRenderSpritesheetTile(instance, piece, component);
-
-            ImGui::NextColumn();
-
-            pul::imgui::InputInt2("tile", &component.tile.x);
-
-            pul::imgui::InputInt2("origin-offset", &component.originOffset.x);
-
-            if (ImGui::Button("-")) {
-              components.erase(components.begin() + componentIt);
-              -- componentIt;
+              ImGui::SetColumnWidth(0, piece.dimensions.x + 16);
             }
 
-            ImGui::SameLine();
-            ImGui::SameLine();
-            if (ImGui::Button("+")) {
-              components
-                .emplace(components.begin() + componentIt + 1, component);
+            // display current image on left side of column, use transparency
+            // w/ previous frame if requested
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            if (animShowPreviousSprite > 0.0f) {
+              ::ImGuiRenderSpritesheetTile(
+                instance, piece
+              , components[
+                  (components.size() + componentIt - 1) % components.size()
+                ]
+              , animShowPreviousSprite
+              );
             }
+            ImGui::SetCursorScreenPos(pos);
+            ::ImGuiRenderSpritesheetTile(
+              instance, piece, component
+            );
 
-            ImGui::SameLine();
-            if (componentIt > 0ul && ImGui::Button("^"))
-              { std::swap(components[componentIt], components[componentIt-1]); }
+            if (!::animShowZoom) {
+              ImGui::NextColumn();
+              pul::imgui::InputInt2("tile", &component.tile.x);
 
-            ImGui::SameLine();
-            if (componentIt < components.size()-1 && ImGui::Button("V"))
-              { std::swap(components[componentIt], components[componentIt+1]); }
+              pul::imgui::InputInt2("origin-offset", &component.originOffset.x);
 
-            ImGui::NextColumn();
+              if (ImGui::Button("-")) {
+                components.erase(components.begin() + componentIt);
+                -- componentIt;
+              }
+
+              ImGui::SameLine();
+              ImGui::SameLine();
+              if (ImGui::Button("+")) {
+                components
+                  .emplace(components.begin() + componentIt + 1, component);
+              }
+
+              ImGui::SameLine();
+              if (componentIt > 0ul && ImGui::Button("^")) {
+                std::swap(components[componentIt], components[componentIt-1]);
+              }
+
+              ImGui::SameLine();
+              if (componentIt < components.size()-1 && ImGui::Button("V")) {
+                std::swap(components[componentIt], components[componentIt+1]);
+              }
+
+              ImGui::NextColumn();
+            }
 
             ImGui::PopID(); // componentIt
             ImGui::Separator();
