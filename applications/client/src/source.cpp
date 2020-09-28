@@ -275,6 +275,7 @@ int main(int argc, char const ** argv) {
     plugins.userInterface.UiDispatch(plugins, sceneBundle);
 
     plugins.map.Render(sceneBundle);
+    plugins.animation.RenderAnimations(plugins, sceneBundle);
 
     simgui_render();
     sg_end_pass();

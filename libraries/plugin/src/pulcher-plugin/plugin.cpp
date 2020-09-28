@@ -114,6 +114,7 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
     default: spdlog::critical("Unknown type in LoadPluginFunctions"); break;
     case pulcher::plugin::Type::Animation: {
       auto & unit = plugin.animation;
+      ctx.LoadFunction(unit.ConstructInstance, "ConstructInstance");
       ctx.LoadFunction(unit.LoadAnimations,   "LoadAnimations");
       ctx.LoadFunction(unit.Shutdown,         "Shutdown");
       ctx.LoadFunction(unit.RenderAnimations, "RenderAnimations");

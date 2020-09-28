@@ -21,5 +21,5 @@ target_link_libraries(
   PUBLIC
     pulcher-gfx
   PRIVATE
-    pulcher-util
+    pulcher-util sokol
 )

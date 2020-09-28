@@ -2,6 +2,8 @@
 
 #include <pulcher-gfx/spritesheet.hpp>
 
+#include <sokol/gfx.hpp>
+
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -32,7 +34,7 @@ namespace pulcher::animation {
   struct Animator {
     // -- structs
     struct Component {
-      size_t tileX, tileY;
+      glm::u32vec2 tile;
     };
 
     struct State {
@@ -44,6 +46,8 @@ namespace pulcher::animation {
 
     struct Piece {
       std::map<std::string, pulcher::animation::Animator::State> states;
+      glm::u32vec2 dimensions, origin;
+      uint8_t renderOrder; // valid from 0 .. 100
     };
 
     // -- members
@@ -54,9 +58,24 @@ namespace pulcher::animation {
 
   struct System {
     std::map<std::string, std::shared_ptr<Animator>> animators;
+
+    sg_pipeline sgPipeline;
+    sg_shader sgProgram;
   };
 
   struct Instance {
     std::shared_ptr<Animator> animator;
+
+    std::map<std::string, std::string> pieceToState;
+
+    sg_buffer sgBufferOrigin;
+    sg_buffer sgBufferUvCoord;
+    sg_bindings sgBindings;
+    size_t drawCallCount;
   };
+
+  struct ComponentInstance {
+    pulcher::animation::Instance instance;
+  };
+
 }

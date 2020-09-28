@@ -20,6 +20,109 @@ namespace {
 
 extern "C" {
 
+PUL_PLUGIN_DECL void ConstructInstance(
+  pulcher::animation::Instance & animationInstance
+, pulcher::animation::System & animationSystem
+, char const * label
+) {
+  if (
+    auto instance = animationSystem.animators.find(label);
+    instance != animationSystem.animators.end()
+  ) {
+    animationInstance.animator = instance->second;
+  } else {
+    spdlog::error("Could not find animation of type '{}'", label);
+    return;
+  }
+
+  // set default values for pieces
+  for (auto & piecePair : animationInstance.animator->pieces) {
+    if (piecePair.second.states.begin() == piecePair.second.states.end()) {
+      spdlog::error(
+        "need at least one state for piece '{}' of '{}'"
+      , piecePair.first, animationInstance.animator->label
+      );
+      continue;
+    }
+    animationInstance.pieceToState[piecePair.first] =
+      piecePair.second.states.begin()->first;
+  }
+
+  { // -- compute initial sokol buffers
+    std::vector<glm::vec3> origin;
+    std::vector<glm::vec2> uvCoord;
+
+    for (auto const & piecePair : animationInstance.animator->pieces) {
+      auto const & piece = piecePair.second;
+      auto const & defaultState =
+        animationInstance.animator
+          ->pieces[piecePair.first]
+          .states[animationInstance.pieceToState[piecePair.first]]
+      ;
+
+      auto pieceDimensions = glm::vec2(piece.dimensions);
+      auto pieceOrigin =
+        glm::vec3(piece.origin, static_cast<float>(piece.renderOrder));
+
+      for (auto const & v
+        : std::vector<glm::vec2> {
+            {0.0f,  0.0f}
+          , {1.0f,  1.0f}
+          , {1.0f,  0.0f}
+
+          , {0.0f,  0.0f}
+          , {0.0f,  1.0f}
+          , {1.0f,  1.0f}
+          }
+      ) {
+        origin.emplace_back(glm::vec3(v*pieceDimensions, 0.0f) + pieceOrigin);
+        uvCoord.emplace_back(
+          (
+            v*pieceDimensions
+          + glm::vec2(defaultState.components[0].tile)*pieceDimensions
+          )
+        * animationInstance.animator->spritesheet.InvResolution()
+        );
+        spdlog::debug("uv coord {}*{} + {}*{} = {}",
+          v, pieceDimensions,
+          defaultState.components[0].tile,
+          pieceDimensions,
+          uvCoord.back());
+      }
+    }
+
+    { // -- origin
+      sg_buffer_desc desc = {};
+      desc.size = origin.size() * sizeof(glm::vec3);
+      desc.usage = SG_USAGE_IMMUTABLE;
+      desc.content = origin.data();
+      desc.label = "origin buffer";
+      animationInstance.sgBufferOrigin = sg_make_buffer(&desc);
+    }
+
+    { // -- uv coord
+      sg_buffer_desc desc = {};
+      desc.size = uvCoord.size() * sizeof(glm::vec2);
+      desc.usage = SG_USAGE_IMMUTABLE;
+      desc.content = uvCoord.data();
+      desc.label = "uv coord buffer";
+      animationInstance.sgBufferUvCoord = sg_make_buffer(&desc);
+    }
+
+    // bindings
+    animationInstance.sgBindings.vertex_buffers[0] =
+      animationInstance.sgBufferOrigin;
+    animationInstance.sgBindings.vertex_buffers[1] =
+      animationInstance.sgBufferUvCoord;
+    animationInstance.sgBindings.fs_images[0] =
+      animationInstance.animator->spritesheet.Image();
+
+    // get draw call count
+    animationInstance.drawCallCount =
+      animationInstance.animator->pieces.size() * 6;
+  }
+}
+
 PUL_PLUGIN_DECL void LoadAnimations(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
@@ -74,18 +177,41 @@ PUL_PLUGIN_DECL void LoadAnimations(
         )
       );
 
-    cJSON * animationJson;
+    cJSON * pieceJson;
     cJSON_ArrayForEach(
-      animationJson, cJSON_GetObjectItemCaseSensitive(sheetJson, "animation")
+      pieceJson, cJSON_GetObjectItemCaseSensitive(sheetJson, "animation")
     ) {
       std::string pieceLabel =
-        cJSON_GetObjectItemCaseSensitive(animationJson, "label")->valuestring;
+        cJSON_GetObjectItemCaseSensitive(pieceJson, "label")->valuestring;
 
       pulcher::animation::Animator::Piece piece;
 
+      piece.dimensions.x =
+        cJSON_GetObjectItemCaseSensitive(pieceJson, "dimension-x")->valueint;
+      piece.dimensions.y =
+        cJSON_GetObjectItemCaseSensitive(pieceJson, "dimension-y")->valueint;
+
+      piece.origin.x =
+        cJSON_GetObjectItemCaseSensitive(pieceJson, "origin-x")->valueint;
+      piece.origin.y =
+        cJSON_GetObjectItemCaseSensitive(pieceJson, "origin-y")->valueint;
+      {
+        auto order =
+          cJSON_GetObjectItemCaseSensitive(pieceJson, "render-order")->valueint;
+        if (order < 0 || order >= 100) {
+          spdlog::error(
+            "render-order for '{}' of '{}' is OOB ({}); "
+            "range must be from 0 to 100"
+          , pieceLabel, animator->label, order
+          );
+          order = 99;
+        }
+        piece.renderOrder = order;
+      }
+
       cJSON * stateJson;
       cJSON_ArrayForEach(
-        stateJson, cJSON_GetObjectItemCaseSensitive(animationJson, "states")
+        stateJson, cJSON_GetObjectItemCaseSensitive(pieceJson, "states")
       ) {
         std::string stateLabel =
           cJSON_GetObjectItemCaseSensitive(stateJson, "label")->valuestring;
@@ -103,10 +229,10 @@ PUL_PLUGIN_DECL void LoadAnimations(
           , cJSON_GetObjectItemCaseSensitive(stateJson, "components")
         ) {
           pulcher::animation::Animator::Component component;
-          component.tileX =
+          component.tile.x =
             cJSON_GetObjectItemCaseSensitive(componentJson, "x")->valueint;
 
-          component.tileY =
+          component.tile.y =
             cJSON_GetObjectItemCaseSensitive(componentJson, "y")->valueint;
 
           state.components.emplace_back(component);
@@ -293,7 +419,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
         pul::imgui::Text("\tstate '{}'", statePair.first);
         pul::imgui::Text("\tdelta time {} ms", statePair.second.msDeltaTime);
         for (auto const & component : statePair.second.components) {
-          pul::imgui::Text("\t\t {}x{}", component.tileX, component.tileY);
+          pul::imgui::Text("\t\t {}", component.tile);
         }
       }
     }
