@@ -251,22 +251,27 @@ int main(int argc, char const ** argv) {
     );
     plugins.physics.ProcessPhysics(sceneBundle);
     plugins.entity.EntityUpdate(plugins, sceneBundle);
+    plugins.animation.UpdateFrame(plugins, sceneBundle);
 
     // -- rendering
     pulcher::gfx::StartFrame(deltaMs);
 
+    static glm::vec3 screenClearColor = glm::vec3(0.7f, 0.4f, .4f);
+
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
-
       ::ShutdownPluginInfo(plugins, sceneBundle);
       pulcher::plugin::UpdatePlugins(plugins);
       ::LoadPluginInfo(plugins, sceneBundle);
     }
+    ImGui::ColorEdit3("screen clear", &screenClearColor.x);
     ImGui::End();
 
     sg_pass_action passAction = {};
     passAction.colors[0].action = SG_ACTION_CLEAR;
-    passAction.colors[0].val[0] = 0.2f;
+    passAction.colors[0].val[0] = screenClearColor.r;
+    passAction.colors[0].val[1] = screenClearColor.g;
+    passAction.colors[0].val[2] = screenClearColor.b;
     sg_begin_default_pass(
       &passAction
     , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
@@ -283,7 +288,7 @@ int main(int argc, char const ** argv) {
 
     pulcher::gfx::EndFrame();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(11));
 
     timePreviousFrameBegin = timeFrameBegin;
   }

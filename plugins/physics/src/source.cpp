@@ -517,7 +517,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
 
   auto & queries = scene.PhysicsQueries();
 
-  static bool showPhysicsQueries = true;
+  static bool showPhysicsQueries = false;
   ImGui::Checkbox("show physics queries", &showPhysicsQueries);
   if (showPhysicsQueries && queries.intersectorResultsPoints.size() > 0ul) {
     { // -- update buffers

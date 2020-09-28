@@ -27,7 +27,12 @@ namespace pulcher::animation {
     Each piece has multiple states dictated by some form of logic (running,
     walking, etc)
 
-    Each state has a list of components that are animated thru using the State
+    Each state has a list of components that are animated thru using the State.
+
+    Pieces are connected together using "parent" and thus they get
+    skeletal-esque animation as their offsets are compounded together.
+
+  TODO change std::string to size_t and use std::hash
 
   */
 
@@ -35,6 +40,7 @@ namespace pulcher::animation {
     // -- structs
     struct Component {
       glm::u32vec2 tile;
+      glm::vec2 originOffset = {};
     };
 
     struct State {
@@ -46,13 +52,20 @@ namespace pulcher::animation {
 
     struct Piece {
       std::map<std::string, pulcher::animation::Animator::State> states;
-      glm::u32vec2 dimensions, origin;
+      glm::u32vec2 dimensions;
+      glm::i32vec2 origin;
       uint8_t renderOrder; // valid from 0 .. 100
+    };
+
+    struct SkeletalPiece {
+      std::string label;
+      std::vector<SkeletalPiece> children;
     };
 
     // -- members
     pulcher::gfx::Spritesheet spritesheet;
     std::map<std::string, pulcher::animation::Animator::Piece> pieces;
+    std::vector<SkeletalPiece> skeleton;
     std::string label;
   };
 
@@ -66,12 +79,22 @@ namespace pulcher::animation {
   struct Instance {
     std::shared_ptr<Animator> animator;
 
-    std::map<std::string, std::string> pieceToState;
+    struct StateInfo {
+      std::string label;
+      float deltaTime = 0.0f;
+      size_t componentIt = 0ul;
+    };
+
+    std::map<std::string, StateInfo> pieceToState;
 
     sg_buffer sgBufferOrigin;
     sg_buffer sgBufferUvCoord;
     sg_bindings sgBindings;
     size_t drawCallCount;
+
+    // keep origin/uv coord buffer data around for streaming updates
+    std::vector<glm::vec2> uvCoordBufferData;
+    std::vector<glm::vec3> originBufferData;
   };
 
   struct ComponentInstance {

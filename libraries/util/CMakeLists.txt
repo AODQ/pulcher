@@ -5,6 +5,7 @@ target_sources(
   pulcher-util
   PRIVATE
     src/pulcher-util/any.cpp
+    src/pulcher-util/consts.cpp
     src/pulcher-util/enum.cpp
     src/pulcher-util/log.cpp
 )

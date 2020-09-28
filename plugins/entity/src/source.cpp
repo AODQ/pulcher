@@ -142,13 +142,13 @@ PUL_PLUGIN_DECL void EntityUpdate(
     // -- process inputs / events
 
     auto & current = scene.PlayerController().current;
-    player.velocity.x = static_cast<float>(current.movementHorizontal)*0.15f;
-    player.velocity.y = static_cast<float>(current.movementVertical)*0.15f;
+    player.velocity.x = static_cast<float>(current.movementHorizontal);
+    player.velocity.y = static_cast<float>(current.movementVertical);
     if (current.dash) { player.velocity *= 16.0f; }
 
     player.jumping = current.jump;
     if (player.jumping && !intersectionCeiling.collision) {
-      player.velocity.y -= 1.5f;
+      player.velocity.y -= 3.5f;
     }
 
     // gravity if gravity check failed

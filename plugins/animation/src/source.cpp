@@ -5,6 +5,7 @@
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/consts.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <entt/entt.hpp>
@@ -16,6 +17,146 @@
 #include <fstream>
 
 namespace {
+
+void JsonParseRecursiveSkeleton(
+  cJSON * skeletalParentJson
+, std::vector<pulcher::animation::Animator::SkeletalPiece> & skeletals
+) {
+  if (!skeletalParentJson) { return; }
+  cJSON * skeletalChildJson;
+  cJSON_ArrayForEach(
+    skeletalChildJson
+  , cJSON_GetObjectItemCaseSensitive(skeletalParentJson, "skeleton")
+  ) {
+    pulcher::animation::Animator::SkeletalPiece skeletal;
+    skeletal.label =
+      cJSON_GetObjectItemCaseSensitive(skeletalChildJson, "label")->valuestring;
+    JsonParseRecursiveSkeleton(skeletalChildJson, skeletal.children);
+    skeletals.emplace_back(std::move(skeletal));
+  }
+}
+
+void DisplayImGuiSkeleton(
+  pulcher::animation::Instance & instance,
+  std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
+) {
+  for (auto const & skeletal : skeletals) {
+    if (
+      ImGui::TreeNode(fmt::format("display '{}'", skeletal.label).c_str())
+    ) {
+      auto & stateInfo = instance.pieceToState[skeletal.label];
+      pul::imgui::Text("State '{}'", stateInfo.label);
+      pul::imgui::Text("current delta time {}", stateInfo.deltaTime);
+      pul::imgui::Text("componentIt {}", stateInfo.componentIt);
+
+      ImGui::Separator();
+      DisplayImGuiSkeleton(instance, skeletal.children);
+
+      ImGui::TreePop();
+    }
+  }
+}
+
+size_t ComputeVertexBufferSize(
+  std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
+) {
+  size_t vertices = 0ul;
+  for (const auto & skeletal : skeletals) {
+    vertices += 6 + ComputeVertexBufferSize(skeletal.children);
+  }
+  return vertices;
+}
+
+void ComputeVertices(
+  pulcher::animation::Instance & instance
+, pulcher::animation::Animator::SkeletalPiece const & skeletal
+, size_t & indexOffset
+, glm::vec2 & originOffset
+, bool const forceUpdate
+) {
+  // okay the below is crazy with the map lookups, I need to cache the
+  // state somehow
+  auto & piece = instance.animator->pieces[skeletal.label];
+  auto & stateInfo = instance.pieceToState[skeletal.label];
+  auto & state = piece.states[stateInfo.label];
+
+  // update delta time and if animation update is necessary, apply uv coord
+  // updates
+  bool hasUpdate = forceUpdate;
+  if (state.msDeltaTime > 0.0f) {
+    stateInfo.deltaTime += pulcher::util::msPerFrame;
+    if (stateInfo.deltaTime > state.msDeltaTime) {
+      stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
+      stateInfo.componentIt =
+        (stateInfo.componentIt + 1) % state.components.size();
+      hasUpdate = true;
+    }
+  }
+
+  auto & component = state.components[stateInfo.componentIt];
+
+  // update originOffset
+  originOffset += glm::vec2(piece.origin) + component.originOffset;
+
+  if (!hasUpdate) {
+    indexOffset += 6ul;
+    return;
+  }
+
+  auto pieceDimensions = glm::vec2(piece.dimensions);
+  auto pieceOrigin =
+    glm::vec3(piece.origin, static_cast<float>(piece.renderOrder));
+
+  // update origins & UV coords
+  for (size_t it = 0ul; it < 6; ++ it, ++ indexOffset) {
+    auto v = pulcher::util::TriangleVertexArray()[it];
+
+    instance.uvCoordBufferData[indexOffset] =
+        (v*pieceDimensions + glm::vec2(component.tile)*pieceDimensions)
+      * instance.animator->spritesheet.InvResolution()
+    ;
+
+    instance.originBufferData[indexOffset] =
+        glm::vec3(
+          v*pieceDimensions + originOffset
+        , static_cast<float>(piece.renderOrder)
+        )
+    ;
+  }
+}
+
+void ComputeVertices(
+  pulcher::animation::Instance & instance
+, std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
+, size_t & indexOffset
+, const glm::vec2 originOffset
+, bool const forceUpdate
+) {
+  for (const auto & skeletal : skeletals) {
+    // compute origin / uv coords
+    glm::vec2 newOriginOffset = originOffset;
+    ComputeVertices(
+      instance, skeletal, indexOffset, newOriginOffset, forceUpdate
+    );
+
+    // continue to children
+    ComputeVertices(
+      instance, skeletal.children, indexOffset, newOriginOffset, forceUpdate
+    );
+  }
+}
+
+void ComputeVertices(
+  pulcher::animation::Instance & instance
+, bool forceUpdate = false
+) {
+  size_t indexOffset = 0ul;
+  ComputeVertices(
+    instance, instance.animator->skeleton, indexOffset, glm::vec2()
+  , forceUpdate
+  );
+}
+
 } // -- namespace
 
 extern "C" {
@@ -45,66 +186,35 @@ PUL_PLUGIN_DECL void ConstructInstance(
       continue;
     }
     animationInstance.pieceToState[piecePair.first] =
-      piecePair.second.states.begin()->first;
+      {piecePair.second.states.begin()->first};
   }
 
   { // -- compute initial sokol buffers
-    std::vector<glm::vec3> origin;
-    std::vector<glm::vec2> uvCoord;
 
-    for (auto const & piecePair : animationInstance.animator->pieces) {
-      auto const & piece = piecePair.second;
-      auto const & defaultState =
-        animationInstance.animator
-          ->pieces[piecePair.first]
-          .states[animationInstance.pieceToState[piecePair.first]]
-      ;
+    // precompute size
+    size_t const vertexBufferSize =
+      ::ComputeVertexBufferSize(animationInstance.animator->skeleton);
+    spdlog::debug("vertex buffer size {}", vertexBufferSize);
 
-      auto pieceDimensions = glm::vec2(piece.dimensions);
-      auto pieceOrigin =
-        glm::vec3(piece.origin, static_cast<float>(piece.renderOrder));
+    animationInstance.uvCoordBufferData.resize(vertexBufferSize);
+    animationInstance.originBufferData.resize(vertexBufferSize);
 
-      for (auto const & v
-        : std::vector<glm::vec2> {
-            {0.0f,  0.0f}
-          , {1.0f,  1.0f}
-          , {1.0f,  0.0f}
-
-          , {0.0f,  0.0f}
-          , {0.0f,  1.0f}
-          , {1.0f,  1.0f}
-          }
-      ) {
-        origin.emplace_back(glm::vec3(v*pieceDimensions, 0.0f) + pieceOrigin);
-        uvCoord.emplace_back(
-          (
-            v*pieceDimensions
-          + glm::vec2(defaultState.components[0].tile)*pieceDimensions
-          )
-        * animationInstance.animator->spritesheet.InvResolution()
-        );
-        spdlog::debug("uv coord {}*{} + {}*{} = {}",
-          v, pieceDimensions,
-          defaultState.components[0].tile,
-          pieceDimensions,
-          uvCoord.back());
-      }
-    }
+    ::ComputeVertices(animationInstance, true);
 
     { // -- origin
       sg_buffer_desc desc = {};
-      desc.size = origin.size() * sizeof(glm::vec3);
-      desc.usage = SG_USAGE_IMMUTABLE;
-      desc.content = origin.data();
+      desc.size = vertexBufferSize * sizeof(glm::vec3);
+      desc.usage = SG_USAGE_STREAM;
+      desc.content = animationInstance.originBufferData.data();
       desc.label = "origin buffer";
       animationInstance.sgBufferOrigin = sg_make_buffer(&desc);
     }
 
     { // -- uv coord
       sg_buffer_desc desc = {};
-      desc.size = uvCoord.size() * sizeof(glm::vec2);
-      desc.usage = SG_USAGE_IMMUTABLE;
-      desc.content = uvCoord.data();
+      desc.size = vertexBufferSize * sizeof(glm::vec2);
+      desc.usage = SG_USAGE_STREAM;
+      desc.content = animationInstance.uvCoordBufferData.data();
       desc.label = "uv coord buffer";
       animationInstance.sgBufferUvCoord = sg_make_buffer(&desc);
     }
@@ -118,8 +228,7 @@ PUL_PLUGIN_DECL void ConstructInstance(
       animationInstance.animator->spritesheet.Image();
 
     // get draw call count
-    animationInstance.drawCallCount =
-      animationInstance.animator->pieces.size() * 6;
+    animationInstance.drawCallCount = vertexBufferSize;
   }
 }
 
@@ -179,7 +288,7 @@ PUL_PLUGIN_DECL void LoadAnimations(
 
     cJSON * pieceJson;
     cJSON_ArrayForEach(
-      pieceJson, cJSON_GetObjectItemCaseSensitive(sheetJson, "animation")
+      pieceJson, cJSON_GetObjectItemCaseSensitive(sheetJson, "animation-piece")
     ) {
       std::string pieceLabel =
         cJSON_GetObjectItemCaseSensitive(pieceJson, "label")->valuestring;
@@ -235,6 +344,20 @@ PUL_PLUGIN_DECL void LoadAnimations(
           component.tile.y =
             cJSON_GetObjectItemCaseSensitive(componentJson, "y")->valueint;
 
+          if (
+            auto offX =
+              cJSON_GetObjectItemCaseSensitive(componentJson, "origin-offset-x")
+          ) {
+            component.originOffset.x = offX->valueint;
+          }
+
+          if (
+            auto offY =
+              cJSON_GetObjectItemCaseSensitive(componentJson, "origin-offset-y")
+          ) {
+            component.originOffset.y = offY->valueint;
+          }
+
           state.components.emplace_back(component);
         }
 
@@ -243,6 +366,9 @@ PUL_PLUGIN_DECL void LoadAnimations(
 
       animator->pieces[pieceLabel] = std::move(piece);
     }
+
+    // load skeleton
+    ::JsonParseRecursiveSkeleton(sheetJson, animator->skeleton);
 
     // store animator
     spdlog::debug("storing animator of {}", animator->label);
@@ -277,7 +403,7 @@ PUL_PLUGIN_DECL void LoadAnimations(
         vec2 framebufferScale = vec2(2.0f) / framebufferResolution;
         vec2 vertexOrigin = (inOrigin.xy)*vec2(1,-1) * framebufferScale;
         vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;
-        gl_Position = vec4(vertexOrigin, 0.5f + inOrigin.z/100.0f, 1.0f);
+        gl_Position = vec4(vertexOrigin, 0.5001f + inOrigin.z/100000.0f, 1.0f);
         uvCoord = vec2(inUvCoord.x, 1.0f-inUvCoord.y);
       }
     );
@@ -288,7 +414,7 @@ PUL_PLUGIN_DECL void LoadAnimations(
       out vec4 outColor;
       void main() {
         outColor = texture(baseSampler, uvCoord);
-        if (outColor.a < 0.01f) { discard; }
+        if (outColor.a < 0.1f) { discard; }
       }
     );
 
@@ -359,6 +485,31 @@ PUL_PLUGIN_DECL void Shutdown(pulcher::core::SceneBundle & scene) {
   scene.AnimationSystem() = {};
 }
 
+PUL_PLUGIN_DECL void UpdateFrame(
+  pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
+) {
+  auto & registry = scene.EnttRegistry();
+  // update each component
+  auto view = registry.view<pulcher::animation::ComponentInstance>();
+  for (auto entity : view) {
+    auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+
+    ::ComputeVertices(self.instance);
+
+    // must update entire animation buffer
+    sg_update_buffer(
+      self.instance.sgBufferUvCoord,
+      self.instance.uvCoordBufferData.data(),
+      self.instance.uvCoordBufferData.size() * sizeof(glm::vec2)
+    );
+    sg_update_buffer(
+      self.instance.sgBufferOrigin,
+      self.instance.originBufferData.data(),
+      self.instance.originBufferData.size() * sizeof(glm::vec3)
+    );
+  }
+}
+
 PUL_PLUGIN_DECL void RenderAnimations(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
@@ -368,9 +519,14 @@ PUL_PLUGIN_DECL void RenderAnimations(
     // bind pipeline & global uniforms
     sg_apply_pipeline(scene.AnimationSystem().sgPipeline);
 
-    glm::vec2 cameraOrigin = scene.cameraOrigin;
+    glm::vec2 animationOrigin = glm::vec2(0);
 
-    spdlog::debug("camera origin {}", cameraOrigin);
+    sg_apply_uniforms(
+      SG_SHADERSTAGE_VS
+    , 0
+    , &animationOrigin.x
+    , sizeof(float) * 2ul
+    );
 
     std::array<float, 2> windowResolution {{
       static_cast<float>(pulcher::gfx::DisplayWidth())
@@ -408,7 +564,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
 
     ImGui::Image(
       reinterpret_cast<void *>(spritesheet.Image().id)
-    , ImVec2(spritesheet.width, spritesheet.height), ImVec2(0, 1), ImVec2(1, 0)
+    , ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0)
     );
 
     for (auto const & piecePair : animatorPair.second->pieces) {
@@ -425,7 +581,35 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
     }
   }
 
+  auto & registry = scene.EnttRegistry();
+
+  static pulcher::animation::Instance * editInstance = nullptr;
+
+  { // -- display entity info
+    auto view = registry.view<pulcher::animation::ComponentInstance>();
+
+    for (auto entity : view) {
+      auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+
+      ImGui::Separator();
+      ImGui::Separator();
+      pul::imgui::Text(
+        "animation instance '{}'", self.instance.animator->label
+      );
+      if (ImGui::Button("edit")) { editInstance = &self.instance; }
+    }
+  }
   ImGui::End();
+
+  if (editInstance) {
+    ImGui::Begin("Animation Editor");
+
+    auto & instance = *editInstance;
+
+    DisplayImGuiSkeleton(*editInstance, editInstance->animator->skeleton);
+
+    ImGui::End();
+  }
 }
 
 } // -- extern C

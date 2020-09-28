@@ -117,6 +117,7 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
       ctx.LoadFunction(unit.ConstructInstance, "ConstructInstance");
       ctx.LoadFunction(unit.LoadAnimations,   "LoadAnimations");
       ctx.LoadFunction(unit.Shutdown,         "Shutdown");
+      ctx.LoadFunction(unit.UpdateFrame, "UpdateFrame");
       ctx.LoadFunction(unit.RenderAnimations, "RenderAnimations");
       ctx.LoadFunction(unit.UiRender,         "UiRender");
     } break;

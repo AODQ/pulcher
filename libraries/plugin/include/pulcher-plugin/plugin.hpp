@@ -38,6 +38,9 @@ namespace pulcher::plugin {
       pulcher::plugin::Info const &, pulcher::core::SceneBundle &
     ) = nullptr;
     void (*Shutdown)(pulcher::core::SceneBundle &) = nullptr;
+    void (*UpdateFrame)(
+      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+    ) = nullptr;
     void (*RenderAnimations)(
       pulcher::plugin::Info const &, pulcher::core::SceneBundle &
     ) = nullptr;
