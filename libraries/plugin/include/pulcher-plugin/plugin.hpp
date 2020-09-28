@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+namespace pulcher::animation { struct Instance; }
+namespace pulcher::animation { struct System; }
 namespace pulcher::core { struct SceneBundle; }
 namespace pulcher::gfx { struct Image; }
 namespace pulcher::physics { struct Tileset; }

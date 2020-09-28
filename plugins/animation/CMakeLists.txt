@@ -4,7 +4,7 @@ target_sources(plugin-animation PRIVATE src/source.cpp)
 target_link_libraries(
   plugin-animation
   PRIVATE
-    EnTT cjson pulcher-core pulcher-gfx pulcher-plugin
+    EnTT cjson pulcher-core pulcher-gfx pulcher-plugin pulcher-animation
 )
 
 set_target_properties(

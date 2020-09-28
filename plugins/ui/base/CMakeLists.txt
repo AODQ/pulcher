@@ -4,7 +4,7 @@ target_sources(ui-base PRIVATE src/source.cpp)
 target_link_libraries(
   ui-base
   PRIVATE
-    pulcher-core pulcher-gfx pulcher-plugin
+    pulcher-core pulcher-gfx pulcher-plugin pulcher-controls
 )
 
 set_target_properties(

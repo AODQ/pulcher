@@ -1,5 +1,6 @@
 /* pulcher | aodq.net */
 
+#include <pulcher-controls/controls.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-plugin/plugin.hpp>
@@ -54,7 +55,7 @@ PUL_PLUGIN_DECL void UiDispatch(
 
   ImGui::Begin("Controls");
 
-    auto & current = sceneBundle.playerController.current;
+    auto & current = sceneBundle.PlayerController().current;
     using Movement = pulcher::controls::Controller::Movement;
 
     // render keys in this format:

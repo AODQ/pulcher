@@ -1,5 +1,6 @@
 /* pulcher | aodq.net */
 
+#include <pulcher-controls/controls.hpp>
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
@@ -246,7 +247,7 @@ int main(int argc, char const ** argv) {
       pulcher::gfx::DisplayWindow()
     , pulcher::gfx::DisplayWidth()
     , pulcher::gfx::DisplayHeight()
-    , sceneBundle.playerController
+    , sceneBundle.PlayerController()
     );
     plugins.physics.ProcessPhysics(sceneBundle);
     plugins.entity.EntityUpdate(plugins, sceneBundle);

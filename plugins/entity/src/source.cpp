@@ -1,7 +1,10 @@
+#include <pulcher-animation/animation.hpp>
+#include <pulcher-controls/controls.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/imgui.hpp>
+#include <pulcher-physics/intersections.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
@@ -14,7 +17,7 @@
 namespace {
 
 // probably should be renamed to Player or similar
-struct ComponentMoveable {
+struct ComponentPlayer {
   glm::vec2 origin = {};
   glm::vec2 velocity = {};
 
@@ -31,6 +34,7 @@ struct ComponentMoveable {
   }
 };
 
+
 struct ComponentLabel {
   std::string label = {};
 };
@@ -46,149 +50,160 @@ struct ComponentCamera {
 extern "C" {
 
 PUL_PLUGIN_DECL void StartScene(
-  pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
 ) {
-  auto & registry = pulcher::core::Registry();
+  auto & registry = scene.EnttRegistry();
 
   auto playerEntity = registry.create();
-  registry.emplace<ComponentMoveable>(playerEntity);
+  registry.emplace<ComponentPlayer>(playerEntity);
   registry.emplace<ComponentControllable>(playerEntity);
   registry.emplace<ComponentCamera>(playerEntity);
   registry.emplace<ComponentLabel>(playerEntity, "Player");
+
+  pulcher::animation::Instance instance;
+  plugin.animation.ConstructInstance(
+    instance, scene.AnimationSystem(), "nygelstromn"
+  );
+  registry.emplace<pulcher::animation::ComponentInstance>(
+    playerEntity, instance
+  );
 }
 
-PUL_PLUGIN_DECL void Shutdown() {
-  pulcher::core::Registry() = {};
+PUL_PLUGIN_DECL void Shutdown(pulcher::core::SceneBundle & scene) {
+
+  // delete registry
+  scene.EnttRegistry() = {};
 }
 
 PUL_PLUGIN_DECL void EntityUpdate(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
-  auto & registry = pulcher::core::Registry();
+  auto & registry = scene.EnttRegistry();
 
   auto view =
-    registry.view<ComponentControllable, ComponentMoveable, ComponentCamera>();
+    registry.view<ComponentControllable, ComponentPlayer, ComponentCamera>();
+
+  auto & physicsQueries = scene.PhysicsQueries();
 
   for (auto entity : view) {
 
-    auto & moveable = view.get<ComponentMoveable>(entity);
+    auto & player = view.get<ComponentPlayer>(entity);
 
     pulcher::physics::IntersectionResults previousFrameGravityIntersection;
-    if (moveable.physxQueryGravity != -1ul) {
+    if (player.physxQueryGravity != -1ul) {
       previousFrameGravityIntersection =
-        scene.physicsQueries.RetrieveQuery(
-          moveable.physxQueryGravity
+        physicsQueries.RetrieveQuery(
+          player.physxQueryGravity
         );
     }
 
     pulcher::physics::IntersectionResults intersectionSlope;
-    if (moveable.physxQuerySlope != -1ul) {
-      intersectionSlope =
-        scene.physicsQueries.RetrieveQuery(moveable.physxQuerySlope);
+    if (player.physxQuerySlope != -1ul) {
+      intersectionSlope = physicsQueries.RetrieveQuery(player.physxQuerySlope);
     }
 
     pulcher::physics::IntersectionResults intersectionCeiling;
-    moveable.physxQueryCeiling = -1ul;
-    if (moveable.physxQueryCeiling != -1ul) {
+    player.physxQueryCeiling = -1ul;
+    if (player.physxQueryCeiling != -1ul) {
       intersectionCeiling =
-        scene.physicsQueries.RetrieveQuery(moveable.physxQueryCeiling);
+        physicsQueries.RetrieveQuery(player.physxQueryCeiling);
     }
 
     { // -- apply projected movement physics
       pulcher::physics::IntersectionResults previousFrameIntersection;
-      if (moveable.physxQueryVelocity != -1ul) {
+      if (player.physxQueryVelocity != -1ul) {
         previousFrameIntersection =
-          scene.physicsQueries.RetrieveQuery(moveable.physxQueryVelocity);
+          physicsQueries.RetrieveQuery(player.physxQueryVelocity);
       }
 
       if (previousFrameIntersection.collision) {
         if (!previousFrameGravityIntersection.collision) {
-          moveable.origin.y += moveable.velocity.y;
+          player.origin.y += player.velocity.y;
         }
         if (!intersectionSlope.collision) {
-          moveable.origin = intersectionSlope.origin;
+          player.origin = intersectionSlope.origin;
         }
-        moveable.velocity = {};
+        player.velocity = {};
       } else {
-        moveable.origin = moveable.CalculateProjectedOrigin();
-        moveable.velocity = {};
+        player.origin = player.CalculateProjectedOrigin();
+        player.velocity = {};
       }
     }
 
     // ground player
     if (
-         !moveable.jumping
+         !player.jumping
       && !intersectionCeiling.collision
       && previousFrameGravityIntersection.collision
     ) {
-      moveable.origin.y = previousFrameGravityIntersection.origin.y - 1.0f;
+      player.origin.y = previousFrameGravityIntersection.origin.y - 1.0f;
     }
 
     // -- process inputs / events
 
-    auto & current = scene.playerController.current;
-    moveable.velocity.x = static_cast<float>(current.movementHorizontal)*0.15f;
-    moveable.velocity.y = static_cast<float>(current.movementVertical)*0.15f;
-    if (current.dash) { moveable.velocity *= 16.0f; }
+    auto & current = scene.PlayerController().current;
+    player.velocity.x = static_cast<float>(current.movementHorizontal)*0.15f;
+    player.velocity.y = static_cast<float>(current.movementVertical)*0.15f;
+    if (current.dash) { player.velocity *= 16.0f; }
 
-    moveable.jumping = current.jump;
-    if (moveable.jumping && !intersectionCeiling.collision) {
-      moveable.velocity.y -= 1.5f;
+    player.jumping = current.jump;
+    if (player.jumping && !intersectionCeiling.collision) {
+      player.velocity.y -= 1.5f;
     }
 
     // gravity if gravity check failed
     if (!previousFrameGravityIntersection.collision) {
-      moveable.velocity.y += 1.0f;
+      player.velocity.y += 1.0f;
     }
 
     // check for next frame physics intersection
-    moveable.physxQueryVelocity = -1ul;
-    if (!moveable.sleeping && !current.crouch) {
+    player.physxQueryVelocity = -1ul;
+    if (!player.sleeping && !current.crouch) {
       pulcher::physics::IntersectorRay ray;
-      ray.beginOrigin = glm::round(moveable.origin);
-      ray.endOrigin = glm::round(moveable.CalculateProjectedOrigin());
-      moveable.physxQueryVelocity = scene.physicsQueries.AddQuery(ray);
+      ray.beginOrigin = glm::round(player.origin);
+      ray.endOrigin = glm::round(player.CalculateProjectedOrigin());
+      player.physxQueryVelocity = physicsQueries.AddQuery(ray);
     }
 
     // check for ceiling
-    moveable.physxQueryCeiling = -1ul;
-    if (!moveable.sleeping && !current.crouch) {
+    player.physxQueryCeiling = -1ul;
+    if (!player.sleeping && !current.crouch) {
       pulcher::physics::IntersectorPoint point;
-      point.origin = glm::round(moveable.origin + glm::vec2(0.0f, -32.0f));
-      moveable.physxQueryCeiling = scene.physicsQueries.AddQuery(point);
+      point.origin = glm::round(player.origin + glm::vec2(0.0f, -32.0f));
+      player.physxQueryCeiling = physicsQueries.AddQuery(point);
     }
 
     // check for slopes
-    moveable.physxQuerySlope = -1ul;
-    if (!moveable.sleeping && !current.crouch) {
+    player.physxQuerySlope = -1ul;
+    if (!player.sleeping && !current.crouch) {
       pulcher::physics::IntersectorRay ray;
-      ray.beginOrigin = glm::round(moveable.origin);
-      auto origin = moveable.CalculateProjectedOrigin();
+      ray.beginOrigin = glm::round(player.origin);
+      auto origin = player.CalculateProjectedOrigin();
       ray.endOrigin =
         glm::round(
           origin
-        + glm::vec2(0, -5) * glm::max(1.0f, glm::length(moveable.velocity))
+        + glm::vec2(0, -5) * glm::max(1.0f, glm::length(player.velocity))
         );
-      moveable.physxQuerySlope = scene.physicsQueries.AddQuery(ray);
+      player.physxQuerySlope = physicsQueries.AddQuery(ray);
     }
 
     // apply gravity intersection test
-    moveable.physxQueryGravity = -1ul;
-    if (!moveable.sleeping && !current.crouch) {
+    player.physxQueryGravity = -1ul;
+    if (!player.sleeping && !current.crouch) {
       pulcher::physics::IntersectorRay ray;
-      ray.beginOrigin = glm::round(moveable.origin);
-      ray.endOrigin = glm::round(moveable.origin + glm::vec2(0, 1));
-      moveable.physxQueryGravity =
-        scene.physicsQueries.AddQuery(ray);
+      ray.beginOrigin = glm::round(player.origin);
+      ray.endOrigin = glm::round(player.origin + glm::vec2(0, 1));
+      player.physxQueryGravity = physicsQueries.AddQuery(ray);
     }
 
     // center camera on this
-    scene.cameraOrigin = glm::i32vec2(moveable.origin);
+    scene.cameraOrigin = glm::i32vec2(player.origin);
   }
 }
 
 PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
-  auto & registry = pulcher::core::Registry();
+  auto & registry = scene.EnttRegistry();
+  auto & physicsQueries = scene.PhysicsQueries();
 
   ImGui::Begin("Entity");
   registry.each([&](auto entity) {
@@ -201,9 +216,9 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
       ImGui::Text("'%s'", label.label.c_str());
     }
 
-    if (registry.has<ComponentMoveable>(entity)) {
-      ImGui::Text("--- moveable ---"); ImGui::SameLine(); ImGui::Separator();
-      auto & self = registry.get<ComponentMoveable>(entity);
+    if (registry.has<ComponentPlayer>(entity)) {
+      ImGui::Text("--- player ---"); ImGui::SameLine(); ImGui::Separator();
+      auto & self = registry.get<ComponentPlayer>(entity);
       pul::imgui::Text("origin <{:2f}, {:2f}>", self.origin.x, self.origin.y);
       pul::imgui::Text(
         "velocity <{:2f}, {:2f}>", self.velocity.x, self.velocity.y
@@ -215,7 +230,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
       );
       if (self.physxQueryVelocity != -1ul) {
         auto intersection =
-          scene.physicsQueries.RetrieveQuery(self.physxQueryVelocity)
+          physicsQueries.RetrieveQuery(self.physxQueryVelocity)
         ;
         pul::imgui::Text(
           " -- collision {}", intersection.collision
@@ -227,8 +242,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
       , self.physxQueryGravity & 0xFFFF
       );
       if (self.physxQueryGravity != -1ul) {
-        auto intersection =
-          scene.physicsQueries.RetrieveQuery(self.physxQueryGravity);
+        auto intersection = physicsQueries.RetrieveQuery(self.physxQueryGravity);
         pul::imgui::Text(" -- collision {}", intersection.collision);
       }
     }

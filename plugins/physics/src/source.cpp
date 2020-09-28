@@ -390,7 +390,7 @@ PUL_PLUGIN_DECL void LoadMapGeometry(
 
 PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
 
-  auto & queries = scene.physicsQueries;
+  auto & queries = scene.PhysicsQueries();
 
   auto computingIntersectorPoints = std::move(queries.intersectorPoints);
   auto computingIntersectorRays = std::move(queries.intersectorRays);
@@ -515,7 +515,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
   pul::imgui::Text("tilemap width {}", ::tilemapLayer.width);
   pul::imgui::Text("tile info size {}", ::tilemapLayer.tileInfo.size());
 
-  auto & queries = scene.physicsQueries;
+  auto & queries = scene.PhysicsQueries();
 
   static bool showPhysicsQueries = true;
   ImGui::Checkbox("show physics queries", &showPhysicsQueries);

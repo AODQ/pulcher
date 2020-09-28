@@ -5,6 +5,7 @@ target_link_libraries(
   plugin-entity
   PRIVATE
     EnTT cjson pulcher-core pulcher-gfx pulcher-physics pulcher-plugin
+    pulcher-controls pulcher-animation
 )
 
 set_target_properties(

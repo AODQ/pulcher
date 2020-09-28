@@ -1,8 +1,34 @@
 #include <pulcher-core/scene-bundle.hpp>
 
-#include <entt/entity/registry.hpp>
+#include <pulcher-animation/animation.hpp>
+#include <pulcher-controls/controls.hpp>
+#include <pulcher-physics/intersections.hpp>
 
-entt::registry & pulcher::core::Registry() {
-  static entt::registry self;
-  return self;
+#include <entt/entt.hpp>
+
+struct pulcher::core::SceneBundle::Impl {
+  pulcher::animation::System animationSystem;
+  pulcher::controls::Controller playerController;
+  pulcher::physics::Queries physicsQueries;
+
+  entt::registry enttRegistry;
+};
+
+#define PIMPL_SPECIALIZE pulcher::core::SceneBundle::Impl
+#include <pulcher-util/pimpl.inl>
+
+pulcher::animation::System & pulcher::core::SceneBundle::AnimationSystem() {
+  return impl->animationSystem;
+}
+
+pulcher::controls::Controller & pulcher::core::SceneBundle::PlayerController() {
+  return impl->playerController;
+}
+
+pulcher::physics::Queries & pulcher::core::SceneBundle::PhysicsQueries() {
+  return impl->physicsQueries;
+}
+
+entt::registry & pulcher::core::SceneBundle::EnttRegistry() {
+  return impl->enttRegistry;
 }

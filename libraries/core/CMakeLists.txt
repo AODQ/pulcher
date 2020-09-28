@@ -22,9 +22,9 @@ target_link_libraries(
     glm
     pulcher-util
     spdlog
-    pulcher-controls
-    pulcher-physics
-    pulcher-animation
   PRIVATE
     EnTT
+    pulcher-animation
+    pulcher-controls
+    pulcher-physics
 )

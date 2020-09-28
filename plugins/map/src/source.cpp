@@ -130,8 +130,7 @@ void MapSokolPushTile(
   renderable->tileOrigins.emplace_back(glm::u32vec2(x, y));
   renderable->tileIds.emplace_back(localTileId);
 
-  for (
-      auto const & v
+  for (auto const & v
     : std::vector<std::array<float, 2>> {
         {0.0f,  0.0f}
       , {1.0f,  1.0f}
