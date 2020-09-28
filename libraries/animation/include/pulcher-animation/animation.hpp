@@ -40,7 +40,7 @@ namespace pulcher::animation {
     // -- structs
     struct Component {
       glm::u32vec2 tile;
-      glm::vec2 originOffset = {};
+      glm::i32vec2 originOffset = {};
     };
 
     struct State {

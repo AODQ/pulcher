@@ -71,7 +71,7 @@ void ComputeVertices(
   pulcher::animation::Instance & instance
 , pulcher::animation::Animator::SkeletalPiece const & skeletal
 , size_t & indexOffset
-, glm::vec2 & originOffset
+, glm::i32vec2 & originOffset
 , bool & forceUpdate
 ) {
   // okay the below is crazy with the map lookups, I need to cache the
@@ -96,7 +96,7 @@ void ComputeVertices(
   auto & component = state.components[stateInfo.componentIt];
 
   // update originOffset
-  originOffset += glm::vec2(piece.origin) + component.originOffset;
+  originOffset += piece.origin + component.originOffset;
 
   if (!hasUpdate) {
     indexOffset += 6ul;
@@ -120,7 +120,7 @@ void ComputeVertices(
 
     instance.originBufferData[indexOffset] =
         glm::vec3(
-          v*pieceDimensions + originOffset
+          v*pieceDimensions + glm::vec2(originOffset)
         , static_cast<float>(piece.renderOrder)
         )
     ;
@@ -131,12 +131,12 @@ void ComputeVertices(
   pulcher::animation::Instance & instance
 , std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
 , size_t & indexOffset
-, const glm::vec2 originOffset
+, const glm::i32vec2 originOffset
 , bool const forceUpdate
 ) {
   for (const auto & skeletal : skeletals) {
     // compute origin / uv coords
-    glm::vec2 newOriginOffset = originOffset;
+    glm::i32vec2 newOriginOffset = originOffset;
     bool newForceUpdate = forceUpdate;
     ComputeVertices(
       instance, skeletal, indexOffset, newOriginOffset, newForceUpdate
@@ -558,32 +558,6 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
 
   ImGui::Begin("Animation");
 
-  for (const auto & animatorPair : scene.AnimationSystem().animators) {
-    ImGui::Separator();
-    ImGui::Separator();
-    pul::imgui::Text("animator '{}'", animatorPair.first);
-
-    auto const & spritesheet = animatorPair.second->spritesheet;
-
-    ImGui::Image(
-      reinterpret_cast<void *>(spritesheet.Image().id)
-    , ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0)
-    );
-
-    for (auto const & piecePair : animatorPair.second->pieces) {
-      ImGui::Separator();
-      pul::imgui::Text("piece '{}'", piecePair.first);
-
-      for (auto const & statePair : piecePair.second.states) {
-        pul::imgui::Text("\tstate '{}'", statePair.first);
-        pul::imgui::Text("\tdelta time {} ms", statePair.second.msDeltaTime);
-        for (auto const & component : statePair.second.components) {
-          pul::imgui::Text("\t\t {}", component.tile);
-        }
-      }
-    }
-  }
-
   auto & registry = scene.EnttRegistry();
 
   static pulcher::animation::Instance * editInstance = nullptr;
@@ -594,7 +568,6 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
     for (auto entity : view) {
       auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
-      ImGui::Separator();
       ImGui::Separator();
       pul::imgui::Text(
         "animation instance '{}'", self.instance.animator->label
@@ -609,7 +582,92 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
 
     auto & instance = *editInstance;
 
-    DisplayImGuiSkeleton(*editInstance, editInstance->animator->skeleton);
+    DisplayImGuiSkeleton(instance, editInstance->animator->skeleton);
+
+    ImGui::Separator();
+
+    pul::imgui::Text("animator '{}'", instance.animator->label);
+
+    ImGui::Separator();
+
+    size_t pieceIt = 0ul;
+    for (auto & piecePair : instance.animator->pieces) {
+      ImGui::Separator();
+
+      ImGui::PushID(++ pieceIt);
+
+      pul::imgui::Text("piece '{}'", piecePair.first);
+
+      size_t statePairIt = 0ul;
+      for (auto & statePair : piecePair.second.states) {
+        pul::imgui::Text("state '{}'", statePair.first);
+
+        ImGui::PushID(++ statePairIt);
+
+        ImGui::SliderFloat(
+          "delta time", &statePair.second.msDeltaTime, 0.0f, 1000.0f
+        );
+
+        ImGui::Separator();
+
+        auto & components = statePair.second.components;
+
+        for (
+          size_t componentIt = 0ul;
+          componentIt < components.size();
+          ++ componentIt
+        ) {
+          auto & component = components[componentIt];
+
+          ImGui::PushID(componentIt);
+
+          {
+            std::array<int, 2> inpInt;
+            inpInt[0] = component.tile.x;
+            inpInt[1] = component.tile.y;
+            if (ImGui::InputInt2("tile", inpInt.data())) {
+              component.tile = {inpInt[0], inpInt[1]};
+            }
+          }
+
+          {
+            std::array<int, 2> inpInt;
+            inpInt[0] = component.originOffset.x;
+            inpInt[1] = component.originOffset.y;
+            if (ImGui::InputInt2("origin-offset", inpInt.data())) {
+              component.originOffset = {inpInt[0], inpInt[1]};
+            }
+          }
+
+          if (ImGui::Button("-")) {
+            components.erase(components.begin() + componentIt);
+            -- componentIt;
+          }
+
+          ImGui::SameLine();
+          if (ImGui::Button("+")) {
+            components.insert(components.begin() + componentIt, {});
+            -- componentIt;
+          }
+
+          ImGui::SameLine();
+          if (componentIt > 0ul && ImGui::Button("^"))
+            { std::swap(components[componentIt], components[componentIt-1]); }
+
+          ImGui::SameLine();
+          if (componentIt < components.size()-1 && ImGui::Button("V"))
+            { std::swap(components[componentIt], components[componentIt+1]); }
+
+          ImGui::Separator();
+
+          ImGui::PopID(); // componentIt
+        }
+
+        ImGui::PopID(); // statePairIt
+      }
+
+      ImGui::PopID(); // pieceIt
+    }
 
     ImGui::End();
   }
