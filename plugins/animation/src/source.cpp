@@ -72,7 +72,7 @@ void ComputeVertices(
 , pulcher::animation::Animator::SkeletalPiece const & skeletal
 , size_t & indexOffset
 , glm::vec2 & originOffset
-, bool const forceUpdate
+, bool & forceUpdate
 ) {
   // okay the below is crazy with the map lookups, I need to cache the
   // state somehow
@@ -102,6 +102,8 @@ void ComputeVertices(
     indexOffset += 6ul;
     return;
   }
+
+  forceUpdate = true;
 
   auto pieceDimensions = glm::vec2(piece.dimensions);
   auto pieceOrigin =
@@ -135,13 +137,14 @@ void ComputeVertices(
   for (const auto & skeletal : skeletals) {
     // compute origin / uv coords
     glm::vec2 newOriginOffset = originOffset;
+    bool newForceUpdate = forceUpdate;
     ComputeVertices(
-      instance, skeletal, indexOffset, newOriginOffset, forceUpdate
+      instance, skeletal, indexOffset, newOriginOffset, newForceUpdate
     );
 
     // continue to children
     ComputeVertices(
-      instance, skeletal.children, indexOffset, newOriginOffset, forceUpdate
+      instance, skeletal.children, indexOffset, newOriginOffset, newForceUpdate
     );
   }
 }
