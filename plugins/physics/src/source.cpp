@@ -302,6 +302,21 @@ PUL_PLUGIN_DECL void ProcessTileset(
 }
 
 PUL_PLUGIN_DECL void ClearMapGeometry() {
+  sg_destroy_buffer(::debugRenderPoint.bufferOrigin);
+  sg_destroy_buffer(::debugRenderRay  .bufferOrigin);
+
+  sg_destroy_buffer(::debugRenderPoint.bufferCollision);
+  sg_destroy_buffer(::debugRenderRay  .bufferCollision);
+
+  sg_destroy_pipeline(::debugRenderPoint.pipeline);
+  sg_destroy_pipeline(::debugRenderRay  .pipeline);
+
+  ::debugRenderPoint.bindings = {};
+  ::debugRenderRay  .bindings = {};
+
+  sg_destroy_shader(::debugRenderPoint.program);
+  sg_destroy_shader(::debugRenderRay  .program);
+
   tilemapLayer = {};
 }
 
