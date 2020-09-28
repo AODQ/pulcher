@@ -21,6 +21,7 @@ namespace pulcher::gfx {
     static Spritesheet Construct(pulcher::gfx::Image const &);
 
     sg_image Image() const;
+    glm::vec2 InvResolution();
 
     void Destroy();
   };

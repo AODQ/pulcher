@@ -68,6 +68,10 @@ sg_image pulcher::gfx::Spritesheet::Image() const {
   return image;
 }
 
+glm::vec2 pulcher::gfx::Spritesheet::InvResolution() {
+  return glm::vec2(1.0f) / glm::vec2(width, height);
+}
+
 void pulcher::gfx::Spritesheet::Destroy() {
   if (handle)
     { sg_destroy_image(this->Image()); }
