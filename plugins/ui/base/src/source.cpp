@@ -29,7 +29,7 @@ void RenderKey(
 extern "C" {
 
 PUL_PLUGIN_DECL void UiDispatch(
-  pulcher::plugin::Info const & plugins
+  pulcher::plugin::Info const & plugin
 , pulcher::core::SceneBundle & sceneBundle
 ) {
   ImGui::Begin("Diagnostics");
@@ -87,10 +87,10 @@ PUL_PLUGIN_DECL void UiDispatch(
 
   ImGui::End();
 
-  plugins.animation.UiRender(sceneBundle);
-  plugins.entity.UiRender(sceneBundle);
-  plugins.map.UiRender(sceneBundle);
-  plugins.physics.UiRender(sceneBundle);
+  plugin.animation.UiRender(plugin, sceneBundle);
+  plugin.entity.UiRender(sceneBundle);
+  plugin.map.UiRender(sceneBundle);
+  plugin.physics.UiRender(sceneBundle);
 }
 
 }

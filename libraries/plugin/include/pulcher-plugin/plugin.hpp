@@ -29,6 +29,9 @@ namespace pulcher::plugin {
   };
 
   struct Animation {
+    void (*DestroyInstance)(
+      pulcher::animation::Instance &
+    ) = nullptr;
     void (*ConstructInstance)(
       pulcher::animation::Instance &
     , pulcher::animation::System &
@@ -44,7 +47,9 @@ namespace pulcher::plugin {
     void (*RenderAnimations)(
       pulcher::plugin::Info const &, pulcher::core::SceneBundle &
     ) = nullptr;
-    void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
+    void (*UiRender)(
+      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+    ) = nullptr;
   };
 
   struct Entity {

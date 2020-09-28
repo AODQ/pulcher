@@ -11,15 +11,47 @@
 
 #include <pulcher-util/log.hpp>
 
+#include <glm/fwd.hpp>
 #include <imgui/imgui.hpp>
 
-#include <glm/fwd.hpp>
+#include <array>
 
 namespace pul::imgui {
   template <typename... T> void Text(char const * label, T && ... fmts) {
     ImGui::TextUnformatted(
       fmt::format(label, std::forward<T>(fmts)...).c_str()
     );
+  }
+
+  template <typename T>
+  bool SliderInt(char const * label, T * value, int min, int max) {
+    int valueAsInt = static_cast<int>(*value);
+    bool result = ImGui::SliderInt(label, &valueAsInt, min, max);
+    if (result) { *value = static_cast<T>(valueAsInt); }
+    return result;
+  }
+
+  template <typename T>
+  bool InputInt(char const * label, T * value) {
+    int valueAsInt = static_cast<int>(*value);
+    bool result = ImGui::InputInt(label, &valueAsInt);
+    if (result) { *value = static_cast<T>(valueAsInt); }
+    return result;
+  }
+
+  template <typename T>
+  bool InputInt2(char const * label, T * value) {
+    std::array<int, 2> valueAsInt =
+      { static_cast<int>(value[0]), static_cast<int>(value[1]) };
+
+    bool result = ImGui::InputInt2(label, valueAsInt.data());
+
+    if (result) {
+      value[0] = static_cast<T>(valueAsInt[0]);
+      value[1] = static_cast<T>(valueAsInt[1]);
+    }
+
+    return result;
   }
 
   bool CheckImageClicked(glm::vec2 & pixelClicked);
