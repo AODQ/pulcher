@@ -225,11 +225,10 @@ void MapSokolEnd() {
     desc.fs.images[0].type = SG_IMAGETYPE_2D;
 
     desc.vs.source = PUL_SHADER(
-      layout(location = 0) in vec2 inVertexOrigin;
-      layout(location = 1) in vec2 inVertexUvCoord;
+      layout(location = 0) in vec2 inOrigin;
+      layout(location = 1) in vec2 inUvCoord;
 
       out vec2 uvCoord;
-      flat out uint tileId;
 
       uniform vec2 originOffset;
       uniform float tileDepth;
@@ -237,18 +236,16 @@ void MapSokolEnd() {
 
       void main() {
         vec2 framebufferScale = vec2(2.0f) / framebufferResolution;
-        vec2 vertexOrigin = (inVertexOrigin)*vec2(1,-1) * framebufferScale;
+        vec2 vertexOrigin = (inOrigin)*vec2(1,-1) * framebufferScale;
         vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;
         gl_Position = vec4(vertexOrigin, tileDepth, 1.0f);
-        uvCoord = inVertexUvCoord;
-        tileId = uint(gl_VertexID/6);
+        uvCoord = inUvCoord;
       }
     );
 
     desc.fs.source = PUL_SHADER(
       uniform sampler2D baseSampler;
       in vec2 uvCoord;
-      flat in uint tileId;
       out vec4 outColor;
       void main() {
         outColor = texture(baseSampler, uvCoord);
