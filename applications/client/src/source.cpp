@@ -145,6 +145,29 @@ static void ImguiApplyColor()
     colors[ImGuiCol_ModalWindowDimBg]      = ImVec4(0.80f, 0.81f, 0.81f, 0.35f);
 }
 
+void LoadPluginInfo(
+  pulcher::plugin::Info & plugin, pulcher::core::SceneBundle & scene
+) {
+  plugin.map.Load(plugin, "base/map/test.json");
+  plugin.animation.LoadAnimations(plugin, scene);
+
+  // last thing so that all the previous information (maps, animation, etc)
+  // can be loaded up. They can still modify the registry if they need tho.
+  plugin.entity.StartScene(plugin, scene);
+}
+
+void ShutdownPluginInfo(
+  pulcher::plugin::Info & plugin, pulcher::core::SceneBundle & scene
+) {
+  plugin.animation.Shutdown(scene);
+  plugin.map.Shutdown();
+  plugin.physics.ClearMapGeometry();
+
+  // entity has to shut down last from plugins to allow entities in the
+  // registry to be deallocated
+  plugin.entity.Shutdown(scene);
+}
+
 } // -- anon namespace
 
 int main(int argc, char const ** argv) {
@@ -202,10 +225,7 @@ int main(int argc, char const ** argv) {
   ::PrintUserConfig(userConfig);
 
   pulcher::core::SceneBundle sceneBundle;
-
-  plugins.map.Load(plugins, "base/map/test.json");
-  plugins.entity.StartScene(plugins, sceneBundle);
-  plugins.animation.LoadAnimations(plugins, sceneBundle);
+  ::LoadPluginInfo(plugins, sceneBundle);
 
   ImguiApplyColor();
 
@@ -236,14 +256,10 @@ int main(int argc, char const ** argv) {
 
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
-      plugins.map.Shutdown();
-      plugins.physics.ClearMapGeometry();
-      plugins.entity.Shutdown();
-      plugins.animation.Shutdown(sceneBundle);
+
+      ::ShutdownPluginInfo(plugins, sceneBundle);
       pulcher::plugin::UpdatePlugins(plugins);
-      plugins.map.Load(plugins, "base/map/test.json");
-      plugins.entity.StartScene(plugins, sceneBundle);
-      plugins.animation.LoadAnimations(plugins, sceneBundle);
+      ::LoadPluginInfo(plugins, sceneBundle);
     }
     ImGui::End();
 
@@ -270,10 +286,9 @@ int main(int argc, char const ** argv) {
     timePreviousFrameBegin = timeFrameBegin;
   }
 
-  plugins.animation.Shutdown(sceneBundle);
-  plugins.entity.Shutdown();
-  plugins.map.Shutdown();
+  ::ShutdownPluginInfo(plugins, sceneBundle);
 
+  // has to be last thing to shut down to allow gl deallocation calls
   pulcher::gfx::Shutdown();
 
   return 0;
