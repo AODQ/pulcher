@@ -296,7 +296,10 @@ int main(int argc, char const ** argv) {
       , "plugins/plugin-physics.pulcher-plugin"
       , "lib/libglad.so", "lib/libimgui.so", "lib/libspdlog.so.1"
       , "lib/libsokol.so"
-      , "lib/libglfw.so"
+      , "lib/libglfw.so.3"
+      , "lib/libstdc++.so.6"
+      , "lib/libpthread.so.0"
+      , "lib/ld-linux-x86-64.so.2"
 
       , "lib/libm.so.6"
       , "lib/libc.so.6"
