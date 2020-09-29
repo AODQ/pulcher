@@ -59,6 +59,7 @@ namespace pulcher::animation {
 
     struct SkeletalPiece {
       std::string label;
+      glm::i32vec2 origin;
       std::vector<SkeletalPiece> children;
     };
 
@@ -86,6 +87,8 @@ namespace pulcher::animation {
       std::string label;
       float deltaTime = 0.0f;
       size_t componentIt = 0ul;
+      bool flip = false;
+      float angle = 0.0f;
     };
 
     std::map<std::string, StateInfo> pieceToState;

@@ -39,6 +39,10 @@ void JsonParseRecursiveSkeleton(
     pulcher::animation::Animator::SkeletalPiece skeletal;
     skeletal.label =
       cJSON_GetObjectItemCaseSensitive(skeletalChildJson, "label")->valuestring;
+    skeletal.origin.x =
+      cJSON_GetObjectItemCaseSensitive(skeletalChildJson, "origin-x")->valueint;
+    skeletal.origin.y =
+      cJSON_GetObjectItemCaseSensitive(skeletalChildJson, "origin-y")->valueint;
     JsonParseRecursiveSkeleton(skeletalChildJson, skeletal.children);
     skeletals.emplace_back(std::move(skeletal));
   }
@@ -56,6 +60,13 @@ cJSON * JsonWriteRecursiveSkeleton(
 
     cJSON_AddItemToObject(
       skeletalJson, "label", cJSON_CreateString(skeletal.label.c_str())
+    );
+
+    cJSON_AddItemToObject(
+      skeletalJson, "origin-x", cJSON_CreateInt(skeletal.origin.x)
+    );
+    cJSON_AddItemToObject(
+      skeletalJson, "origin-y", cJSON_CreateInt(skeletal.origin.y)
     );
 
     if (auto childrenJson = JsonWriteRecursiveSkeleton(skeletal.children)) {
@@ -81,6 +92,8 @@ void ComputeVertices(
 , pulcher::animation::Animator::SkeletalPiece const & skeletal
 , size_t & indexOffset
 , glm::i32vec2 & originOffset
+, bool & skeletalFlip
+, float & skeletalRotation
 , bool & forceUpdate
 ) {
   // okay the below is crazy with the map lookups, I need to cache the
@@ -115,8 +128,13 @@ void ComputeVertices(
     }
   }
 
-  // update originOffset
+  // update skeletal information (origins, flip, rotation, etc)
+  skeletalFlip ^= stateInfo.flip;
   originOffset += piece.origin + component.originOffset;
+
+  if (skeletalFlip) {
+    originOffset += skeletal.origin;
+  }
 
   if (!hasUpdate) {
     indexOffset += 6ul;
@@ -133,8 +151,12 @@ void ComputeVertices(
   for (size_t it = 0ul; it < 6; ++ it, ++ indexOffset) {
     auto v = pulcher::util::TriangleVertexArray()[it];
 
+    // flip uv coords if requested
+    auto uv = v;
+    if (skeletalFlip) { uv.x = 1.0f - uv.x; }
+
     instance.uvCoordBufferData[indexOffset] =
-        (v*pieceDimensions + glm::vec2(component.tile)*pieceDimensions)
+        (uv*pieceDimensions + glm::vec2(component.tile)*pieceDimensions)
       * instance.animator->spritesheet.InvResolution()
     ;
 
@@ -152,19 +174,25 @@ void ComputeVertices(
 , std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
 , size_t & indexOffset
 , const glm::i32vec2 originOffset
+, const bool skeletalFlip
+, const float skeletalRotation
 , bool const forceUpdate
 ) {
   for (const auto & skeletal : skeletals) {
     // compute origin / uv coords
     glm::i32vec2 newOriginOffset = originOffset;
+    bool newSkeletalFlip = skeletalFlip;
+    float newSkeletalRotation = skeletalRotation;
     bool newForceUpdate = forceUpdate;
     ComputeVertices(
-      instance, skeletal, indexOffset, newOriginOffset, newForceUpdate
+      instance, skeletal, indexOffset, newOriginOffset
+    , newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
 
     // continue to children
     ComputeVertices(
-      instance, skeletal.children, indexOffset, newOriginOffset, newForceUpdate
+      instance, skeletal.children, indexOffset, newOriginOffset
+    , newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
   }
 }
@@ -175,7 +203,7 @@ void ComputeVertices(
 ) {
   size_t indexOffset = 0ul;
   ComputeVertices(
-    instance, instance.animator->skeleton, indexOffset, glm::vec2()
+    instance, instance.animator->skeleton, indexOffset, glm::vec2(), false, 0.0f
   , forceUpdate
   );
 }
@@ -319,10 +347,7 @@ void DisplayImGuiSkeleton(
       continue;
     }
 
-    auto & stateInfo = instance.pieceToState[skeletal.label];
-    pul::imgui::Text("State '{}'", stateInfo.label);
-    pul::imgui::Text("current delta time {}", stateInfo.deltaTime);
-    pul::imgui::Text("componentIt {}", stateInfo.componentIt);
+    pul::imgui::InputInt2("origin", &skeletal.origin.x);
 
     if (ImGui::Button("remove")) {
       skeletals.erase(skeletals.begin() + skeletalIdx);
@@ -748,7 +773,7 @@ PUL_PLUGIN_DECL void UpdateFrame(
   for (auto entity : view) {
     auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
-    ::ComputeVertices(self.instance);
+    ::ComputeVertices(self.instance, true);
 
     // must update entire animation buffer
     sg_update_buffer(

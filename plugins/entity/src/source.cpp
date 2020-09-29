@@ -81,13 +81,17 @@ PUL_PLUGIN_DECL void EntityUpdate(
   auto & registry = scene.EnttRegistry();
 
   auto view =
-    registry.view<ComponentControllable, ComponentPlayer, ComponentCamera>();
+    registry.view<
+      ComponentControllable, ComponentPlayer, ComponentCamera
+    , pulcher::animation::ComponentInstance
+    >();
 
   auto & physicsQueries = scene.PhysicsQueries();
 
   for (auto entity : view) {
 
     auto & player = view.get<ComponentPlayer>(entity);
+    auto & animation = view.get<pulcher::animation::ComponentInstance>(entity);
 
     pulcher::physics::IntersectionResults previousFrameGravityIntersection;
     if (player.physxQueryGravity != -1ul) {
@@ -149,6 +153,31 @@ PUL_PLUGIN_DECL void EntityUpdate(
     player.jumping = current.jump;
     if (player.jumping && !intersectionCeiling.collision) {
       player.velocity.y -= 3.5f;
+    }
+
+    // -- set leg animation
+    float velocityXAbs = glm::abs(player.velocity.x);
+    if (velocityXAbs < 0.1f) {
+      animation.instance.pieceToState["legs"].label = "stand";
+    }
+    else if (velocityXAbs < 1.5f) {
+      animation.instance.pieceToState["legs"].label = "walk";
+    }
+    else {
+      animation.instance.pieceToState["legs"].label = "run";
+    }
+
+    if (
+        current.movementHorizontal
+     == pulcher::controls::Controller::Movement::Right
+    ) {
+      animation.instance.pieceToState["legs"].flip = true;
+    }
+    else if (
+        current.movementHorizontal
+     == pulcher::controls::Controller::Movement::Left
+    ) {
+      animation.instance.pieceToState["legs"].flip = false;
     }
 
     // gravity if gravity check failed
