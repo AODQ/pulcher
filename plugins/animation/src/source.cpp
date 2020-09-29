@@ -424,10 +424,10 @@ void SaveAnimations(pulcher::animation::System & system) {
         pieceJson, "label", cJSON_CreateString(pieceLabel.c_str())
       );
       cJSON_AddItemToObject(
-        pieceJson, "dimensions-x", cJSON_CreateInt(piece.dimensions.x)
+        pieceJson, "dimension-x", cJSON_CreateInt(piece.dimensions.x)
       );
       cJSON_AddItemToObject(
-        pieceJson, "dimensions-y", cJSON_CreateInt(piece.dimensions.y)
+        pieceJson, "dimension-y", cJSON_CreateInt(piece.dimensions.y)
       );
       cJSON_AddItemToObject(
         pieceJson, "origin-x", cJSON_CreateInt(piece.origin.x)
