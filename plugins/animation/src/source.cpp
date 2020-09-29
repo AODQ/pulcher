@@ -44,6 +44,28 @@ void JsonParseRecursiveSkeleton(
   }
 }
 
+cJSON * JsonWriteRecursiveSkeleton(
+  std::vector<pulcher::animation::Animator::SkeletalPiece> & skeletals
+) {
+  if (skeletals.size() == 0ul) { return nullptr; }
+
+  cJSON * skeletalsJson = cJSON_CreateArray();
+  for (auto & skeletal : skeletals) {
+    cJSON * skeletalJson = cJSON_CreateObject();
+    cJSON_AddItemToArray(skeletalsJson, skeletalJson);
+
+    cJSON_AddItemToObject(
+      skeletalJson, "label", cJSON_CreateString(skeletal.label.c_str())
+    );
+
+    if (auto childrenJson = JsonWriteRecursiveSkeleton(skeletal.children)) {
+      cJSON_AddItemToObject(skeletalJson, "skeleton", childrenJson);
+    }
+  }
+
+  return skeletalsJson;
+}
+
 size_t ComputeVertexBufferSize(
   std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
 ) {
@@ -356,6 +378,117 @@ void ImGuiRenderSpritesheetTile(
   );
 }
 
+void SaveAnimations(pulcher::animation::System & system) {
+  cJSON * playerDataJson;
+
+  playerDataJson = cJSON_CreateObject();
+
+  cJSON * spritesheetsJson = cJSON_CreateArray();
+  cJSON_AddItemToObject(playerDataJson, "spritesheets", spritesheetsJson);
+
+  for (auto & animatorPair : system.animators) {
+    auto & animator = *animatorPair.second;
+
+    cJSON * spritesheetJson = cJSON_CreateObject();
+    cJSON_AddItemToArray(spritesheetsJson, spritesheetJson);
+
+    cJSON_AddItemToObject(
+      spritesheetJson, "label", cJSON_CreateString(animator.label.c_str())
+    );
+
+    cJSON_AddItemToObject(
+      spritesheetJson
+    , "filename", cJSON_CreateString(animator.spritesheet.filename.c_str())
+    );
+
+    // TODO bug if skeleton is empty i think
+    cJSON_AddItemToObject(
+      spritesheetJson
+    , "skeleton"
+    , JsonWriteRecursiveSkeleton(animator.skeleton)
+    );
+
+    cJSON * animationPieceJson = cJSON_CreateArray();
+    cJSON_AddItemToObject(
+      spritesheetJson, "animation-piece", animationPieceJson
+    );
+
+    for (auto const & piecePair : animator.pieces) {
+      auto const & pieceLabel = std::get<0>(piecePair);
+      auto const & piece = std::get<1>(piecePair);
+
+      cJSON * pieceJson = cJSON_CreateObject();
+      cJSON_AddItemToArray(animationPieceJson, pieceJson);
+
+      cJSON_AddItemToObject(
+        pieceJson, "label", cJSON_CreateString(pieceLabel.c_str())
+      );
+      cJSON_AddItemToObject(
+        pieceJson, "dimensions-x", cJSON_CreateInt(piece.dimensions.x)
+      );
+      cJSON_AddItemToObject(
+        pieceJson, "dimensions-y", cJSON_CreateInt(piece.dimensions.y)
+      );
+      cJSON_AddItemToObject(
+        pieceJson, "origin-x", cJSON_CreateInt(piece.origin.x)
+      );
+      cJSON_AddItemToObject(
+        pieceJson, "origin-y", cJSON_CreateInt(piece.origin.y)
+      );
+      cJSON_AddItemToObject(
+        pieceJson, "render-order", cJSON_CreateInt(piece.renderOrder)
+      );
+
+      cJSON * statesJson = cJSON_CreateArray();
+      cJSON_AddItemToObject(pieceJson, "states", statesJson);
+
+      for (auto const & statePair : piece.states) {
+        auto const & stateLabel = std::get<0>(statePair);
+        auto const & state = std::get<1>(statePair);
+
+        cJSON * stateJson = cJSON_CreateObject();
+        cJSON_AddItemToArray(statesJson, stateJson);
+
+        cJSON_AddItemToObject(
+          stateJson, "label", cJSON_CreateString(stateLabel.c_str())
+        );
+        cJSON_AddItemToObject(
+          stateJson, "ms-delta-time", cJSON_CreateInt(state.msDeltaTime)
+        );
+
+        cJSON * componentsJson = cJSON_CreateArray();
+        cJSON_AddItemToObject(stateJson, "components", componentsJson);
+
+        for (auto const & component : state.components) {
+          cJSON * componentJson = cJSON_CreateObject();
+          cJSON_AddItemToArray(componentsJson, componentJson);
+
+          cJSON_AddItemToObject(
+            componentJson, "x", cJSON_CreateInt(component.tile.x)
+          );
+          cJSON_AddItemToObject(
+            componentJson, "y", cJSON_CreateInt(component.tile.y)
+          );
+          cJSON_AddItemToObject(
+            componentJson, "origin-offset-x"
+          , cJSON_CreateInt(component.originOffset.x)
+          );
+          cJSON_AddItemToObject(
+            componentJson, "origin-offset-y"
+          , cJSON_CreateInt(component.originOffset.y)
+          );
+        }
+      }
+    }
+  }
+
+  auto jsonStr = cJSON_Print(playerDataJson);
+
+  spdlog::info("saving: \n{}", jsonStr);
+
+  cJSON_Delete(playerDataJson);
+}
+
 }
 
 extern "C" {
@@ -393,6 +526,8 @@ PUL_PLUGIN_DECL void LoadAnimations(
   }
 
   auto & animationSystem = scene.AnimationSystem();
+
+  animationSystem.filename = "base/spritesheets/player/data.json";
 
   cJSON * sheetJson;
   cJSON_ArrayForEach(
@@ -742,11 +877,17 @@ PUL_PLUGIN_DECL void UiRender(
 
     ImGui::Begin("Animation Editor");
 
-    pul::imgui::Text("animator '{}'", instance.animator->label);
-
     if (ImGui::Button("reload")) {
       ReconstructInstance(instance, scene.AnimationSystem());
     }
+
+    if (ImGui::Button("save")) {
+      ::SaveAnimations(scene.AnimationSystem());
+    }
+
+    ImGui::Separator();
+
+    pul::imgui::Text("animator '{}'", instance.animator->label);
 
     ImGui::Separator();
 
