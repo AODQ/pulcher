@@ -507,9 +507,22 @@ void SaveAnimations(pulcher::animation::System & system) {
     }
   }
 
-  auto jsonStr = cJSON_Print(playerDataJson);
+  { // -- save file
+    auto jsonStr = cJSON_Print(playerDataJson);
 
-  spdlog::info("saving: \n{}", jsonStr);
+    auto const filename = "base/spritesheets/player/data.json";
+
+    spdlog::info("saving json: '{}'", filename);
+
+    auto file = std::ofstream{filename};
+    if (!file.good()) {
+      spdlog::error("could not save file");
+      cJSON_Delete(playerDataJson);
+      return;
+    }
+
+    file << jsonStr;
+  }
 
   cJSON_Delete(playerDataJson);
 }
