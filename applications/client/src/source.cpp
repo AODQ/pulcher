@@ -259,6 +259,8 @@ int main(int argc, char const ** argv) {
     static glm::vec3 screenClearColor = glm::vec3(0.7f, 0.4f, .4f);
 
     ImGui::Begin("Diagnostics");
+    ImGui::Text("WARNING: RELOADING plugins will not save animation yet!!");
+    ImGui::Text("progress WILL be lost");
     if (ImGui::Button("Reload plugins")) {
       ::ShutdownPluginInfo(plugins, sceneBundle);
       pulcher::plugin::UpdatePlugins(plugins);
