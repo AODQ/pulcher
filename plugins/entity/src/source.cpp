@@ -26,6 +26,7 @@ struct ComponentPlayer {
   size_t physxQueryVelocity = -1ul;
   size_t physxQuerySlope = -1ul;
   size_t physxQueryCeiling = -1ul;
+  size_t physxQueryGun = -1ul;
   bool sleeping = false;
 
   bool jumping = false;
@@ -240,6 +241,19 @@ PUL_PLUGIN_DECL void EntityUpdate(
       ray.endOrigin = glm::round(player.CalculateProjectedOrigin());
       player.physxQueryVelocity = physicsQueries.AddQuery(ray);
     }
+
+    // check gun
+    player.physxQueryGun = -1ul;
+    static size_t gunSleep = 0ul;
+    if (current.shoot && gunSleep == 0ul) {
+      gunSleep = 0ul;
+      pulcher::physics::IntersectorRay ray;
+      glm::vec2 const origin = player.origin + glm::vec2(0.0f, -40.0f);
+      ray.beginOrigin = glm::round(origin);
+      ray.endOrigin = glm::round(origin + current.lookDirection*1000.0f);
+      player.physxQueryGun = physicsQueries.AddQuery(ray);
+    }
+    if (gunSleep > 0ul) -- gunSleep;
 
     // check for ceiling
     player.physxQueryCeiling = -1ul;

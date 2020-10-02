@@ -23,6 +23,8 @@ namespace pulcher::controls {
 
       bool jump = false, dash = false, crouch = false;
 
+      bool shoot = false;
+
       glm::vec2 lookDirection = { 0.0f, 0.0f };
     };
 

@@ -37,4 +37,5 @@ void pulcher::controls::UpdateControls(
   current.jump = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
   current.dash = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
   current.crouch = glfwGetKey(window, GLFW_KEY_BACKSPACE) == GLFW_PRESS;
+  current.shoot = glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS;
 }
