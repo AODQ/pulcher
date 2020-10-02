@@ -6,6 +6,7 @@
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/consts.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 
@@ -134,13 +135,16 @@ PUL_PLUGIN_DECL void EntityUpdate(
       }
     }
 
+    bool const grounded = previousFrameGravityIntersection.collision;
+
     // ground player
     if (
          !player.jumping
       && !intersectionCeiling.collision
-      && previousFrameGravityIntersection.collision
+      && grounded
     ) {
-      player.origin.y = previousFrameGravityIntersection.origin.y - 1.0f;
+      player.origin.y = previousFrameGravityIntersection.origin.y - 0.501f;
+      player.velocity.y = 0.0f;
     }
 
     // -- process inputs / events
@@ -148,23 +152,58 @@ PUL_PLUGIN_DECL void EntityUpdate(
     auto & current = scene.PlayerController().current;
     player.velocity.x = static_cast<float>(current.movementHorizontal);
     player.velocity.y = static_cast<float>(current.movementVertical);
-    if (current.dash) { player.velocity *= 16.0f; }
+    if (current.dash) { player.velocity *= 4.0f; }
 
     player.jumping = current.jump;
     if (player.jumping && !intersectionCeiling.collision) {
       player.velocity.y -= 3.5f;
     }
 
+    const float velocityXAbs = glm::abs(player.velocity.x);
+
     // -- set leg animation
-    float velocityXAbs = glm::abs(player.velocity.x);
-    if (velocityXAbs < 0.1f) {
-      animation.instance.pieceToState["legs"].label = "stand";
+    if (grounded) {
+      if (current.crouch) {
+        if (velocityXAbs < 0.1f) {
+          animation.instance.pieceToState["legs"].Apply("crouch-idle");
+        } else {
+          animation.instance.pieceToState["legs"].Apply("crouch-walk");
+        }
+      }
+      else if (velocityXAbs < 0.1f) {
+        animation.instance.pieceToState["legs"].Apply("stand");
+      }
+      else if (velocityXAbs < 1.5f) {
+        animation.instance.pieceToState["legs"].Apply("walk");
+      }
+      else {
+        animation.instance.pieceToState["legs"].Apply("run");
+      }
+    } else {
+      animation.instance.pieceToState["legs"].Apply("air-idle");
     }
-    else if (velocityXAbs < 1.5f) {
-      animation.instance.pieceToState["legs"].label = "walk";
-    }
-    else {
-      animation.instance.pieceToState["legs"].label = "run";
+
+    // -- arm animation
+    if (grounded) {
+      if (current.crouch) {
+        animation.instance.pieceToState["arm-back"].Apply("alarmed");
+        animation.instance.pieceToState["arm-front"].Apply("alarmed");
+      }
+      else if (velocityXAbs < 0.1f) {
+        animation.instance.pieceToState["arm-back"].Apply("alarmed");
+        animation.instance.pieceToState["arm-front"].Apply("alarmed");
+      }
+      else if (velocityXAbs < 1.5f) {
+        animation.instance.pieceToState["arm-back"].Apply("unequip-walk");
+        animation.instance.pieceToState["arm-front"].Apply("unequip-walk");
+      }
+      else {
+        animation.instance.pieceToState["arm-back"].Apply("unequip-run");
+        animation.instance.pieceToState["arm-front"].Apply("unequip-run");
+      }
+    } else {
+      animation.instance.pieceToState["arm-back"].Apply("alarmed");
+      animation.instance.pieceToState["arm-front"].Apply("alarmed");
     }
 
     if (
@@ -180,14 +219,22 @@ PUL_PLUGIN_DECL void EntityUpdate(
       animation.instance.pieceToState["legs"].flip = false;
     }
 
+    float const angle =
+      std::atan2(current.lookDirection.x, current.lookDirection.y);
+
+    animation.instance.pieceToState["arm-back"].angle = angle;
+    animation.instance.pieceToState["arm-front"].angle = angle;
+
+    animation.instance.pieceToState["head"].angle = angle;
+
     // gravity if gravity check failed
     if (!previousFrameGravityIntersection.collision) {
-      player.velocity.y += 1.0f;
+      player.velocity.y += 4.0f;
     }
 
     // check for next frame physics intersection
     player.physxQueryVelocity = -1ul;
-    if (!player.sleeping && !current.crouch) {
+    if (!player.sleeping) {
       pulcher::physics::IntersectorRay ray;
       ray.beginOrigin = glm::round(player.origin);
       ray.endOrigin = glm::round(player.CalculateProjectedOrigin());
@@ -196,7 +243,7 @@ PUL_PLUGIN_DECL void EntityUpdate(
 
     // check for ceiling
     player.physxQueryCeiling = -1ul;
-    if (!player.sleeping && !current.crouch) {
+    if (!player.sleeping) {
       pulcher::physics::IntersectorPoint point;
       point.origin = glm::round(player.origin + glm::vec2(0.0f, -32.0f));
       player.physxQueryCeiling = physicsQueries.AddQuery(point);
@@ -204,7 +251,7 @@ PUL_PLUGIN_DECL void EntityUpdate(
 
     // check for slopes
     player.physxQuerySlope = -1ul;
-    if (!player.sleeping && !current.crouch) {
+    if (!player.sleeping) {
       pulcher::physics::IntersectorRay ray;
       ray.beginOrigin = glm::round(player.origin);
       auto origin = player.CalculateProjectedOrigin();
@@ -218,7 +265,7 @@ PUL_PLUGIN_DECL void EntityUpdate(
 
     // apply gravity intersection test
     player.physxQueryGravity = -1ul;
-    if (!player.sleeping && !current.crouch) {
+    if (!player.sleeping) {
       pulcher::physics::IntersectorRay ray;
       ray.beginOrigin = glm::round(player.origin);
       ray.endOrigin = glm::round(player.origin + glm::vec2(0, 1));

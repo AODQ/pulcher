@@ -4,7 +4,7 @@ target_include_directories(pulcher-animation PUBLIC "include/")
 target_sources(
   pulcher-animation
   PRIVATE
-    src/pulcher-animation/player.cpp
+    src/pulcher-animation/animation.cpp
 )
 
 set_target_properties(

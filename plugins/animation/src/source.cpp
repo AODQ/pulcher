@@ -6,6 +6,7 @@
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
+#include <pulcher-util/consts.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <entt/entt.hpp>
@@ -46,6 +47,40 @@ void JsonParseRecursiveSkeleton(
     JsonParseRecursiveSkeleton(skeletalChildJson, skeletal.children);
     skeletals.emplace_back(std::move(skeletal));
   }
+}
+
+std::vector<pulcher::animation::Animator::Component> JsonLoadComponents(
+  cJSON * componentsJson
+) {
+  std::vector<pulcher::animation::Animator::Component> components;
+
+  cJSON * componentJson;
+  cJSON_ArrayForEach(componentJson, componentsJson) {
+    pulcher::animation::Animator::Component component;
+    component.tile.x =
+      cJSON_GetObjectItemCaseSensitive(componentJson, "x")->valueint;
+
+    component.tile.y =
+      cJSON_GetObjectItemCaseSensitive(componentJson, "y")->valueint;
+
+    if (
+      auto offX =
+        cJSON_GetObjectItemCaseSensitive(componentJson, "origin-offset-x")
+    ) {
+      component.originOffset.x = offX->valueint;
+    }
+
+    if (
+      auto offY =
+        cJSON_GetObjectItemCaseSensitive(componentJson, "origin-offset-y")
+    ) {
+      component.originOffset.y = offY->valueint;
+    }
+
+    components.emplace_back(component);
+  }
+
+  return components;
 }
 
 cJSON * JsonWriteRecursiveSkeleton(
@@ -102,8 +137,27 @@ void ComputeVertices(
   auto & stateInfo = instance.pieceToState[skeletal.label];
   auto & state = piece.states[stateInfo.label];
 
+  // update skeletal information (origins, flip, rotation, etc)
+  skeletalFlip ^= stateInfo.flip;
+
+  skeletalRotation += stateInfo.angle;
+
+  // if rotation can affect flipping, the skeletal has to flip if rotation is
+  // reverse of current flip direction
+  if (state.rotationMirrored && ((skeletalRotation > 0.0f) ^ skeletalFlip)) {
+    skeletalFlip ^= 1;
+
+    // if not flipped, have to apply the skeletal flip origin cancellation
+    if (!skeletalFlip) {
+      originOffset.x -= skeletal.origin.x*2.0f;
+    }
+  }
+
+  auto * componentsPtr =
+    state.ComponentLookup(skeletalFlip , glm::abs(skeletalRotation));
+
   // if there are no components to render, output a degenerate tile
-  if (state.components.size() == 0ul) {
+  if (!componentsPtr || componentsPtr->size() == 0ul) {
     for (size_t it = 0ul; it < 6ul; ++ it) {
       instance.uvCoordBufferData[indexOffset + it] = glm::vec2(-1);
       instance.originBufferData[indexOffset + it] = glm::vec3(-1);
@@ -113,7 +167,17 @@ void ComputeVertices(
     return;
   }
 
-  auto & component = state.components[stateInfo.componentIt];
+  auto components = *componentsPtr;
+
+  PUL_ASSERT_CMP(
+    stateInfo.componentIt, <, components.size()
+  , stateInfo.componentIt = components.size()-1;
+  );
+
+  auto & component = components[stateInfo.componentIt];
+
+  // update origin offset
+  originOffset += skeletal.origin;
 
   // update delta time and if animation update is necessary, apply uv coord
   // updates
@@ -122,18 +186,9 @@ void ComputeVertices(
     stateInfo.deltaTime += pulcher::util::msPerFrame;
     if (stateInfo.deltaTime > state.msDeltaTime) {
       stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
-      stateInfo.componentIt =
-        (stateInfo.componentIt + 1) % state.components.size();
+      stateInfo.componentIt = (stateInfo.componentIt + 1) % components.size();
       hasUpdate = true;
     }
-  }
-
-  // update skeletal information (origins, flip, rotation, etc)
-  skeletalFlip ^= stateInfo.flip;
-  originOffset += piece.origin + component.originOffset;
-
-  if (skeletalFlip) {
-    originOffset += skeletal.origin;
   }
 
   if (!hasUpdate) {
@@ -144,8 +199,6 @@ void ComputeVertices(
   forceUpdate = true;
 
   auto pieceDimensions = glm::vec2(piece.dimensions);
-  auto pieceOrigin =
-    glm::vec3(piece.origin, static_cast<float>(piece.renderOrder));
 
   // update origins & UV coords
   for (size_t it = 0ul; it < 6; ++ it, ++ indexOffset) {
@@ -160,13 +213,51 @@ void ComputeVertices(
       * instance.animator->spritesheet.InvResolution()
     ;
 
+    auto origin = v*pieceDimensions + glm::vec2(originOffset);
+    auto localOrigin = piece.origin + component.originOffset;
+
+    // flip local origin
+    if (skeletalFlip) {
+      localOrigin.x = 64.0f - localOrigin.x;
+    }
+
+    if (state.rotatePixels) {
+      const float theta =
+        skeletalRotation + pul::Pi*0.5f + skeletalFlip*pul::Pi
+      ;
+
+      float sinTheta = glm::sin(theta);
+      float cosTheta = glm::cos(theta);
+
+      glm::mat2 rotM = glm::mat2(cosTheta, -sinTheta, sinTheta, cosTheta);
+
+      origin = v*pieceDimensions;
+      origin.x -= localOrigin.x;
+      origin.y -= localOrigin.y;
+
+      origin = rotM * origin;
+
+      origin += localOrigin;
+
+      origin += glm::vec2(originOffset);
+    }
+
+    origin -= localOrigin;
+
+    if (skeletalFlip) {
+      // flip over this skeletal locally
+      origin.x -= skeletal.origin.x*2.0f;
+    }
+
     instance.originBufferData[indexOffset] =
-        glm::vec3(
-          v*pieceDimensions + glm::vec2(originOffset)
-        , static_cast<float>(piece.renderOrder)
-        )
-    ;
+        glm::vec3(origin, static_cast<float>(piece.renderOrder));
   }
+
+  originOffset -= component.originOffset;
+
+  /* if (skeletalFlip) { */
+  /*   originOffset -= piece.origin.x; */
+  /* } */
 }
 
 void ComputeVertices(
@@ -314,57 +405,6 @@ void ReconstructInstance(
   ConstructInstance(instance, system, label.c_str());
 }
 
-void DisplayImGuiSkeleton(
-  pulcher::animation::Instance & instance
-, pulcher::animation::System & system
-, std::vector<pulcher::animation::Animator::SkeletalPiece> & skeletals
-) {
-
-  ImGui::SameLine();
-  if (ImGui::Button("add"))
-    { ImGui::OpenPopup("add skeletal"); }
-
-  if (ImGui::BeginPopup("add skeletal")) {
-    for (auto & piecePair : instance.animator->pieces) {
-      auto & label = std::get<0>(piecePair);
-      if (ImGui::Selectable(label.c_str())) {
-        skeletals.emplace_back(
-          pulcher::animation::Animator::SkeletalPiece{label, {}}
-        );
-        ReconstructInstance(instance, system);
-      }
-    }
-
-    ImGui::EndPopup();
-  }
-
-  size_t skeletalIdx = 0ul;
-  for (auto & skeletal : skeletals) {
-    if (
-      !ImGui::TreeNode(fmt::format("skeletal '{}'", skeletal.label).c_str())
-    ) {
-      ++ skeletalIdx;
-      continue;
-    }
-
-    pul::imgui::InputInt2("origin", &skeletal.origin.x);
-
-    if (ImGui::Button("remove")) {
-      skeletals.erase(skeletals.begin() + skeletalIdx);
-      ReconstructInstance(instance, system);
-
-      ImGui::TreePop();
-      continue;
-    }
-
-    DisplayImGuiSkeleton(instance, system, skeletal.children);
-
-    ImGui::TreePop();
-
-    ++ skeletalIdx;
-  }
-}
-
 void ImGuiRenderSpritesheetTile(
   pulcher::animation::Instance & instance
 , pulcher::animation::Animator::Piece & piece
@@ -401,6 +441,162 @@ void ImGuiRenderSpritesheetTile(
     )
   , ImVec4(1, 1, 1, 1)
   );
+}
+
+void DisplayImGuiComponent(
+  pulcher::animation::Instance & instance
+, pulcher::animation::Animator::Piece & piece
+, std::vector<pulcher::animation::Animator::Component> & components
+, size_t componentIt
+) {
+  auto & component = components[componentIt];
+
+  ImGui::PushID(componentIt);
+
+  // do not show columns or editor properties on sprite zoom
+  if (!::animShowZoom) {
+    ImGui::Columns(2, nullptr, false);
+
+    ImGui::SetColumnWidth(0, piece.dimensions.x + 16);
+  }
+
+  // display current image on left side of column, use transparency
+  // w/ previous frame if requested
+  ImVec2 pos = ImGui::GetCursorScreenPos();
+  if (animShowPreviousSprite > 0.0f) {
+    ::ImGuiRenderSpritesheetTile(
+      instance, piece
+    , components[
+        (components.size() + componentIt - 1) % components.size()
+      ]
+    , animShowPreviousSprite
+    );
+  }
+  ImGui::SetCursorScreenPos(pos);
+  ::ImGuiRenderSpritesheetTile(
+    instance, piece, component
+  );
+
+  if (!::animShowZoom) {
+    ImGui::NextColumn();
+    pul::imgui::DragInt2("tile", &component.tile.x, 0.025f);
+
+    pul::imgui::DragInt2("origin-offset", &component.originOffset.x, 0.025f);
+
+    if (ImGui::Button("-")) {
+      components.erase(components.begin() + componentIt);
+      -- componentIt;
+    }
+
+    ImGui::SameLine();
+    ImGui::SameLine();
+    if (ImGui::Button("+")) {
+      components
+        .emplace(components.begin() + componentIt + 1, component);
+      components.back().tile.x += 1;
+    }
+
+    ImGui::SameLine();
+    if (componentIt > 0ul && ImGui::Button("^")) {
+      std::swap(components[componentIt], components[componentIt-1]);
+    }
+
+    ImGui::SameLine();
+    if (componentIt < components.size()-1 && ImGui::Button("V")) {
+      std::swap(components[componentIt], components[componentIt+1]);
+    }
+
+    ImGui::NextColumn();
+  }
+
+  ImGui::PopID(); // componentIt
+  ImGui::Separator();
+
+  ImGui::Columns(1);
+}
+
+void DisplayImGuiSkeleton(
+  pulcher::animation::Instance & instance
+, pulcher::animation::System & system
+, std::vector<pulcher::animation::Animator::SkeletalPiece> & skeletals
+) {
+
+  ImGui::SameLine();
+  if (ImGui::Button("add"))
+    { ImGui::OpenPopup("add skeletal"); }
+
+  if (ImGui::BeginPopup("add skeletal")) {
+    for (auto & piecePair : instance.animator->pieces) {
+      auto & label = std::get<0>(piecePair);
+      if (ImGui::Selectable(label.c_str())) {
+        skeletals.emplace_back(
+          pulcher::animation::Animator::SkeletalPiece{label}
+        );
+        ReconstructInstance(instance, system);
+      }
+    }
+
+    ImGui::EndPopup();
+  }
+
+  size_t skeletalIdx = 0ul;
+  for (auto & skeletal : skeletals) {
+    ImGui::PushID(skeletalIdx);
+    if (
+      !ImGui::TreeNode(fmt::format("skeletal '{}'", skeletal.label).c_str())
+    ) {
+      ++ skeletalIdx;
+      ImGui::PopID();
+      continue;
+    }
+
+    pul::imgui::DragInt2("origin", &skeletal.origin.x, 0.025f);
+
+    if (ImGui::Button("remove")) {
+      skeletals.erase(skeletals.begin() + skeletalIdx);
+      ReconstructInstance(instance, system);
+
+      ImGui::TreePop();
+      ImGui::PopID();
+      continue;
+    }
+
+    DisplayImGuiSkeleton(instance, system, skeletal.children);
+
+    ImGui::TreePop();
+    ImGui::PopID();
+
+    ++ skeletalIdx;
+  }
+}
+
+
+cJSON * SaveAnimationComponent(
+  std::vector<pulcher::animation::Animator::Component> const & components
+) {
+  cJSON * componentsJson = cJSON_CreateArray();
+
+  for (auto const & component : components) {
+    cJSON * componentJson = cJSON_CreateObject();
+    cJSON_AddItemToArray(componentsJson, componentJson);
+
+    cJSON_AddItemToObject(
+      componentJson, "x", cJSON_CreateInt(component.tile.x)
+    );
+    cJSON_AddItemToObject(
+      componentJson, "y", cJSON_CreateInt(component.tile.y)
+    );
+    cJSON_AddItemToObject(
+      componentJson, "origin-offset-x"
+    , cJSON_CreateInt(component.originOffset.x)
+    );
+    cJSON_AddItemToObject(
+      componentJson, "origin-offset-y"
+    , cJSON_CreateInt(component.originOffset.y)
+    );
+  }
+
+  return componentsJson;
 }
 
 void SaveAnimations(pulcher::animation::System & system) {
@@ -480,27 +676,35 @@ void SaveAnimations(pulcher::animation::System & system) {
         cJSON_AddItemToObject(
           stateJson, "ms-delta-time", cJSON_CreateInt(state.msDeltaTime)
         );
+        cJSON_AddItemToObject(
+          stateJson, "rotation-mirrored"
+        , cJSON_CreateInt(state.rotationMirrored)
+        );
+        cJSON_AddItemToObject(
+          stateJson, "rotate-pixels"
+        , cJSON_CreateInt(state.rotatePixels)
+        );
 
-        cJSON * componentsJson = cJSON_CreateArray();
-        cJSON_AddItemToObject(stateJson, "components", componentsJson);
+        cJSON * componentPartsJson = cJSON_CreateArray();
+        cJSON_AddItemToObject(stateJson, "components", componentPartsJson);
 
-        for (auto const & component : state.components) {
-          cJSON * componentJson = cJSON_CreateObject();
-          cJSON_AddItemToArray(componentsJson, componentJson);
+        for (auto const & componentPart : state.components) {
+          cJSON * componentPartJson = cJSON_CreateObject();
+          cJSON_AddItemToArray(componentPartsJson, componentPartJson);
 
           cJSON_AddItemToObject(
-            componentJson, "x", cJSON_CreateInt(component.tile.x)
+            componentPartJson, "angle-range-max"
+          , cJSON_CreateNumber(static_cast<double>(componentPart.rangeMax))
           );
+
           cJSON_AddItemToObject(
-            componentJson, "y", cJSON_CreateInt(component.tile.y)
+            componentPartJson, "default"
+          , SaveAnimationComponent(componentPart.data[0])
           );
+
           cJSON_AddItemToObject(
-            componentJson, "origin-offset-x"
-          , cJSON_CreateInt(component.originOffset.x)
-          );
-          cJSON_AddItemToObject(
-            componentJson, "origin-offset-y"
-          , cJSON_CreateInt(component.originOffset.y)
+            componentPartJson, "flipped"
+          , SaveAnimationComponent(componentPart.data[1])
           );
         }
       }
@@ -604,6 +808,7 @@ PUL_PLUGIN_DECL void LoadAnimations(
         cJSON_GetObjectItemCaseSensitive(pieceJson, "origin-x")->valueint;
       piece.origin.y =
         cJSON_GetObjectItemCaseSensitive(pieceJson, "origin-y")->valueint;
+
       {
         auto order =
           cJSON_GetObjectItemCaseSensitive(pieceJson, "render-order")->valueint;
@@ -632,33 +837,39 @@ PUL_PLUGIN_DECL void LoadAnimations(
             stateJson, "ms-delta-time"
           )->valueint;
 
-        cJSON * componentJson;
+        state.rotationMirrored =
+          cJSON_GetObjectItemCaseSensitive(stateJson, "rotation-mirrored")
+            ->valueint
+        ;
+
+        state.rotatePixels =
+          cJSON_GetObjectItemCaseSensitive(stateJson, "rotate-pixels")
+            ->valueint
+        ;
+
+        cJSON * componentPartJson;
         cJSON_ArrayForEach(
-            componentJson
-          , cJSON_GetObjectItemCaseSensitive(stateJson, "components")
+          componentPartJson
+        , cJSON_GetObjectItemCaseSensitive(stateJson, "components")
         ) {
-          pulcher::animation::Animator::Component component;
-          component.tile.x =
-            cJSON_GetObjectItemCaseSensitive(componentJson, "x")->valueint;
+          pulcher::animation::Animator::ComponentPart componentPart;
+          componentPart.rangeMax =
+            cJSON_GetObjectItemCaseSensitive(
+              componentPartJson, "angle-range-max"
+            )->valuedouble
+          ;
 
-          component.tile.y =
-            cJSON_GetObjectItemCaseSensitive(componentJson, "y")->valueint;
+          componentPart.data[0] =
+            ::JsonLoadComponents(
+              cJSON_GetObjectItemCaseSensitive(componentPartJson, "default")
+            );
 
-          if (
-            auto offX =
-              cJSON_GetObjectItemCaseSensitive(componentJson, "origin-offset-x")
-          ) {
-            component.originOffset.x = offX->valueint;
-          }
+          componentPart.data[1] =
+            ::JsonLoadComponents(
+              cJSON_GetObjectItemCaseSensitive(componentPartJson, "flipped")
+            );
 
-          if (
-            auto offY =
-              cJSON_GetObjectItemCaseSensitive(componentJson, "origin-offset-y")
-          ) {
-            component.originOffset.y = offY->valueint;
-          }
-
-          state.components.emplace_back(component);
+          state.components.emplace_back(std::move(componentPart));
         }
 
         piece.states[stateLabel] = std::move(state);
@@ -863,6 +1074,15 @@ PUL_PLUGIN_DECL void UiRender(
         "animation instance '{}'", self.instance.animator->label
       );
       if (ImGui::Button("edit")) { editInstance = &self.instance; }
+      for (auto const & stateInfoPair : self.instance.pieceToState) {
+        auto & stateInfo = stateInfoPair.second;
+
+        pul::imgui::Text("part - '{}'", stateInfoPair.first);
+        pul::imgui::Text("\tdelta-time {}", stateInfo.deltaTime);
+        pul::imgui::Text("\tcomponent-it {}", stateInfo.componentIt);
+        pul::imgui::Text("\tflip {}", stateInfo.flip);
+        pul::imgui::Text("\tangle {}", stateInfo.angle);
+      }
     }
   }
   ImGui::End();
@@ -915,10 +1135,6 @@ PUL_PLUGIN_DECL void UiRender(
 
     ImGui::Begin("Animation Editor");
 
-    if (ImGui::Button("reload")) {
-      ReconstructInstance(instance, scene.AnimationSystem());
-    }
-
     if (ImGui::Button("save")) {
       ::SaveAnimations(scene.AnimationSystem());
     }
@@ -944,8 +1160,8 @@ PUL_PLUGIN_DECL void UiRender(
       if (ImGui::TreeNode(piecePair.first.c_str())) {
 
         pul::imgui::InputInt2("dimensions", &piece.dimensions.x);
-        pul::imgui::InputInt2("origin", &piece.origin.x);
-        pul::imgui::InputInt("render order", &piece.renderOrder);
+        pul::imgui::DragInt2("origin", &piece.origin.x, 0.01f);
+        pul::imgui::DragInt("render order", &piece.renderOrder, 0.01f);
 
         for (auto & statePair : piece.states) {
           ImGui::Separator();
@@ -954,119 +1170,225 @@ PUL_PLUGIN_DECL void UiRender(
             continue;
           }
 
-          auto & components = statePair.second.components;
-
-          if (components.size() > 0ul)
-          { // display image
-            size_t componentIt =
-              static_cast<size_t>(animMsTimer / statePair.second.msDeltaTime);
-            componentIt %= components.size();
-
-            // render w/ previous sprite alpha if requested
-
-            ImVec2 pos = ImGui::GetCursorScreenPos();
-            if (animShowPreviousSprite > 0.0f) {
-              ::ImGuiRenderSpritesheetTile(
-                instance, piece
-              , components[
-                  (components.size() + componentIt - 1) % components.size()
-                ]
-              , animShowPreviousSprite
-              );
-            }
-            ImGui::SetCursorScreenPos(pos);
-            ::ImGuiRenderSpritesheetTile(
-              instance, piece, components[componentIt]
-            );
-
-            ImGui::Separator();
-          }
+          auto & state = statePair.second;
+          (void)state;
 
           ImGui::SliderFloat(
             "delta time", &statePair.second.msDeltaTime, 0.0f, 1000.0f
           );
 
-          if (ImGui::Button("Set animation timer")) {
-            animMaxTime =
-              static_cast<size_t>(
-                0.5f + components.size() * statePair.second.msDeltaTime
-              );
-          }
+          auto & componentParts = statePair.second.components;
 
-          // insert at 0, important for when component is size 0 also
-          if (ImGui::Button("+")) {
-            components.emplace(components.begin());
+          /* if (components.size() > 0ul) */
+          /* { // display image */
+          /*   size_t componentIt = */
+          /*     static_cast<size_t>(animMsTimer / statePair.second.msDeltaTime); */
+          /*   componentIt %= components.size(); */
+
+          /*   // render w/ previous sprite alpha if requested */
+
+          /*   ImVec2 pos = ImGui::GetCursorScreenPos(); */
+          /*   if (animShowPreviousSprite > 0.0f) { */
+          /*     ::ImGuiRenderSpritesheetTile( */
+          /*       instance, piece */
+          /*     , components[ */
+          /*         (components.size() + componentIt - 1) % components.size() */
+          /*       ] */
+          /*     , animShowPreviousSprite */
+          /*     ); */
+          /*   } */
+          /*   ImGui::SetCursorScreenPos(pos); */
+          /*   ::ImGuiRenderSpritesheetTile( */
+          /*     instance, piece, components[componentIt] */
+          /*   ); */
+
+          /*   ImGui::Separator(); */
+          /* } */
+
+          /* if (ImGui::Button("Set animation timer")) { */
+          /*   animMaxTime = */
+          /*     static_cast<size_t>( */
+          /*       0.5f + components.size() * statePair.second.msDeltaTime */
+          /*     ); */
+          /* } */
+
+/*           // insert at 0, important for when component is size 0 also */
+/*           if (ImGui::Button("+")) { */
+/*             components.emplace(components.begin()); */
+/*           } */
+
+          bool angleRangeChanged = false;
+
+          ImGui::Checkbox("rotation mirrored", &state.rotationMirrored);
+          ImGui::SameLine();
+          ImGui::Checkbox("rotate pixels", &state.rotatePixels);
+
+          if (ImGui::Button("add range part")) {
+            componentParts.emplace_back();
+            angleRangeChanged = true;
           }
 
           for (
-            size_t componentIt = 0ul;
-            componentIt < components.size();
-            ++ componentIt
+            size_t componentPartIt = 0ul;
+            componentPartIt < componentParts.size();
+            ++ componentPartIt
           ) {
-            auto & component = components[componentIt];
 
-            ImGui::PushID(componentIt);
+            ImGui::PushID(&componentParts[componentPartIt]);
 
-            // do not show columns or editor properties on sprite zoom
-            if (!::animShowZoom) {
-              ImGui::Columns(2, nullptr, false);
+            auto & componentPart = componentParts[componentPartIt];
 
-              ImGui::SetColumnWidth(0, piece.dimensions.x + 16);
-            }
+            ImGui::Separator();
 
-            // display current image on left side of column, use transparency
-            // w/ previous frame if requested
-            ImVec2 pos = ImGui::GetCursorScreenPos();
-            if (animShowPreviousSprite > 0.0f) {
-              ::ImGuiRenderSpritesheetTile(
-                instance, piece
-              , components[
-                  (components.size() + componentIt - 1) % components.size()
-                ]
-              , animShowPreviousSprite
+            bool const componentTreeNode = 
+              ImGui::TreeNode(
+                fmt::format("{}", componentPartIt).c_str()
+              , "%s"
+              , fmt::format(
+                  "[{:.2f}]"
+                , componentPart.rangeMax * 360.0f / pul::Tau
+                ).c_str()
               );
+
+            if (!componentTreeNode) {
+              ImGui::PopID();
+              continue;
             }
-            ImGui::SetCursorScreenPos(pos);
-            ::ImGuiRenderSpritesheetTile(
-              instance, piece, component
+
+            { // draw angle
+              ImDrawList * drawList = ImGui::GetWindowDrawList();
+
+              ImVec2 pos = ImGui::GetCursorScreenPos();
+              pos.x += 96;
+
+              ImVec4 col = ImVec4(1, 1, 1, 1);
+
+              drawList->AddCircle(pos, 16.0f, ImColor(col), 20, 1.0f);
+
+              float const theta = componentPart.rangeMax + pul::Pi*0.5f;
+
+              // render angles for both sides
+              drawList->AddLine(
+                pos
+              , ImVec2(
+                  pos.x + 16.0f * glm::cos(theta)
+                , pos.y + 16.0f - 32.0f * (componentPart.rangeMax / pul::Pi)
+                )
+              , ImColor(ImVec4(1.0f, 0.7f, 0.7f, 1.0f))
+              , 2.0f
+              );
+
+              drawList->AddLine(
+                pos
+              , ImVec2(
+                  pos.x - 16.0f * glm::cos(theta)
+                , pos.y + 16.0f - 32.0f * (componentPart.rangeMax / pul::Pi)
+                )
+              , ImColor(ImVec4(1.0f, 0.7f, 0.7f, 1.0f))
+              , 2.0f
+              );
+
+              // render angles for both sides for previous
+              float const prevRange =
+                  componentPartIt == 0ul
+                ? 0.0f : componentParts[componentPartIt-1].rangeMax
+              ;
+              float const prevTheta = prevRange + pul::Pi*0.5f;
+
+              drawList->AddLine(
+                pos
+              , ImVec2(
+                  pos.x + 16.0f * glm::cos(prevTheta)
+                , pos.y + 16.0f - 32.0f * (prevRange / pul::Pi)
+                )
+              , ImColor(ImVec4(0.7f, 0.7f, 1.0f, 1.0f))
+              , 1.0f
+              );
+
+              drawList->AddLine(
+                pos
+              , ImVec2(
+                  pos.x - 16.0f * glm::cos(prevTheta)
+                , pos.y + 16.0f - 32.0f * (prevRange / pul::Pi)
+                )
+              , ImColor(ImVec4(0.7f, 0.7f, 1.0f, 1.0f))
+              , 1.0f
+              );
+
+            }
+
+            if (ImGui::Button("remove")) {
+              componentParts.erase(componentParts.begin()+componentPartIt);
+              -- componentPartIt;
+              ImGui::PopID();
+            }
+
+            ImGui::DragFloat(
+              "angle range", &componentPart.rangeMax
+            , 0.0025f, 0.0f, pul::Pi, "%.2f"
             );
 
-            if (!::animShowZoom) {
-              ImGui::NextColumn();
-              pul::imgui::InputInt2("tile", &component.tile.x);
+            angleRangeChanged |= ImGui::IsItemActive();
 
-              pul::imgui::InputInt2("origin-offset", &component.originOffset.x);
+            ImGui::Separator();
 
-              if (ImGui::Button("-")) {
-                components.erase(components.begin() + componentIt);
-                -- componentIt;
-              }
+            auto & componentsDefault = componentPart.data[0];
+            auto & componentsFlipped = componentPart.data[1];
 
-              ImGui::SameLine();
-              ImGui::SameLine();
-              if (ImGui::Button("+")) {
-                components
-                  .emplace(components.begin() + componentIt + 1, component);
-              }
-
-              ImGui::SameLine();
-              if (componentIt > 0ul && ImGui::Button("^")) {
-                std::swap(components[componentIt], components[componentIt-1]);
-              }
-
-              ImGui::SameLine();
-              if (componentIt < components.size()-1 && ImGui::Button("V")) {
-                std::swap(components[componentIt], components[componentIt+1]);
-              }
-
-              ImGui::NextColumn();
+            if (
+                componentsDefault.size() == 0ul
+             && ImGui::Button("add default")
+            ) {
+              componentsDefault.emplace_back();
             }
 
-            ImGui::PopID(); // componentIt
-            ImGui::Separator();
+            for (
+              size_t componentIt = 0ul;
+              componentIt < componentsDefault.size();
+              ++ componentIt
+            ) {
+              DisplayImGuiComponent(
+                instance, piece, componentsDefault, componentIt
+              );
+            }
+
+            if (componentsFlipped.size() > 0ul) {
+
+              ImGui::Text("flipped state");
+              ImGui::Separator();
+
+              ImGui::PushID(1);
+
+              for (
+                size_t componentIt = 0ul;
+                componentIt < componentsFlipped.size();
+                ++ componentIt
+              ) {
+                DisplayImGuiComponent(
+                  instance, piece, componentsFlipped, componentIt
+                );
+              }
+
+              ImGui::PopID();
+            } else {
+              if (ImGui::Button("add flipped")) {
+                componentsFlipped.emplace_back();
+              }
+            }
+
+            ImGui::PopID();
+            ImGui::TreePop();
           }
 
-          ImGui::Columns(1);
+          // can only sort when user is not modifying anymore
+          if (!angleRangeChanged) {
+            std::sort(
+              componentParts.begin(), componentParts.end()
+            , [](auto & partA, auto& partB) {
+                return partA.rangeMax < partB.rangeMax;
+              }
+            );
+          }
 
           ImGui::TreePop(); // state
         }

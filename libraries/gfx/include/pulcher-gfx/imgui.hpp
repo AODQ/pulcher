@@ -32,6 +32,27 @@ namespace pul::imgui {
   }
 
   template <typename T>
+  bool DragInt(char const * label, T * value, float accel = 1.0f) {
+    int valueAsInt = static_cast<int>(*value);
+    bool result = ImGui::DragInt(label, &valueAsInt, accel);
+    if (result) { *value = static_cast<T>(valueAsInt); }
+    return result;
+  }
+
+  template <typename T>
+  bool DragInt2(char const * label, T * value, float accel = 1.0f) {
+    std::array<int, 2> valueAsInt =
+      { static_cast<int>(value[0]), static_cast<int>(value[1]) };
+
+    bool result = ImGui::DragInt2(label, valueAsInt.data(), accel);
+    if (result) {
+      value[0] = static_cast<T>(valueAsInt[0]);
+      value[1] = static_cast<T>(valueAsInt[1]);
+    }
+    return result;
+  }
+
+  template <typename T>
   bool InputInt(char const * label, T * value) {
     int valueAsInt = static_cast<int>(*value);
     bool result = ImGui::InputInt(label, &valueAsInt);

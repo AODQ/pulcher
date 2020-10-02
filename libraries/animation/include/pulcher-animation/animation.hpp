@@ -39,28 +39,41 @@ namespace pulcher::animation {
   struct Animator {
     // -- structs
     struct Component {
-      glm::u32vec2 tile;
+      glm::u32vec2 tile = {};
       glm::i32vec2 originOffset = {};
     };
 
+    struct ComponentPart {
+      float rangeMax = 0.0f;
+      std::array<std::vector<Component>, 2> data = {};
+    };
+
     struct State {
-      std::vector<Component> components;
+      std::vector<ComponentPart> components;
       float msDeltaTime;
+      bool rotationMirrored = false;
+      bool rotatePixels = false;
+
+      size_t ComponentPartIdxLookup(float const angle);
+
+      std::vector<Component> * ComponentLookup(
+        bool const flip, float const angle
+      );
 
       void (*Update)(State & state) = nullptr;
     };
 
     struct Piece {
-      std::map<std::string, pulcher::animation::Animator::State> states;
-      glm::u32vec2 dimensions;
-      glm::i32vec2 origin;
-      uint8_t renderOrder; // valid from 0 .. 100
+      std::map<std::string, pulcher::animation::Animator::State> states = {};
+      glm::u32vec2 dimensions = {};
+      glm::i32vec2 origin = {};
+      uint8_t renderOrder = 0; // valid from 0 .. 100
     };
 
     struct SkeletalPiece {
       std::string label;
-      glm::i32vec2 origin;
-      std::vector<SkeletalPiece> children;
+      glm::i32vec2 origin = {};
+      std::vector<SkeletalPiece> children = {};
     };
 
     // -- members
@@ -89,14 +102,21 @@ namespace pulcher::animation {
       size_t componentIt = 0ul;
       bool flip = false;
       float angle = 0.0f;
+
+      void Apply(std::string const & nLabel) {
+        if (label != nLabel) {
+          label = nLabel;
+          componentIt = 0ul;
+        }
+      }
     };
 
     std::map<std::string, StateInfo> pieceToState;
 
-    sg_buffer sgBufferOrigin;
-    sg_buffer sgBufferUvCoord;
-    sg_bindings sgBindings;
-    size_t drawCallCount;
+    sg_buffer sgBufferOrigin = {};
+    sg_buffer sgBufferUvCoord = {};
+    sg_bindings sgBindings = {};
+    size_t drawCallCount = 0ul;
 
     // keep origin/uv coord buffer data around for streaming updates
     std::vector<glm::vec2> uvCoordBufferData;
