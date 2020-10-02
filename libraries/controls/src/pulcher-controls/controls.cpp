@@ -17,8 +17,8 @@ void pulcher::controls::UpdateControls(
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     current.lookDirection = {
-      static_cast<float>(xpos) - displayWidth / 0.5f
-    , static_cast<float>(ypos) - displayHeight / 0.5f
+      (static_cast<float>(xpos) - displayWidth*0.5f) / displayWidth
+    , (static_cast<float>(ypos) - displayHeight*0.5f) / displayHeight
     };
   }
 
