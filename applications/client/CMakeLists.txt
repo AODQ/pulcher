@@ -18,7 +18,7 @@ set_target_properties(
 target_link_libraries(
   pulcher-client
   PRIVATE
-    argparse pulcher-core pulcher-gfx pulcher-plugin pulcher-network
+    argparse pulcher-core pulcher-gfx pulcher-plugin
     pulcher-physics pulcher-controls spdlog
 )
 

@@ -18,7 +18,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-static -static-libstdc++ -static-libgcc")
 target_link_libraries(
   pulcher-launcher
   PRIVATE
-    argparse pulcher-network tiny-process-library
+    argparse tiny-process-library
 )
 
 install(
