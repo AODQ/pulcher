@@ -998,18 +998,6 @@ PUL_PLUGIN_DECL void UpdateFrame(
     auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
     ::ComputeVertices(self.instance, true);
-
-    // must update entire animation buffer
-    sg_update_buffer(
-      self.instance.sgBufferUvCoord,
-      self.instance.uvCoordBufferData.data(),
-      self.instance.uvCoordBufferData.size() * sizeof(glm::vec2)
-    );
-    sg_update_buffer(
-      self.instance.sgBufferOrigin,
-      self.instance.originBufferData.data(),
-      self.instance.originBufferData.size() * sizeof(glm::vec3)
-    );
   }
 }
 
@@ -1047,6 +1035,18 @@ PUL_PLUGIN_DECL void RenderAnimations(
     auto view = registry.view<pulcher::animation::ComponentInstance>();
     for (auto entity : view) {
       auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+
+      // must update entire animation buffer
+      sg_update_buffer(
+        self.instance.sgBufferUvCoord,
+        self.instance.uvCoordBufferData.data(),
+        self.instance.uvCoordBufferData.size() * sizeof(glm::vec2)
+      );
+      sg_update_buffer(
+        self.instance.sgBufferOrigin,
+        self.instance.originBufferData.data(),
+        self.instance.originBufferData.size() * sizeof(glm::vec3)
+      );
 
       sg_apply_bindings(self.instance.sgBindings);
       sg_draw(0, self.instance.drawCallCount, 1);

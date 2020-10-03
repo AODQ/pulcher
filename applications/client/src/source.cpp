@@ -6,6 +6,7 @@
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/consts.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 
@@ -84,7 +85,7 @@ void PrintUserConfig(pulcher::core::Config const & config) {
   );
 }
 
-static void ImguiApplyColor()
+static void ImGuiApplyStyling()
 {
     ImGuiStyle& style = ImGui::GetStyle();
     style.TabRounding = 0.0f;
@@ -169,33 +170,66 @@ void ShutdownPluginInfo(
   plugin.entity.Shutdown(scene);
 }
 
-} // -- anon namespace
+// this gets capped at 90Hz
+void ProcessLogic(
+  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
+) {
+  pulcher::controls::UpdateControls(
+    pulcher::gfx::DisplayWindow()
+  , pulcher::gfx::DisplayWidth()
+  , pulcher::gfx::DisplayHeight()
+  , scene.PlayerController()
+  );
+  plugin.physics.ProcessPhysics(scene);
+  plugin.entity.EntityUpdate(plugin, scene);
+  plugin.animation.UpdateFrame(plugin, scene);
+}
 
-int main(int argc, char const ** argv) {
+// this has no framerate cap, but it most provide a minimal of 90 framerate
+void ProcessRendering(
+  pulcher::plugin::Info & plugin, pulcher::core::SceneBundle & scene
+, float deltaMs
+, size_t numCpuFrames
+) {
+  pulcher::gfx::StartFrame(deltaMs);
 
-  spdlog::set_pattern("%^%M:%S |%$ %v");
+  static glm::vec3 screenClearColor = glm::vec3(0.7f, 0.4f, .4f);
 
-  pulcher::core::Config userConfig;
-
-  { // -- collect user options
-    auto options = ::StartupOptions();
-
-    options.parse_args(argc, argv);
-
-    userConfig = ::CreateUserConfig(options);
+  ImGui::Begin("Diagnostics");
+  ImGui::Text("WARNING: RELOADING plugins will not save animation yet!!");
+  ImGui::Text("progress WILL be lost");
+  if (ImGui::Button("Reload plugins")) {
+    ::ShutdownPluginInfo(plugin, scene);
+    pulcher::plugin::UpdatePlugins(plugin);
+    ::LoadPluginInfo(plugin, scene);
   }
+  ImGui::ColorEdit3("screen clear", &screenClearColor.x);
+  ImGui::Text("CPU frames %lu", numCpuFrames);
+  ImGui::End();
 
-  #ifdef __unix__
-    spdlog::info("-- running on Linux platform --");
-  #elif _WIN64
-    spdlog::info("-- running on Windows 64 platform --");
-  #elif _WIN32
-    spdlog::info("-- running on Windows 32 platform --");
-  #endif
+  sg_pass_action passAction = {};
+  passAction.colors[0].action = SG_ACTION_CLEAR;
+  passAction.colors[0].val[0] = screenClearColor.r;
+  passAction.colors[0].val[1] = screenClearColor.g;
+  passAction.colors[0].val[2] = screenClearColor.b;
+  sg_begin_default_pass(
+    &passAction
+  , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
+  );
 
-  spdlog::info("initializing pulcher");
-  // -- initialize relevant components
-  pulcher::gfx::InitializeContext(userConfig);
+  plugin.userInterface.UiDispatch(plugin, scene);
+
+  plugin.map.Render(scene);
+  plugin.animation.RenderAnimations(plugin, scene);
+
+  simgui_render();
+  sg_end_pass();
+  sg_commit();
+
+  pulcher::gfx::EndFrame();
+}
+
+pulcher::plugin::Info InitializePlugins() {
   pulcher::plugin::Info plugins;
 
   pulcher::plugin::LoadPlugin(
@@ -223,79 +257,79 @@ int main(int argc, char const ** argv) {
   , "plugins/plugin-animation.pulcher-plugin"
   );
 
+  return plugins;
+}
+
+} // -- anon namespace
+
+int main(int argc, char const ** argv) {
+
+  spdlog::set_pattern("%^%M:%S |%$ %v");
+
+  pulcher::core::Config userConfig;
+
+  { // -- collect user options
+    auto options = ::StartupOptions();
+
+    options.parse_args(argc, argv);
+
+    userConfig = ::CreateUserConfig(options);
+  }
+
+  #ifdef __unix__
+    spdlog::info("-- running on Linux platform --");
+  #elif _WIN64
+    spdlog::info("-- running on Windows 64 platform --");
+  #elif _WIN32
+    spdlog::info("-- running on Windows 32 platform --");
+  #endif
+
+  spdlog::info("initializing pulcher");
+  // -- initialize relevant components
+  pulcher::gfx::InitializeContext(userConfig);
   ::PrintUserConfig(userConfig);
 
-  pulcher::core::SceneBundle sceneBundle;
-  ::LoadPluginInfo(plugins, sceneBundle);
+  pulcher::plugin::Info plugin = InitializePlugins();
 
-  ImguiApplyColor();
+  pulcher::core::SceneBundle sceneBundle;
+  ::LoadPluginInfo(plugin, sceneBundle);
+
+  ImGuiApplyStyling();
 
   auto timePreviousFrameBegin = std::chrono::high_resolution_clock::now();
 
-  while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
+  float msToCalculate = 0.0f;
 
+  while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
+    // -- get timing
     auto timeFrameBegin = std::chrono::high_resolution_clock::now();
     float const deltaMs =
       std::chrono::duration_cast<std::chrono::milliseconds>(
         timeFrameBegin - timePreviousFrameBegin
       ).count();
 
+    // -- update windowing events
     glfwPollEvents();
 
-    // -- logic
-    pulcher::controls::UpdateControls(
-      pulcher::gfx::DisplayWindow()
-    , pulcher::gfx::DisplayWidth()
-    , pulcher::gfx::DisplayHeight()
-    , sceneBundle.PlayerController()
-    );
-    plugins.physics.ProcessPhysics(sceneBundle);
-    plugins.entity.EntityUpdate(plugins, sceneBundle);
-    plugins.animation.UpdateFrame(plugins, sceneBundle);
-
-    // -- rendering
-    pulcher::gfx::StartFrame(deltaMs);
-
-    static glm::vec3 screenClearColor = glm::vec3(0.7f, 0.4f, .4f);
-
-    ImGui::Begin("Diagnostics");
-    ImGui::Text("WARNING: RELOADING plugins will not save animation yet!!");
-    ImGui::Text("progress WILL be lost");
-    if (ImGui::Button("Reload plugins")) {
-      ::ShutdownPluginInfo(plugins, sceneBundle);
-      pulcher::plugin::UpdatePlugins(plugins);
-      ::LoadPluginInfo(plugins, sceneBundle);
+    // -- logic, 90 Hz
+    msToCalculate += deltaMs;
+    size_t calculatedFrames = 0ul;
+    while (msToCalculate >= pulcher::util::msPerFrame) {
+      ++ calculatedFrames;
+      msToCalculate -= pulcher::util::msPerFrame;
+      ::ProcessLogic(plugin, sceneBundle);
     }
-    ImGui::ColorEdit3("screen clear", &screenClearColor.x);
-    ImGui::End();
 
-    sg_pass_action passAction = {};
-    passAction.colors[0].action = SG_ACTION_CLEAR;
-    passAction.colors[0].val[0] = screenClearColor.r;
-    passAction.colors[0].val[1] = screenClearColor.g;
-    passAction.colors[0].val[2] = screenClearColor.b;
-    sg_begin_default_pass(
-      &passAction
-    , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
-    );
 
-    plugins.userInterface.UiDispatch(plugins, sceneBundle);
+    // -- rendering, unlimited Hz
+    ::ProcessRendering(plugin, sceneBundle, deltaMs, calculatedFrames);
 
-    plugins.map.Render(sceneBundle);
-    plugins.animation.RenderAnimations(plugins, sceneBundle);
-
-    simgui_render();
-    sg_end_pass();
-    sg_commit();
-
-    pulcher::gfx::EndFrame();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(11));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     timePreviousFrameBegin = timeFrameBegin;
   }
 
-  ::ShutdownPluginInfo(plugins, sceneBundle);
+  ::ShutdownPluginInfo(plugin, sceneBundle);
 
   // has to be last thing to shut down to allow gl deallocation calls
   pulcher::gfx::Shutdown();
