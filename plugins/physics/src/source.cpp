@@ -266,7 +266,7 @@ TilemapLayer tilemapLayer;
 // -- plugin functions
 extern "C" {
 
-PUL_PLUGIN_DECL void ProcessTileset(
+PUL_PLUGIN_DECL void Physics_ProcessTileset(
   pulcher::physics::Tileset & tileset
 , pulcher::gfx::Image const & image
 ) {
@@ -301,7 +301,7 @@ PUL_PLUGIN_DECL void ProcessTileset(
   }
 }
 
-PUL_PLUGIN_DECL void ClearMapGeometry() {
+PUL_PLUGIN_DECL void Physics_ClearMapGeometry() {
   sg_destroy_buffer(::debugRenderPoint.bufferOrigin);
   sg_destroy_buffer(::debugRenderRay  .bufferOrigin);
 
@@ -320,12 +320,12 @@ PUL_PLUGIN_DECL void ClearMapGeometry() {
   tilemapLayer = {};
 }
 
-PUL_PLUGIN_DECL void LoadMapGeometry(
+PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
   std::vector<pulcher::physics::Tileset const *> const & tilesets
 , std::vector<std::span<size_t>>                 const & mapTileIndices
 , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
 ) {
-  ClearMapGeometry();
+  Physics_ClearMapGeometry();
 
   // -- assert tilesets.size == mapTileIndices.size == mapTileOrigins.size
   if (tilesets.size() != mapTileOrigins.size()) {
@@ -388,8 +388,9 @@ PUL_PLUGIN_DECL void LoadMapGeometry(
   ::LoadSokolInfo();
 }
 
-PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
-
+PUL_PLUGIN_DECL void Physics_ProcessPhysics(
+  pulcher::core::SceneBundle & scene
+) {
   auto & queries = scene.PhysicsQueries();
 
   auto computingIntersectorPoints = std::move(queries.intersectorPoints);
@@ -509,7 +510,7 @@ PUL_PLUGIN_DECL void ProcessPhysics(pulcher::core::SceneBundle & scene) {
   }
 }
 
-PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::Begin("Physics");
 
   pul::imgui::Text("tilemap width {}", ::tilemapLayer.width);

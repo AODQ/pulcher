@@ -28,7 +28,7 @@ void RenderKey(
 
 extern "C" {
 
-PUL_PLUGIN_DECL void UiDispatch(
+PUL_PLUGIN_DECL void Ui_UiDispatch(
   pulcher::plugin::Info const & plugin
 , pulcher::core::SceneBundle & sceneBundle
 ) {

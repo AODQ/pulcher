@@ -58,6 +58,7 @@ template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
+    spdlog::info("loadin fn");
     fn =
       reinterpret_cast<T>(
         reinterpret_cast<void *>(::GetProcAddress(this->data, label))
@@ -67,6 +68,7 @@ template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
         "Failed to load function '{}' for plugin '{}'", label, ::GetLastError()
       );
     }
+    spdlog::info("loaded fn");
   #endif
 }
 
@@ -96,12 +98,14 @@ void Plugin::Open() {
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
+    spdlog::info("loading library");
     this->data = ::LoadLibraryA(this->filename.c_str());
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}", this->filename, ::GetLastError()
       );
     }
+    spdlog::info("loaded library");
   #endif
 }
 
@@ -114,39 +118,39 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
     default: spdlog::critical("Unknown type in LoadPluginFunctions"); break;
     case pulcher::plugin::Type::Animation: {
       auto & unit = plugin.animation;
-      ctx.LoadFunction(unit.DestroyInstance,   "DestroyInstance");
-      ctx.LoadFunction(unit.ConstructInstance, "ConstructInstance");
-      ctx.LoadFunction(unit.LoadAnimations,    "LoadAnimations");
-      ctx.LoadFunction(unit.Shutdown,          "Shutdown");
-      ctx.LoadFunction(unit.UpdateFrame,       "UpdateFrame");
-      ctx.LoadFunction(unit.RenderAnimations,  "RenderAnimations");
-      ctx.LoadFunction(unit.UiRender,          "UiRender");
+      ctx.LoadFunction(unit.DestroyInstance,   "Animation_DestroyInstance");
+      ctx.LoadFunction(unit.ConstructInstance, "Animation_ConstructInstance");
+      ctx.LoadFunction(unit.LoadAnimations,    "Animation_LoadAnimations");
+      ctx.LoadFunction(unit.Shutdown,          "Animation_Shutdown");
+      ctx.LoadFunction(unit.UpdateFrame,       "Animation_UpdateFrame");
+      ctx.LoadFunction(unit.RenderAnimations,  "Animation_RenderAnimations");
+      ctx.LoadFunction(unit.UiRender,          "Animation_UiRender");
     } break;
     case pulcher::plugin::Type::Entity: {
       auto & unit = plugin.entity;
-      ctx.LoadFunction(unit.StartScene,   "StartScene");
-      ctx.LoadFunction(unit.Shutdown,     "Shutdown");
-      ctx.LoadFunction(unit.EntityUpdate, "EntityUpdate");
-      ctx.LoadFunction(unit.UiRender,     "UiRender");
+      ctx.LoadFunction(unit.StartScene,   "Entity_StartScene");
+      ctx.LoadFunction(unit.Shutdown,     "Entity_Shutdown");
+      ctx.LoadFunction(unit.EntityUpdate, "Entity_EntityUpdate");
+      ctx.LoadFunction(unit.UiRender,     "Entity_UiRender");
     } break;
     case pulcher::plugin::Type::UserInterface: {
       auto & unit = plugin.userInterface;
-      ctx.LoadFunction(unit.UiDispatch, "UiDispatch");
+      ctx.LoadFunction(unit.UiDispatch, "Ui_UiDispatch");
     } break;
     case pulcher::plugin::Type::Map: {
       auto & unit = plugin.map;
-      ctx.LoadFunction(unit.Load,     "Load");
-      ctx.LoadFunction(unit.Render,   "Render");
-      ctx.LoadFunction(unit.UiRender, "UiRender");
-      ctx.LoadFunction(unit.Shutdown, "Shutdown");
+      ctx.LoadFunction(unit.Load,     "Map_Load");
+      ctx.LoadFunction(unit.Render,   "Map_Render");
+      ctx.LoadFunction(unit.UiRender, "Map_UiRender");
+      ctx.LoadFunction(unit.Shutdown, "Map_Shutdown");
     } break;
     case pulcher::plugin::Type::Physics: {
       auto & unit = plugin.physics;
-      ctx.LoadFunction(unit.ProcessTileset,   "ProcessTileset");
-      ctx.LoadFunction(unit.ClearMapGeometry, "ClearMapGeometry");
-      ctx.LoadFunction(unit.LoadMapGeometry,  "LoadMapGeometry");
-      ctx.LoadFunction(unit.ProcessPhysics,   "ProcessPhysics");
-      ctx.LoadFunction(unit.UiRender,         "UiRender");
+      ctx.LoadFunction(unit.ProcessTileset,   "Physics_ProcessTileset");
+      ctx.LoadFunction(unit.ClearMapGeometry, "Physics_ClearMapGeometry");
+      ctx.LoadFunction(unit.LoadMapGeometry,  "Physics_LoadMapGeometry");
+      ctx.LoadFunction(unit.ProcessPhysics,   "Physics_ProcessPhysics");
+      ctx.LoadFunction(unit.UiRender,         "Physics_UiRender");
     } break;
   }
 }

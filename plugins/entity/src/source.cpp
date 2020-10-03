@@ -51,7 +51,7 @@ struct ComponentCamera {
 
 extern "C" {
 
-PUL_PLUGIN_DECL void StartScene(
+PUL_PLUGIN_DECL void Entity_StartScene(
   pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
@@ -71,13 +71,13 @@ PUL_PLUGIN_DECL void StartScene(
   );
 }
 
-PUL_PLUGIN_DECL void Shutdown(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Entity_Shutdown(pulcher::core::SceneBundle & scene) {
 
   // delete registry
   scene.EnttRegistry() = {};
 }
 
-PUL_PLUGIN_DECL void EntityUpdate(
+PUL_PLUGIN_DECL void Entity_EntityUpdate(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
@@ -291,7 +291,7 @@ PUL_PLUGIN_DECL void EntityUpdate(
   }
 }
 
-PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
   auto & physicsQueries = scene.PhysicsQueries();
 

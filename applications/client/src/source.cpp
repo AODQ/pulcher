@@ -4,6 +4,7 @@
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
+#include <pulcher-gfx/imgui.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
@@ -150,7 +151,7 @@ static void ImGuiApplyStyling()
 void LoadPluginInfo(
   pulcher::plugin::Info & plugin, pulcher::core::SceneBundle & scene
 ) {
-  plugin.map.Load(plugin, "base/map/test.json");
+  plugin.map.Load(plugin, "assets/base/map/test.json");
   plugin.animation.LoadAnimations(plugin, scene);
 
   // last thing so that all the previous information (maps, animation, etc)
@@ -204,7 +205,7 @@ void ProcessRendering(
     ::LoadPluginInfo(plugin, scene);
   }
   ImGui::ColorEdit3("screen clear", &screenClearColor.x);
-  ImGui::Text("CPU frames %lu", numCpuFrames);
+  pul::imgui::Text("CPU frames %lu", numCpuFrames);
   ImGui::End();
 
   sg_pass_action passAction = {};

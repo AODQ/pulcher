@@ -302,7 +302,7 @@ void ComputeVertices(
 } // -- namespace
 
 extern "C" {
-PUL_PLUGIN_DECL void DestroyInstance(
+PUL_PLUGIN_DECL void Animation_DestroyInstance(
   pulcher::animation::Instance & instance
 ) {
   if (instance.sgBufferOrigin.id) {
@@ -321,7 +321,7 @@ PUL_PLUGIN_DECL void DestroyInstance(
   instance.animator = {};
 }
 
-PUL_PLUGIN_DECL void ConstructInstance(
+PUL_PLUGIN_DECL void Animation_ConstructInstance(
   pulcher::animation::Instance & animationInstance
 , pulcher::animation::System & animationSystem
 , char const * label
@@ -401,8 +401,8 @@ void ReconstructInstance(
 , pulcher::animation::System & system
 ) {
   auto label = instance.animator->label;
-  DestroyInstance(instance);
-  ConstructInstance(instance, system, label.c_str());
+  Animation_DestroyInstance(instance);
+  Animation_ConstructInstance(instance, system, label.c_str());
 }
 
 void ImGuiRenderSpritesheetTile(
@@ -714,7 +714,7 @@ void SaveAnimations(pulcher::animation::System & system) {
   { // -- save file
     auto jsonStr = cJSON_Print(playerDataJson);
 
-    auto const filename = "base/spritesheets/player/data.json";
+    auto const filename = "assets/base/spritesheets/player/data.json";
 
     spdlog::info("saving json: '{}'", filename);
 
@@ -734,7 +734,7 @@ void SaveAnimations(pulcher::animation::System & system) {
 }
 
 extern "C" {
-PUL_PLUGIN_DECL void LoadAnimations(
+PUL_PLUGIN_DECL void Animation_LoadAnimations(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
 
@@ -744,7 +744,7 @@ PUL_PLUGIN_DECL void LoadAnimations(
   cJSON * playerDataJson;
   {
     // load file
-    auto file = std::ifstream{"base/spritesheets/player/data.json"};
+    auto file = std::ifstream{"assets/base/spritesheets/player/data.json"};
     if (file.eof() || !file.good()) {
       spdlog::error("could not load player spritesheet");
       return;
@@ -769,7 +769,7 @@ PUL_PLUGIN_DECL void LoadAnimations(
 
   auto & animationSystem = scene.AnimationSystem();
 
-  animationSystem.filename = "base/spritesheets/player/data.json";
+  animationSystem.filename = "assets/base/spritesheets/player/data.json";
 
   cJSON * sheetJson;
   cJSON_ArrayForEach(
@@ -969,7 +969,7 @@ PUL_PLUGIN_DECL void LoadAnimations(
   }
 }
 
-PUL_PLUGIN_DECL void Shutdown(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Animation_Shutdown(pulcher::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   { // -- delete sokol animation information
@@ -978,7 +978,7 @@ PUL_PLUGIN_DECL void Shutdown(pulcher::core::SceneBundle & scene) {
     for (auto entity : view) {
       auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
-      DestroyInstance(self.instance);
+      Animation_DestroyInstance(self.instance);
     }
   }
 
@@ -988,7 +988,7 @@ PUL_PLUGIN_DECL void Shutdown(pulcher::core::SceneBundle & scene) {
   scene.AnimationSystem() = {};
 }
 
-PUL_PLUGIN_DECL void UpdateFrame(
+PUL_PLUGIN_DECL void Animation_UpdateFrame(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
@@ -1001,7 +1001,7 @@ PUL_PLUGIN_DECL void UpdateFrame(
   }
 }
 
-PUL_PLUGIN_DECL void RenderAnimations(
+PUL_PLUGIN_DECL void Animation_RenderAnimations(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
@@ -1054,7 +1054,7 @@ PUL_PLUGIN_DECL void RenderAnimations(
   }
 }
 
-PUL_PLUGIN_DECL void UiRender(
+PUL_PLUGIN_DECL void Animation_UiRender(
   pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
 ) {
   ImGui::Begin("Animation");

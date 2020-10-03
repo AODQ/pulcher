@@ -298,7 +298,7 @@ void MapSokolEnd() {
 
 extern "C" {
 
-PUL_PLUGIN_DECL void Load(
+PUL_PLUGIN_DECL void Map_Load(
   pulcher::plugin::Info const & plugins
 , char const * filename
 ) {
@@ -484,7 +484,7 @@ PUL_PLUGIN_DECL void Load(
   cJSON_Delete(map);
 }
 
-PUL_PLUGIN_DECL void Render(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Map_Render(pulcher::core::SceneBundle & scene) {
   sg_apply_pipeline(pipeline);
 
   glm::vec2 cameraOrigin = scene.cameraOrigin;
@@ -527,7 +527,7 @@ PUL_PLUGIN_DECL void Render(pulcher::core::SceneBundle & scene) {
   }
 }
 
-PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Map_UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::Begin("Map Info");
 
   ImGui::DragInt2("map origin", &scene.cameraOrigin.x);
@@ -568,42 +568,43 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
 
     if (!open) {
       tileInfoTilesetIdx = -1ul;
-    }
+    } else {
+      pul::imgui::Text("tileset clicked {}", tileInfoTilesetIdx);
+      pul::imgui::Text(
+        "pixel clicked {}x{}", tileInfoPixelClicked.x, tileInfoPixelClicked.y
+      );
 
-    pul::imgui::Text("tileset clicked {}", tileInfoTilesetIdx);
-    pul::imgui::Text(
-      "pixel clicked {}x{}", tileInfoPixelClicked.x, tileInfoPixelClicked.y
-    );
+      // calculate tile indices for spritesheet
+      size_t tileIdx;
+      glm::u32vec2 origin;
+      pulcher::util::CalculateTileIndices(
+        tileIdx, origin, glm::u32vec2(tileInfoPixelClicked)
+      , ::mapTilesets[tileInfoTilesetIdx].spritesheet.width / 32ul
+      , ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles.size()
+      );
 
-    // calculate tile indices for spritesheet
-    size_t tileIdx;
-    glm::u32vec2 origin;
-    pulcher::util::CalculateTileIndices(
-      tileIdx, origin, glm::u32vec2(tileInfoPixelClicked)
-    , ::mapTilesets[tileInfoTilesetIdx].spritesheet.width / 32ul
-    , ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles.size()
-    );
+      pul::imgui::Text("tile idx {} origin {}", tileIdx, origin);
 
-    pul::imgui::Text("tile idx {} origin {}", tileIdx, origin);
+      pulcher::physics::Tile const & physicsTile =
+        ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles[tileIdx];
 
-    pulcher::physics::Tile const & physicsTile =
-      ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles[tileIdx];
+      std::string physxStr = "";
+      for (size_t i = 0; i < 32*32; ++ i) {
+        if (i % 32 == 0 && i > 0) {
+          physxStr += "\n";
+        }
 
-    std::string physxStr = "";
-    for (size_t i = 0; i < 32*32; ++ i) {
-      if (i % 32 == 0 && i > 0) {
-        physxStr += "\n";
+        physxStr +=
+          physicsTile.signedDistanceField[i%32][i/32] > 0.0f ? "#" : "-";
       }
 
-      physxStr +=
-        physicsTile.signedDistanceField[i%32][i/32] > 0.0f ? "#" : "-";
+      pul::imgui::Text("{}", physxStr);
+
+      ImGui::End();
     }
-
-    pul::imgui::Text("{}", physxStr);
-
-    ImGui::End();
-    ImGui::Begin("Map Info");
   }
+
+  ImGui::Begin("Map Info");
 
   ImGui::Separator();
   ImGui::Separator();
@@ -623,7 +624,7 @@ PUL_PLUGIN_DECL void UiRender(pulcher::core::SceneBundle & scene) {
   ImGui::End();
 }
 
-PUL_PLUGIN_DECL void Shutdown() {
+PUL_PLUGIN_DECL void Map_Shutdown() {
   spdlog::info("destroying map");
 
   for (auto & renderable : ::renderables) {
