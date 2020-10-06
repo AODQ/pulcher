@@ -1,6 +1,7 @@
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/scene-bundle.hpp>
+#include <pulcher-core/weapon.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/imgui.hpp>
@@ -30,6 +31,8 @@ struct ComponentPlayer {
   bool sleeping = false;
 
   bool jumping = false;
+
+  pulcher::core::Inventory inventory;
 
   glm::vec2 CalculateProjectedOrigin() {
     return origin + velocity;
@@ -293,7 +296,6 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
 PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
-  auto & physicsQueries = scene.PhysicsQueries();
 
   ImGui::Begin("Entity");
   registry.each([&](auto entity) {
@@ -309,32 +311,40 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
     if (registry.has<ComponentPlayer>(entity)) {
       ImGui::Text("--- player ---"); ImGui::SameLine(); ImGui::Separator();
       auto & self = registry.get<ComponentPlayer>(entity);
-      pul::imgui::Text("origin <{:2f}, {:2f}>", self.origin.x, self.origin.y);
-      pul::imgui::Text(
-        "velocity <{:2f}, {:2f}>", self.velocity.x, self.velocity.y
-      );
+      ImGui::PushID(&self);
+      ImGui::DragFloat2("origin", &self.origin.x, 16.125f);
+      ImGui::DragFloat2("velocity", &self.velocity.x, 0.025f);
       ImGui::Checkbox("sleeping", &self.sleeping);
-      pul::imgui::Text(
-        "physics projection query ID {}"
-      , self.physxQueryVelocity & 0xFFFF
-      );
-      if (self.physxQueryVelocity != -1ul) {
-        auto intersection =
-          physicsQueries.RetrieveQuery(self.physxQueryVelocity)
-        ;
-        pul::imgui::Text(
-          " -- collision {}", intersection.collision
-        );
-      }
+      if (ImGui::TreeNode("inventory")) {
+        for (auto & weapon : self.inventory.weapons) {
+          ImGui::PushID(Idx(weapon.type));
 
-      pul::imgui::Text(
-        "physics gravity query ID {}"
-      , self.physxQueryGravity & 0xFFFF
-      );
-      if (self.physxQueryGravity != -1ul) {
-        auto intersection = physicsQueries.RetrieveQuery(self.physxQueryGravity);
-        pul::imgui::Text(" -- collision {}", intersection.collision);
+          ImGui::Separator();
+
+          if (ImGui::Button(ToStr(weapon.type)))
+            { self.inventory.ChangeWeapon(weapon.type); }
+
+          if (weapon.type == self.inventory.currentWeapon) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 1.0f, 1.0f), "equipped");
+          }
+
+          ImGui::Checkbox("picked up", &weapon.pickedUp);
+          pul::imgui::Text("cooldown {}", weapon.cooldown);
+
+          ImGui::SetNextItemWidth(128.0f);
+          pul::imgui::SliderInt("ammo", &weapon.ammunition, 0, 1000);
+
+          ImGui::PopID(); // weapon
+        }
       }
+      pul::imgui::Text(
+        "current weapon: '{}'", ToStr(self.inventory.currentWeapon)
+      );
+      pul::imgui::Text(
+        "prev    weapon: '{}'", ToStr(self.inventory.previousWeapon)
+      );
+      ImGui::PopID(); // player
     }
 
     if (registry.has<ComponentControllable>(entity)) {

@@ -58,7 +58,6 @@ template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
-    spdlog::info("loadin fn");
     fn =
       reinterpret_cast<T>(
         reinterpret_cast<void *>(::GetProcAddress(this->data, label))
