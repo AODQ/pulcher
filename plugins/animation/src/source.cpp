@@ -396,23 +396,24 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
 
 namespace {
 
-void ReconstructInstance(
-  pulcher::animation::Instance & instance
-, pulcher::animation::System & system
-) {
-  auto label = instance.animator->label;
-  Animation_DestroyInstance(instance);
-  Animation_ConstructInstance(instance, system, label.c_str());
+void ReconstructInstances(pulcher::core::SceneBundle & scene) {
+  auto & registry = scene.EnttRegistry();
+  auto & system = scene.AnimationSystem();
+  auto view = registry.view<pulcher::animation::ComponentInstance>();
+  for (auto entity : view) {
+    auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+    auto label = self.instance.animator->label;
+    Animation_DestroyInstance(self.instance);
+    Animation_ConstructInstance(self.instance, system, label.c_str());
+  }
 }
 
 void ImGuiRenderSpritesheetTile(
-  pulcher::animation::Instance & instance
+  pulcher::gfx::Spritesheet & spritesheet
 , pulcher::animation::Animator::Piece & piece
 , pulcher::animation::Animator::Component & component
 , float alpha = 1.0f
 ) {
-  auto & spritesheet = instance.animator->spritesheet;
-
   auto pieceDimensions = glm::vec2(piece.dimensions);
   auto const imgUl =
     glm::vec2(component.tile)*pieceDimensions
@@ -441,10 +442,19 @@ void ImGuiRenderSpritesheetTile(
     )
   , ImVec4(1, 1, 1, 1)
   );
+
+  // must be at least 64 pixels  for alignment, so if it is not we need to
+  // introduce empty space
+  if (dimensions.y < 64) {
+    ImGui::Image(
+      0, ImVec2(dimensions.x, 64 - dimensions.y),
+      ImVec2(0, 0), ImVec2(0, 0), ImVec4(0, 0, 0, 0)
+    );
+  }
 }
 
 void DisplayImGuiComponent(
-  pulcher::animation::Instance & instance
+  pulcher::animation::Animator & animator
 , pulcher::animation::Animator::Piece & piece
 , std::vector<pulcher::animation::Animator::Component> & components
 , size_t componentIt
@@ -465,7 +475,7 @@ void DisplayImGuiComponent(
   ImVec2 pos = ImGui::GetCursorScreenPos();
   if (animShowPreviousSprite > 0.0f) {
     ::ImGuiRenderSpritesheetTile(
-      instance, piece
+      animator.spritesheet, piece
     , components[
         (components.size() + componentIt - 1) % components.size()
       ]
@@ -473,9 +483,7 @@ void DisplayImGuiComponent(
     );
   }
   ImGui::SetCursorScreenPos(pos);
-  ::ImGuiRenderSpritesheetTile(
-    instance, piece, component
-  );
+  ::ImGuiRenderSpritesheetTile(animator.spritesheet, piece, component);
 
   if (!::animShowZoom) {
     ImGui::NextColumn();
@@ -516,7 +524,8 @@ void DisplayImGuiComponent(
 }
 
 void DisplayImGuiSkeleton(
-  pulcher::animation::Instance & instance
+  pulcher::core::SceneBundle & scene
+, pulcher::animation::Animator & animator
 , pulcher::animation::System & system
 , std::vector<pulcher::animation::Animator::SkeletalPiece> & skeletals
 ) {
@@ -526,13 +535,13 @@ void DisplayImGuiSkeleton(
     { ImGui::OpenPopup("add skeletal"); }
 
   if (ImGui::BeginPopup("add skeletal")) {
-    for (auto & piecePair : instance.animator->pieces) {
+    for (auto & piecePair : animator.pieces) {
       auto & label = std::get<0>(piecePair);
       if (ImGui::Selectable(label.c_str())) {
         skeletals.emplace_back(
           pulcher::animation::Animator::SkeletalPiece{label}
         );
-        ReconstructInstance(instance, system);
+        ReconstructInstances(scene);
       }
     }
 
@@ -554,14 +563,14 @@ void DisplayImGuiSkeleton(
 
     if (ImGui::Button("remove")) {
       skeletals.erase(skeletals.begin() + skeletalIdx);
-      ReconstructInstance(instance, system);
+      ReconstructInstances(scene);
 
       ImGui::TreePop();
       ImGui::PopID();
       continue;
     }
 
-    DisplayImGuiSkeleton(instance, system, skeletal.children);
+    DisplayImGuiSkeleton(scene, animator, system, skeletal.children);
 
     ImGui::TreePop();
     ImGui::PopID();
@@ -599,189 +608,202 @@ cJSON * SaveAnimationComponent(
   return componentsJson;
 }
 
-void SaveAnimations(pulcher::animation::System & system) {
-  cJSON * playerDataJson;
+cJSON * SaveAnimation(pulcher::animation::Animator& animator) {
+  cJSON * spritesheetJson = cJSON_CreateObject();
 
-  playerDataJson = cJSON_CreateObject();
+  cJSON_AddItemToObject(
+    spritesheetJson, "label", cJSON_CreateString(animator.label.c_str())
+  );
 
-  cJSON * spritesheetsJson = cJSON_CreateArray();
-  cJSON_AddItemToObject(playerDataJson, "spritesheets", spritesheetsJson);
+  cJSON_AddItemToObject(
+    spritesheetJson
+  , "filename", cJSON_CreateString(animator.spritesheet.filename.c_str())
+  );
 
-  for (auto & animatorPair : system.animators) {
-    auto & animator = *animatorPair.second;
+  // TODO bug if skeleton is empty i think
+  cJSON_AddItemToObject(
+    spritesheetJson
+  , "skeleton"
+  , JsonWriteRecursiveSkeleton(animator.skeleton)
+  );
 
-    cJSON * spritesheetJson = cJSON_CreateObject();
-    cJSON_AddItemToArray(spritesheetsJson, spritesheetJson);
+  cJSON * animationPieceJson = cJSON_CreateArray();
+  cJSON_AddItemToObject(
+    spritesheetJson, "animation-piece", animationPieceJson
+  );
+
+  for (auto const & piecePair : animator.pieces) {
+    auto const & pieceLabel = std::get<0>(piecePair);
+    auto const & piece = std::get<1>(piecePair);
+
+    cJSON * pieceJson = cJSON_CreateObject();
+    cJSON_AddItemToArray(animationPieceJson, pieceJson);
 
     cJSON_AddItemToObject(
-      spritesheetJson, "label", cJSON_CreateString(animator.label.c_str())
+      pieceJson, "label", cJSON_CreateString(pieceLabel.c_str())
     );
-
     cJSON_AddItemToObject(
-      spritesheetJson
-    , "filename", cJSON_CreateString(animator.spritesheet.filename.c_str())
+      pieceJson, "dimension-x", cJSON_CreateInt(piece.dimensions.x)
     );
-
-    // TODO bug if skeleton is empty i think
     cJSON_AddItemToObject(
-      spritesheetJson
-    , "skeleton"
-    , JsonWriteRecursiveSkeleton(animator.skeleton)
+      pieceJson, "dimension-y", cJSON_CreateInt(piece.dimensions.y)
     );
-
-    cJSON * animationPieceJson = cJSON_CreateArray();
     cJSON_AddItemToObject(
-      spritesheetJson, "animation-piece", animationPieceJson
+      pieceJson, "origin-x", cJSON_CreateInt(piece.origin.x)
+    );
+    cJSON_AddItemToObject(
+      pieceJson, "origin-y", cJSON_CreateInt(piece.origin.y)
+    );
+    cJSON_AddItemToObject(
+      pieceJson, "render-order", cJSON_CreateInt(piece.renderOrder)
     );
 
-    for (auto const & piecePair : animator.pieces) {
-      auto const & pieceLabel = std::get<0>(piecePair);
-      auto const & piece = std::get<1>(piecePair);
+    cJSON * statesJson = cJSON_CreateArray();
+    cJSON_AddItemToObject(pieceJson, "states", statesJson);
 
-      cJSON * pieceJson = cJSON_CreateObject();
-      cJSON_AddItemToArray(animationPieceJson, pieceJson);
+    for (auto const & statePair : piece.states) {
+      auto const & stateLabel = std::get<0>(statePair);
+      auto const & state = std::get<1>(statePair);
+
+      cJSON * stateJson = cJSON_CreateObject();
+      cJSON_AddItemToArray(statesJson, stateJson);
 
       cJSON_AddItemToObject(
-        pieceJson, "label", cJSON_CreateString(pieceLabel.c_str())
+        stateJson, "label", cJSON_CreateString(stateLabel.c_str())
       );
       cJSON_AddItemToObject(
-        pieceJson, "dimension-x", cJSON_CreateInt(piece.dimensions.x)
+        stateJson, "ms-delta-time", cJSON_CreateInt(state.msDeltaTime)
       );
       cJSON_AddItemToObject(
-        pieceJson, "dimension-y", cJSON_CreateInt(piece.dimensions.y)
+        stateJson, "rotation-mirrored"
+      , cJSON_CreateInt(state.rotationMirrored)
       );
       cJSON_AddItemToObject(
-        pieceJson, "origin-x", cJSON_CreateInt(piece.origin.x)
-      );
-      cJSON_AddItemToObject(
-        pieceJson, "origin-y", cJSON_CreateInt(piece.origin.y)
-      );
-      cJSON_AddItemToObject(
-        pieceJson, "render-order", cJSON_CreateInt(piece.renderOrder)
+        stateJson, "rotate-pixels"
+      , cJSON_CreateInt(state.rotatePixels)
       );
 
-      cJSON * statesJson = cJSON_CreateArray();
-      cJSON_AddItemToObject(pieceJson, "states", statesJson);
+      cJSON * componentPartsJson = cJSON_CreateArray();
+      cJSON_AddItemToObject(stateJson, "components", componentPartsJson);
 
-      for (auto const & statePair : piece.states) {
-        auto const & stateLabel = std::get<0>(statePair);
-        auto const & state = std::get<1>(statePair);
-
-        cJSON * stateJson = cJSON_CreateObject();
-        cJSON_AddItemToArray(statesJson, stateJson);
+      for (auto const & componentPart : state.components) {
+        cJSON * componentPartJson = cJSON_CreateObject();
+        cJSON_AddItemToArray(componentPartsJson, componentPartJson);
 
         cJSON_AddItemToObject(
-          stateJson, "label", cJSON_CreateString(stateLabel.c_str())
+          componentPartJson, "angle-range-max"
+        , cJSON_CreateNumber(static_cast<double>(componentPart.rangeMax))
         );
+
         cJSON_AddItemToObject(
-          stateJson, "ms-delta-time", cJSON_CreateInt(state.msDeltaTime)
+          componentPartJson, "default"
+        , SaveAnimationComponent(componentPart.data[0])
         );
+
         cJSON_AddItemToObject(
-          stateJson, "rotation-mirrored"
-        , cJSON_CreateInt(state.rotationMirrored)
+          componentPartJson, "flipped"
+        , SaveAnimationComponent(componentPart.data[1])
         );
-        cJSON_AddItemToObject(
-          stateJson, "rotate-pixels"
-        , cJSON_CreateInt(state.rotatePixels)
-        );
-
-        cJSON * componentPartsJson = cJSON_CreateArray();
-        cJSON_AddItemToObject(stateJson, "components", componentPartsJson);
-
-        for (auto const & componentPart : state.components) {
-          cJSON * componentPartJson = cJSON_CreateObject();
-          cJSON_AddItemToArray(componentPartsJson, componentPartJson);
-
-          cJSON_AddItemToObject(
-            componentPartJson, "angle-range-max"
-          , cJSON_CreateNumber(static_cast<double>(componentPart.rangeMax))
-          );
-
-          cJSON_AddItemToObject(
-            componentPartJson, "default"
-          , SaveAnimationComponent(componentPart.data[0])
-          );
-
-          cJSON_AddItemToObject(
-            componentPartJson, "flipped"
-          , SaveAnimationComponent(componentPart.data[1])
-          );
-        }
       }
     }
   }
 
-  { // -- save file
-    auto jsonStr = cJSON_Print(playerDataJson);
+  return spritesheetJson;
+}
 
-    auto const filename = "assets/base/spritesheets/player/data.json";
-
-    spdlog::info("saving json: '{}'", filename);
-
-    auto file = std::ofstream{filename};
-    if (!file.good()) {
-      spdlog::error("could not save file");
-      cJSON_Delete(playerDataJson);
-      return;
-    }
-
-    file << jsonStr;
+void SaveAnimations(pulcher::animation::System & system) {
+  // save each animation into its own map to seperate them out by file
+  std::map<std::string, std::vector<cJSON *>> filenameToCJson;
+  for (auto & animatorPair : system.animators) {
+    auto & animator = *animatorPair.second;
+    spdlog::debug(
+      "attempting to save '{}' to '{}'", animator.label, animator.filename
+    );
+    filenameToCJson[animator.filename].emplace_back(SaveAnimation(animator));
   }
 
-  cJSON_Delete(playerDataJson);
+  // accumulate each cJSON into an array of spritesheets & save the file
+  for (auto & filenameCJsonPair : filenameToCJson) {
+    auto & filename = filenameCJsonPair.first;
+
+    cJSON * fileDataJson = cJSON_CreateObject();
+    cJSON * spritesheetsJson = cJSON_CreateArray();
+    cJSON_AddItemToObject(fileDataJson, "spritesheets", spritesheetsJson);
+
+    for (auto & spritesheetJson : filenameCJsonPair.second)
+      { cJSON_AddItemToArray(spritesheetsJson, spritesheetJson); }
+
+    { // -- save file
+      auto jsonStr = cJSON_Print(fileDataJson);
+
+      spdlog::info("saving json: '{}'", filename);
+
+      auto file = std::ofstream{filename};
+      if (file.good()) {
+        file << jsonStr;
+      } else {
+        spdlog::error("could not save file");
+      }
+    }
+
+    cJSON_Delete(fileDataJson);
+  }
 }
 
+cJSON * LoadJsonFile(std::string const & filename) {
+  // load file
+  auto file = std::ifstream{filename};
+  if (file.eof() || !file.good()) {
+    spdlog::error("could not load player spritesheet");
+    return nullptr;
+  }
+
+  auto str =
+    std::string {
+      std::istreambuf_iterator<char>(file)
+    , std::istreambuf_iterator<char>()
+    };
+
+  auto fileDataJson = cJSON_Parse(str.c_str());
+
+  if (fileDataJson == nullptr) {
+    spdlog::critical(
+      " -- failed to parse json for '{}'; '{}'"
+    , filename
+    , cJSON_GetErrorPtr()
+    );
+  }
+
+  return fileDataJson;
 }
 
-extern "C" {
-PUL_PLUGIN_DECL void Animation_LoadAnimations(
-  pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
+void LoadAnimation(
+  std::string const & filename
+, std::map<
+    std::string
+  , std::shared_ptr<pulcher::animation::Animator>
+  > & animators
 ) {
 
-  // note that this will probably need to be expanded to handle generic amount
-  // of spritesheet types (player, particles, enemies, etc)
+  cJSON * fileDataJson = ::LoadJsonFile(filename);
+  if (!fileDataJson) { return; }
 
-  cJSON * playerDataJson;
-  {
-    // load file
-    auto file = std::ifstream{"assets/base/spritesheets/player/data.json"};
-    if (file.eof() || !file.good()) {
-      spdlog::error("could not load player spritesheet");
-      return;
-    }
-
-    auto str =
-      std::string {
-        std::istreambuf_iterator<char>(file)
-      , std::istreambuf_iterator<char>()
-      };
-
-    playerDataJson = cJSON_Parse(str.c_str());
-
-    if (playerDataJson == nullptr) {
-      spdlog::critical(
-        " -- failed to parse json for player spritesheet; '{}'"
-      , cJSON_GetErrorPtr()
-      );
-      return;
-    }
-  }
-
-  auto & animationSystem = scene.AnimationSystem();
-
-  animationSystem.filename = "assets/base/spritesheets/player/data.json";
-
+  // iterate thru each spritesheet contained in file
   cJSON * sheetJson;
   cJSON_ArrayForEach(
-    sheetJson, cJSON_GetObjectItemCaseSensitive(playerDataJson, "spritesheets")
+    sheetJson
+  , cJSON_GetObjectItemCaseSensitive(fileDataJson, "spritesheets")
   ) {
     auto animator = std::make_shared<pulcher::animation::Animator>();
-
+    animator->filename = filename;
     animator->label =
       std::string{
         cJSON_GetObjectItemCaseSensitive(sheetJson, "label")->valuestring
       };
+
     spdlog::debug("loading animation spritesheet '{}'", animator->label);
+    // store animator
+    animators[animator->label] = animator;
 
     animator->spritesheet =
       pulcher::gfx::Spritesheet::Construct(
@@ -880,13 +902,44 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
 
     // load skeleton
     ::JsonParseRecursiveSkeleton(sheetJson, animator->skeleton);
-
-    // store animator
-    spdlog::debug("storing animator of {}", animator->label);
-    animationSystem.animators[animator->label] = animator;
   }
 
-  cJSON_Delete(playerDataJson);
+  cJSON_Delete(fileDataJson);
+}
+
+} // -- namespace
+
+extern "C" {
+PUL_PLUGIN_DECL void Animation_LoadAnimations(
+  pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
+) {
+
+  auto & animationSystem = scene.AnimationSystem();
+
+  { // load animations
+    cJSON * spritesheetDataJson =
+      ::LoadJsonFile("assets/base/spritesheets/data.json");
+
+    spdlog::debug("Loading animations");
+
+    cJSON * filenameJson;
+    cJSON_ArrayForEach(
+      filenameJson
+    , cJSON_GetObjectItemCaseSensitive(spritesheetDataJson, "files")
+    ) {
+      spdlog::debug("Loading '{}'", filenameJson->valuestring);
+      ::LoadAnimation(
+        std::string{filenameJson->valuestring}
+      , animationSystem.animators
+      );
+    }
+
+    cJSON_Delete(spritesheetDataJson);
+  }
+
+  for (auto const & anim : animationSystem.animators) {
+    spdlog::debug("successfully loaded anim '{}'/'{}'", anim.first, anim.second->label);
+  }
 
   { // -- sokol animation program
     sg_shader_desc desc = {};
@@ -1061,33 +1114,63 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
   auto & registry = scene.EnttRegistry();
 
-  static pulcher::animation::Instance * editInstance = nullptr;
+  static pulcher::animation::Animator * editAnimator = nullptr;
+
+  { // -- display spritesheet info
+    ImGui::Text("spritesheets");
+
+    ImGui::Separator();
+    ImGui::Separator();
+
+    for (auto & animatorPair : scene.AnimationSystem().animators) {
+      auto & animator = *animatorPair.second;
+
+      ImGui::PushID(&animator);
+
+      pul::imgui::Text("{}", animator.label);
+      if (ImGui::Button("edit")) { editAnimator = &animator; }
+
+      ImGui::Separator();
+
+      ImGui::PopID();
+    }
+  }
+
+  ImGui::NewLine();
 
   { // -- display entity info
     auto view = registry.view<pulcher::animation::ComponentInstance>();
 
+    ImGui::Text("instances");
+
+    ImGui::Separator();
+    ImGui::Separator();
+
     for (auto entity : view) {
       auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
-      ImGui::Separator();
-      pul::imgui::Text(
-        "animation instance '{}'", self.instance.animator->label
-      );
-      if (ImGui::Button("edit")) { editInstance = &self.instance; }
-      for (auto const & stateInfoPair : self.instance.pieceToState) {
-        auto & stateInfo = stateInfoPair.second;
+      ImGui::PushID(&self);
 
-        pul::imgui::Text("part - '{}'", stateInfoPair.first);
-        pul::imgui::Text("\tdelta-time {}", stateInfo.deltaTime);
-        pul::imgui::Text("\tcomponent-it {}", stateInfo.componentIt);
-        pul::imgui::Text("\tflip {}", stateInfo.flip);
-        pul::imgui::Text("\tangle {}", stateInfo.angle);
+      if (ImGui::TreeNode(self.instance.animator->label.c_str())) {
+        for (auto const & stateInfoPair : self.instance.pieceToState) {
+          auto & stateInfo = stateInfoPair.second;
+
+          pul::imgui::Text("part - '{}'", stateInfoPair.first);
+          pul::imgui::Text("\tdelta-time {}", stateInfo.deltaTime);
+          pul::imgui::Text("\tcomponent-it {}", stateInfo.componentIt);
+          pul::imgui::Text("\tflip {}", stateInfo.flip);
+          pul::imgui::Text("\tangle {}", stateInfo.angle);
+        }
+
+        ImGui::TreePop();
       }
+
+      ImGui::PopID();
     }
   }
   ImGui::End();
 
-  if (editInstance) {
+  if (editAnimator) {
 
     ImGui::Begin("Animation Timeline");
       ImGui::Checkbox("loop", &animLoop);
@@ -1117,7 +1200,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
       }
     ImGui::End();
 
-    auto & instance = *editInstance;
+    auto & animator = *editAnimator;
 
     ImGui::Begin("Animation Skeleton");
       ImGui::Separator();
@@ -1125,7 +1208,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
       ImGui::Separator();
       ImGui::Text("");
       DisplayImGuiSkeleton(
-        instance, scene.AnimationSystem(), editInstance->animator->skeleton
+        scene, animator, scene.AnimationSystem(), animator.skeleton
       );
 
       ImGui::Separator();
@@ -1141,7 +1224,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
     ImGui::Separator();
 
-    pul::imgui::Text("animator '{}'", instance.animator->label);
+    pul::imgui::Text("animator '{}'", animator.label);
 
     ImGui::Separator();
 
@@ -1150,7 +1233,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
     ImGui::Separator();
 
     size_t pieceIt = 0ul;
-    for (auto & piecePair : instance.animator->pieces) {
+    for (auto & piecePair : animator.pieces) {
       ImGui::Separator();
 
       auto & piece = piecePair.second;
@@ -1348,7 +1431,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
               ++ componentIt
             ) {
               DisplayImGuiComponent(
-                instance, piece, componentsDefault, componentIt
+                animator, piece, componentsDefault, componentIt
               );
             }
 
@@ -1365,7 +1448,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
                 ++ componentIt
               ) {
                 DisplayImGuiComponent(
-                  instance, piece, componentsFlipped, componentIt
+                  animator, piece, componentsFlipped, componentIt
                 );
               }
 

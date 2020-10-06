@@ -81,12 +81,11 @@ namespace pulcher::animation {
     std::map<std::string, pulcher::animation::Animator::Piece> pieces;
     std::vector<SkeletalPiece> skeleton;
     std::string label;
+    std::string filename;
   };
 
   struct System {
     std::map<std::string, std::shared_ptr<Animator>> animators;
-
-    std::string filename;
 
     sg_pipeline sgPipeline;
     sg_shader sgProgram;
