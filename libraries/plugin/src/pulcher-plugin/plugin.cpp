@@ -67,12 +67,10 @@ template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
         "Failed to load function '{}' for plugin '{}'", label, ::GetLastError()
       );
     }
-    spdlog::info("loaded fn");
   #endif
 }
 
 void Plugin::Reload() {
-  spdlog::info("Reloading plugin '{}'", this->filename.c_str());
   this->Close();
   this->Open();
 }
@@ -90,21 +88,18 @@ void Plugin::Close() {
 void Plugin::Open() {
   #if defined(__unix__)
     this->data = ::dlopen(this->filename.c_str(), RTLD_LAZY | RTLD_LOCAL);
-    spdlog::debug("Opened plugin {}; {}", this->filename.c_str(), this->data);
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}", this->filename, ::dlerror()
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
-    spdlog::info("loading library");
     this->data = ::LoadLibraryA(this->filename.c_str());
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}", this->filename, ::GetLastError()
       );
     }
-    spdlog::info("loaded library");
   #endif
 }
 

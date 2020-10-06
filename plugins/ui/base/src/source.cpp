@@ -91,6 +91,7 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
   plugin.entity.UiRender(sceneBundle);
   plugin.map.UiRender(sceneBundle);
   plugin.physics.UiRender(sceneBundle);
+  simgui_render();
 }
 
 }
