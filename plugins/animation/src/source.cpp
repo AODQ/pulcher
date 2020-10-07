@@ -15,6 +15,9 @@
 #include <imgui/imgui.hpp>
 #include <sokol/gfx.hpp>
 
+#include <glm/gtx/transform2.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
+
 #include <fstream>
 
 namespace {
@@ -126,9 +129,8 @@ void ComputeVertices(
   pulcher::animation::Instance & instance
 , pulcher::animation::Animator::SkeletalPiece const & skeletal
 , size_t & indexOffset
-, glm::i32vec2 & originOffset
+, glm::mat3 & skeletalMatrix
 , bool & skeletalFlip
-, float & skeletalRotation
 , bool & forceUpdate
 ) {
   // okay the below is crazy with the map lookups, I need to cache the
@@ -140,21 +142,21 @@ void ComputeVertices(
   // update skeletal information (origins, flip, rotation, etc)
   skeletalFlip ^= stateInfo.flip;
 
-  skeletalRotation += stateInfo.angle;
+  /* skeletalRotation += stateInfo.angle; */
 
-  // if rotation can affect flipping, the skeletal has to flip if rotation is
-  // reverse of current flip direction
-  if (state.rotationMirrored && ((skeletalRotation > 0.0f) ^ skeletalFlip)) {
-    skeletalFlip ^= 1;
+  /* // if rotation can affect flipping, the skeletal has to flip if rotation is */
+  /* // reverse of current flip direction */
+  /* if (state.rotationMirrored && ((skeletalRotation > 0.0f) ^ skeletalFlip)) { */
+  /*   skeletalFlip ^= 1; */
 
-    // if not flipped, have to apply the skeletal flip origin cancellation
-    if (!skeletalFlip) {
-      originOffset.x -= skeletal.origin.x*2.0f;
-    }
-  }
+  /*   // if not flipped, have to apply the skeletal flip origin cancellation */
+  /*   if (!skeletalFlip) { */
+  /*     originOffset.x -= skeletal.origin.x*2.0f; */
+  /*   } */
+  /* } */
 
   auto * componentsPtr =
-    state.ComponentLookup(skeletalFlip , glm::abs(skeletalRotation));
+    state.ComponentLookup(skeletalFlip , glm::abs(0.0f)); // TODO extract theta
 
   // if there are no components to render, output a degenerate tile
   if (!componentsPtr || componentsPtr->size() == 0ul) {
@@ -176,9 +178,6 @@ void ComputeVertices(
 
   auto & component = components[stateInfo.componentIt];
 
-  // update origin offset
-  originOffset += skeletal.origin;
-
   // update delta time and if animation update is necessary, apply uv coord
   // updates
   bool hasUpdate = forceUpdate;
@@ -196,7 +195,41 @@ void ComputeVertices(
     return;
   }
 
-  forceUpdate = true;
+  { // -- compose skeletal matrix
+    // first rotate locally by offset into the pixel it rotates around
+    glm::mat3 localMatrix = glm::mat3(1);
+    glm::vec2 localOrigin = piece.origin + component.originOffset;
+
+    if (skeletalFlip) {
+      localOrigin.x = 64 - localOrigin.x;
+    }
+
+    localMatrix =
+      glm::translate(
+        localMatrix, glm::vec2(localOrigin)
+      );
+
+    // flip origin
+
+    if (state.rotatePixels) {
+      const float theta = stateInfo.angle + pul::Pi*0.5f + skeletalFlip*pul::Pi;
+      localMatrix = glm::rotate(localMatrix, theta);
+    }
+
+    localMatrix =
+      glm::translate(
+        localMatrix, glm::vec2(-localOrigin)
+      );
+
+    // then apply its offset into the skeletal structure
+    skeletalMatrix =
+      glm::translate(
+        skeletalMatrix
+      , glm::vec2(skeletal.origin) - localOrigin
+      );
+
+    skeletalMatrix = skeletalMatrix * localMatrix;
+  }
 
   auto pieceDimensions = glm::vec2(piece.dimensions);
 
@@ -212,78 +245,45 @@ void ComputeVertices(
         (uv*pieceDimensions + glm::vec2(component.tile)*pieceDimensions)
       * instance.animator->spritesheet.InvResolution()
     ;
+    auto origin = glm::vec3(v*pieceDimensions, 1.0f);
 
-    auto origin = v*pieceDimensions + glm::vec2(originOffset);
-    auto localOrigin = piece.origin + component.originOffset;
-
-    // flip local origin
-    if (skeletalFlip) {
-      localOrigin.x = 64.0f - localOrigin.x;
-    }
-
-    if (state.rotatePixels) {
-      const float theta =
-        skeletalRotation + pul::Pi*0.5f + skeletalFlip*pul::Pi
-      ;
-
-      float sinTheta = glm::sin(theta);
-      float cosTheta = glm::cos(theta);
-
-      glm::mat2 rotM = glm::mat2(cosTheta, -sinTheta, sinTheta, cosTheta);
-
-      origin = v*pieceDimensions;
-      origin.x -= localOrigin.x;
-      origin.y -= localOrigin.y;
-
-      origin = rotM * origin;
-
-      origin += localOrigin;
-
-      origin += glm::vec2(originOffset);
-    }
-
-    origin -= localOrigin;
-
-    if (skeletalFlip) {
-      // flip over this skeletal locally
-      origin.x -= skeletal.origin.x*2.0f;
-    }
+    origin = skeletalMatrix * origin;
 
     instance.originBufferData[indexOffset] =
-        glm::vec3(origin, static_cast<float>(piece.renderOrder));
+        glm::vec3(origin.x, origin.y, static_cast<float>(piece.renderOrder));
   }
 
-  originOffset -= component.originOffset;
-
-  /* if (skeletalFlip) { */
-  /*   originOffset -= piece.origin.x; */
-  /* } */
+  // the piece origin is only part of the local matrix, so it must be recomposed
+  auto ll = piece.origin;
+  if (skeletalFlip)
+    ll.x = 64 - ll.x;
+  skeletalMatrix =
+    glm::translate(skeletalMatrix, glm::vec2(ll));
 }
 
 void ComputeVertices(
   pulcher::animation::Instance & instance
 , std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
 , size_t & indexOffset
-, const glm::i32vec2 originOffset
 , const bool skeletalFlip
-, const float skeletalRotation
+, const glm::mat3 skeletalMatrix
 , bool const forceUpdate
 ) {
+
   for (const auto & skeletal : skeletals) {
     // compute origin / uv coords
-    glm::i32vec2 newOriginOffset = originOffset;
     bool newSkeletalFlip = skeletalFlip;
-    float newSkeletalRotation = skeletalRotation;
+    auto newSkeletalMatrix = skeletalMatrix;
     bool newForceUpdate = forceUpdate;
     ComputeVertices(
-      instance, skeletal, indexOffset, newOriginOffset
-    , newSkeletalFlip, newSkeletalRotation, newForceUpdate
+      instance, skeletal, indexOffset
+    , newSkeletalMatrix, newSkeletalFlip, newForceUpdate
     );
 
     // continue to children
     ComputeVertices(
-      instance, skeletal.children, indexOffset, newOriginOffset
-    , newSkeletalFlip, newSkeletalRotation, newForceUpdate
+      instance, skeletal.children, indexOffset
+    , newSkeletalFlip, newSkeletalMatrix, newForceUpdate
     );
   }
 }
@@ -294,8 +294,8 @@ void ComputeVertices(
 ) {
   size_t indexOffset = 0ul;
   ComputeVertices(
-    instance, instance.animator->skeleton, indexOffset, glm::vec2(), false, 0.0f
-  , forceUpdate
+    instance, instance.animator->skeleton, indexOffset, false
+  , glm::mat3(1.0f), forceUpdate
   );
 }
 
@@ -1011,7 +1011,9 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
 
     desc.blend.enabled = false;
 
-    desc.rasterizer.cull_mode = SG_CULLMODE_BACK;
+    // TODO possibly make the below SG_CULLMODE_BACK if i get flipping worked
+    // out
+    desc.rasterizer.cull_mode = SG_CULLMODE_NONE;
     desc.rasterizer.alpha_to_coverage_enabled = false;
     desc.rasterizer.face_winding = SG_FACEWINDING_CCW;
     desc.rasterizer.sample_count = 1;
