@@ -1100,6 +1100,8 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     for (auto entity : view) {
       auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
+      if (self.instance.drawCallCount == 0ul) { continue; }
+
       // must update entire animation buffer
       sg_update_buffer(
         self.instance.sgBufferUvCoord,
@@ -1161,6 +1163,8 @@ PUL_PLUGIN_DECL void Animation_UiRender(
       auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
       ImGui::PushID(&self);
+
+      PUL_ASSERT(self.instance.animator, continue;);
 
       if (ImGui::TreeNode(self.instance.animator->label.c_str())) {
         for (auto const & stateInfoPair : self.instance.pieceToState) {
