@@ -20,6 +20,12 @@
 
 #include <fstream>
 
+// animation could always use cleaning / optimizing as a lot of it isn't based
+// on anything concrete, it's all developed pretty rapidly using whatever just
+// worked at the time
+
+// this implements the logic for the 'pixel-perfect' animation skeletal system
+
 namespace {
 
 static size_t animMsTimer = 0ul;
@@ -131,6 +137,7 @@ void ComputeVertices(
 , size_t & indexOffset
 , glm::mat3 & skeletalMatrix
 , bool & skeletalFlip
+, float & skeletalRotation
 , bool & forceUpdate
 ) {
   // okay the below is crazy with the map lookups, I need to cache the
@@ -142,21 +149,19 @@ void ComputeVertices(
   // update skeletal information (origins, flip, rotation, etc)
   skeletalFlip ^= stateInfo.flip;
 
-  /* skeletalRotation += stateInfo.angle; */
+  skeletalRotation += stateInfo.angle;
 
-  /* // if rotation can affect flipping, the skeletal has to flip if rotation is */
-  /* // reverse of current flip direction */
-  /* if (state.rotationMirrored && ((skeletalRotation > 0.0f) ^ skeletalFlip)) { */
-  /*   skeletalFlip ^= 1; */
+  if (state.rotationMirrored && ((skeletalRotation > 0.0f) ^ skeletalFlip)) {
+    skeletalFlip ^= 1;
+  }
 
-  /*   // if not flipped, have to apply the skeletal flip origin cancellation */
-  /*   if (!skeletalFlip) { */
-  /*     originOffset.x -= skeletal.origin.x*2.0f; */
-  /*   } */
-  /* } */
+  float const theta = -skeletalRotation - pul::Pi*0.5f + skeletalFlip*pul::Pi;
 
+  // grab component from flip/rotation
   auto * componentsPtr =
-    state.ComponentLookup(skeletalFlip , glm::abs(0.0f)); // TODO extract theta
+    state.ComponentLookup(
+      skeletalFlip , skeletalFlip ? skeletalRotation : -skeletalRotation
+    );
 
   // if there are no components to render, output a degenerate tile
   if (!componentsPtr || componentsPtr->size() == 0ul) {
@@ -212,7 +217,6 @@ void ComputeVertices(
     // flip origin
 
     if (state.rotatePixels) {
-      const float theta = stateInfo.angle + pul::Pi*0.5f + skeletalFlip*pul::Pi;
       localMatrix = glm::rotate(localMatrix, theta);
     }
 
@@ -253,37 +257,42 @@ void ComputeVertices(
         glm::vec3(origin.x, origin.y, static_cast<float>(piece.renderOrder));
   }
 
-  // the piece origin is only part of the local matrix, so it must be recomposed
-  auto ll = piece.origin;
-  if (skeletalFlip)
-    ll.x = 64 - ll.x;
-  skeletalMatrix =
-    glm::translate(skeletalMatrix, glm::vec2(ll));
+  // the piece origin is only part of the local matrix, so it must be recomposed,
+  // but apply the flipping
+  {
+    auto localOrigin = piece.origin;
+    if (skeletalFlip)
+      { localOrigin.x = 64 - localOrigin.x; }
+    skeletalMatrix =
+      glm::translate(skeletalMatrix, glm::vec2(localOrigin));
+   }
 }
 
 void ComputeVertices(
   pulcher::animation::Instance & instance
 , std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
 , size_t & indexOffset
-, const bool skeletalFlip
 , const glm::mat3 skeletalMatrix
+, const bool skeletalFlip
+, const float skeletalRotation
 , bool const forceUpdate
 ) {
 
   for (const auto & skeletal : skeletals) {
     // compute origin / uv coords
     bool newSkeletalFlip = skeletalFlip;
+    float newSkeletalRotation = skeletalRotation;
     auto newSkeletalMatrix = skeletalMatrix;
     bool newForceUpdate = forceUpdate;
     ComputeVertices(
       instance, skeletal, indexOffset
-    , newSkeletalMatrix, newSkeletalFlip, newForceUpdate
+    , newSkeletalMatrix, newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
 
     // continue to children
     ComputeVertices(
       instance, skeletal.children, indexOffset
-    , newSkeletalFlip, newSkeletalMatrix, newForceUpdate
+    , newSkeletalMatrix, newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
   }
 }
@@ -294,8 +303,8 @@ void ComputeVertices(
 ) {
   size_t indexOffset = 0ul;
   ComputeVertices(
-    instance, instance.animator->skeleton, indexOffset, false
-  , glm::mat3(1.0f), forceUpdate
+    instance, instance.animator->skeleton, indexOffset
+  , glm::mat3(1.0f), false, 0.0f, forceUpdate
   );
 }
 
