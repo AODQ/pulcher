@@ -118,6 +118,11 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
       ctx.LoadFunction(unit.Shutdown,          "Animation_Shutdown");
       ctx.LoadFunction(unit.UpdateFrame,       "Animation_UpdateFrame");
       ctx.LoadFunction(unit.RenderAnimations,  "Animation_RenderAnimations");
+      ctx.LoadFunction(unit.UpdateCache,       "Animation_UpdateCache");
+      ctx.LoadFunction(
+        unit.UpdateCacheWithPrecalculatedMatrix
+      , "Animation_UpdateCacheWithPrecalculatedMatrix"
+      );
       ctx.LoadFunction(unit.UiRender,          "Animation_UiRender");
     } break;
     case pulcher::plugin::Type::Entity: {

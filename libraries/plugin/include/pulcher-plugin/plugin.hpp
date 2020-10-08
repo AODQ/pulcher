@@ -47,6 +47,11 @@ namespace pulcher::plugin {
     void (*RenderAnimations)(
       pulcher::plugin::Info const &, pulcher::core::SceneBundle &
     ) = nullptr;
+    void (*UpdateCache)(pulcher::animation::Instance & instance) = nullptr;
+    void (*UpdateCacheWithPrecalculatedMatrix)(
+      pulcher::animation::Instance & instance
+    , glm::mat3 const & matrix
+    ) = nullptr;
     void (*UiRender)(
       pulcher::plugin::Info const &, pulcher::core::SceneBundle &
     ) = nullptr;

@@ -102,6 +102,8 @@ namespace pulcher::animation {
       bool flip = false;
       float angle = 0.0f;
 
+      glm::mat3 cachedLocalSkeletalMatrix = glm::mat3(1.0f);
+
       void Apply(std::string const & nLabel) {
         if (label != nLabel) {
           label = nLabel;
@@ -111,6 +113,10 @@ namespace pulcher::animation {
     };
 
     std::map<std::string, StateInfo> pieceToState;
+
+    bool hasCalculatedCachedInfo = false;
+
+    glm::vec2 origin = glm::vec2(0.0);
 
     sg_buffer sgBufferOrigin = {};
     sg_buffer sgBufferUvCoord = {};

@@ -37,6 +37,8 @@ struct ComponentPlayer {
   glm::vec2 CalculateProjectedOrigin() {
     return origin + velocity;
   }
+
+  entt::entity weaponAnimation;
 };
 
 
@@ -72,6 +74,20 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   registry.emplace<pulcher::animation::ComponentInstance>(
     playerEntity, instance
   );
+
+  {
+    auto & player = registry.get<ComponentPlayer>(playerEntity);
+
+    pulcher::animation::Instance weaponInstance;
+    plugin.animation.ConstructInstance(
+      weaponInstance, scene.AnimationSystem(), "weapons"
+    );
+
+    player.weaponAnimation = registry.create();
+    registry.emplace<pulcher::animation::ComponentInstance>(
+      player.weaponAnimation, weaponInstance
+    );
+  }
 }
 
 PUL_PLUGIN_DECL void Entity_Shutdown(pulcher::core::SceneBundle & scene) {
@@ -81,7 +97,7 @@ PUL_PLUGIN_DECL void Entity_Shutdown(pulcher::core::SceneBundle & scene) {
 }
 
 PUL_PLUGIN_DECL void Entity_EntityUpdate(
-  pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
+  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -291,6 +307,29 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
     // center camera on this
     scene.cameraOrigin = glm::i32vec2(player.origin);
+    animation.instance.origin = glm::vec2(0.0f);
+
+    // center weapon origin, first have to update cache for this animation to
+    // get the hand position
+    {
+      plugin.animation.UpdateCache(animation.instance);
+      auto & handState = animation.instance.pieceToState["weapon-placeholder"];
+
+      auto & weaponAnimation =
+        registry.get<pulcher::animation::ComponentInstance>(
+          player.weaponAnimation
+        );
+      auto & weaponState = weaponAnimation.instance.pieceToState["pericaliya"];
+
+      weaponAnimation.instance.origin = animation.instance.origin;
+
+      weaponState.angle = animation.instance.pieceToState["arm-front"].angle;
+      weaponState.flip = animation.instance.pieceToState["legs"].flip;
+
+      plugin.animation.UpdateCacheWithPrecalculatedMatrix(
+        weaponAnimation.instance, handState.cachedLocalSkeletalMatrix
+      );
+    }
   }
 }
 
@@ -312,6 +351,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       ImGui::Text("--- player ---"); ImGui::SameLine(); ImGui::Separator();
       auto & self = registry.get<ComponentPlayer>(entity);
       ImGui::PushID(&self);
+      pul::imgui::Text("weapon anim ID {}", static_cast<size_t>(self.weaponAnimation));
       ImGui::DragFloat2("origin", &self.origin.x, 16.125f);
       ImGui::DragFloat2("velocity", &self.velocity.x, 0.025f);
       ImGui::Checkbox("sleeping", &self.sleeping);
@@ -353,6 +393,13 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
 
     if (registry.has<ComponentCamera>(entity)) {
       ImGui::Text("--- camera ---"); ImGui::SameLine(); ImGui::Separator();
+    }
+
+    if (registry.has<pulcher::animation::ComponentInstance>(entity)) {
+      ImGui::Text("--- animation ---"); ImGui::SameLine(); ImGui::Separator();
+      auto & self = registry.get<pulcher::animation::ComponentInstance>(entity);
+      pul::imgui::Text("label: {}", self.instance.animator->label);
+      pul::imgui::Text("origin: {}", self.instance.origin);
     }
 
     ImGui::Separator();

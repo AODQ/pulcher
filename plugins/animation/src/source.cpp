@@ -135,7 +135,6 @@ void ComputeVertices(
   pulcher::animation::Instance & instance
 , pulcher::animation::Animator::SkeletalPiece const & skeletal
 , size_t & indexOffset
-, glm::mat3 & skeletalMatrix
 , bool & skeletalFlip
 , float & skeletalRotation
 , bool & forceUpdate
@@ -155,8 +154,6 @@ void ComputeVertices(
     skeletalFlip ^= 1;
   }
 
-  float const theta = -skeletalRotation - pul::Pi*0.5f + skeletalFlip*pul::Pi;
-
   // grab component from flip/rotation
   auto * componentsPtr =
     state.ComponentLookup(
@@ -174,7 +171,7 @@ void ComputeVertices(
     return;
   }
 
-  auto components = *componentsPtr;
+  auto & components = *componentsPtr;
 
   PUL_ASSERT_CMP(
     stateInfo.componentIt, <, components.size()
@@ -200,41 +197,6 @@ void ComputeVertices(
     return;
   }
 
-  { // -- compose skeletal matrix
-    // first rotate locally by offset into the pixel it rotates around
-    glm::mat3 localMatrix = glm::mat3(1);
-    glm::vec2 localOrigin = piece.origin + component.originOffset;
-
-    if (skeletalFlip) {
-      localOrigin.x = 64 - localOrigin.x;
-    }
-
-    localMatrix =
-      glm::translate(
-        localMatrix, glm::vec2(localOrigin)
-      );
-
-    // flip origin
-
-    if (state.rotatePixels) {
-      localMatrix = glm::rotate(localMatrix, theta);
-    }
-
-    localMatrix =
-      glm::translate(
-        localMatrix, glm::vec2(-localOrigin)
-      );
-
-    // then apply its offset into the skeletal structure
-    skeletalMatrix =
-      glm::translate(
-        skeletalMatrix
-      , glm::vec2(skeletal.origin) - localOrigin
-      );
-
-    skeletalMatrix = skeletalMatrix * localMatrix;
-  }
-
   auto pieceDimensions = glm::vec2(piece.dimensions);
 
   // update origins & UV coords
@@ -251,48 +213,35 @@ void ComputeVertices(
     ;
     auto origin = glm::vec3(v*pieceDimensions, 1.0f);
 
-    origin = skeletalMatrix * origin;
+    origin = stateInfo.cachedLocalSkeletalMatrix * origin;
 
     instance.originBufferData[indexOffset] =
         glm::vec3(origin.x, origin.y, static_cast<float>(piece.renderOrder));
   }
-
-  // the piece origin is only part of the local matrix, so it must be recomposed,
-  // but apply the flipping
-  {
-    auto localOrigin = piece.origin;
-    if (skeletalFlip)
-      { localOrigin.x = 64 - localOrigin.x; }
-    skeletalMatrix =
-      glm::translate(skeletalMatrix, glm::vec2(localOrigin));
-   }
 }
 
 void ComputeVertices(
   pulcher::animation::Instance & instance
 , std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
 , size_t & indexOffset
-, const glm::mat3 skeletalMatrix
-, const bool skeletalFlip
-, const float skeletalRotation
+, bool const skeletalFlip
+, float const skeletalRotation
 , bool const forceUpdate
 ) {
-
-  for (const auto & skeletal : skeletals) {
+  for (auto const & skeletal : skeletals) {
     // compute origin / uv coords
     bool newSkeletalFlip = skeletalFlip;
     float newSkeletalRotation = skeletalRotation;
-    auto newSkeletalMatrix = skeletalMatrix;
     bool newForceUpdate = forceUpdate;
     ComputeVertices(
       instance, skeletal, indexOffset
-    , newSkeletalMatrix, newSkeletalFlip, newSkeletalRotation, newForceUpdate
+    , newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
 
     // continue to children
     ComputeVertices(
       instance, skeletal.children, indexOffset
-    , newSkeletalMatrix, newSkeletalFlip, newSkeletalRotation, newForceUpdate
+    , newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
   }
 }
@@ -303,9 +252,123 @@ void ComputeVertices(
 ) {
   size_t indexOffset = 0ul;
   ComputeVertices(
-    instance, instance.animator->skeleton, indexOffset
-  , glm::mat3(1.0f), false, 0.0f, forceUpdate
+    instance, instance.animator->skeleton, indexOffset, false, 0.0f, forceUpdate
   );
+}
+
+void ComputeCache(
+  pulcher::animation::Instance & instance
+, pulcher::animation::Animator::SkeletalPiece const & skeletal
+, glm::mat3 & skeletalMatrix
+, bool & skeletalFlip
+, float & skeletalRotation
+) {
+  auto & piece = instance.animator->pieces[skeletal.label];
+  auto & stateInfo = instance.pieceToState[skeletal.label];
+  auto & state = piece.states[stateInfo.label];
+
+  // update skeletal information (origins, flip, rotation, etc)
+  skeletalFlip ^= stateInfo.flip;
+
+  skeletalRotation += stateInfo.angle;
+
+  if (state.rotationMirrored && ((skeletalRotation > 0.0f) ^ skeletalFlip)) {
+    skeletalFlip ^= 1;
+  }
+
+  float const theta = -skeletalRotation - pul::Pi*0.5f + skeletalFlip*pul::Pi;
+
+  // grab component from flip/rotation
+  auto * componentsPtr =
+    state.ComponentLookup(
+      skeletalFlip , skeletalFlip ? skeletalRotation : -skeletalRotation
+    );
+
+  PUL_ASSERT(
+    componentsPtr && componentsPtr->size() > 0ul
+  , return;
+  );
+
+  auto & components = *componentsPtr;
+
+  PUL_ASSERT_CMP(
+    stateInfo.componentIt, <, components.size()
+  , stateInfo.componentIt = components.size()-1;
+  );
+
+  auto & component = components[stateInfo.componentIt];
+
+  // -- compose skeletal matrix
+  // first rotate locally by offset into the pixel it rotates around
+  glm::mat3 localMatrix = glm::mat3(1);
+  glm::vec2 localOrigin = piece.origin + component.originOffset;
+
+  if (skeletalFlip) {
+    localOrigin.x = piece.dimensions.x - localOrigin.x;
+  }
+
+  localMatrix =
+    glm::translate(
+      localMatrix, glm::vec2(localOrigin)
+    );
+
+  // flip origin
+
+  if (state.rotatePixels) {
+    localMatrix = glm::rotate(localMatrix, theta);
+  }
+
+  localMatrix =
+    glm::translate(
+      localMatrix, glm::vec2(-localOrigin)
+    );
+
+  // then apply its offset into the skeletal structure
+  auto skeletalOrigin = skeletal.origin;
+  if (skeletalFlip) { skeletalOrigin.x *= -1; }
+  skeletalMatrix =
+    glm::translate(
+      skeletalMatrix
+    , glm::vec2(skeletalOrigin) - localOrigin
+    );
+
+  skeletalMatrix = skeletalMatrix * localMatrix;
+
+  // cache matrix
+  stateInfo.cachedLocalSkeletalMatrix = skeletalMatrix;
+
+  // the piece origin is only part of the local matrix, so it must be
+  // recomposed, but apply the flipping
+  {
+    localOrigin = piece.origin;
+    if (skeletalFlip)
+      { localOrigin.x = piece.dimensions.x - localOrigin.x; }
+    skeletalMatrix =
+      glm::translate(skeletalMatrix, glm::vec2(localOrigin));
+   }
+}
+
+void ComputeCache(
+  pulcher::animation::Instance & instance
+, std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
+, glm::mat3 const skeletalMatrix
+, bool const skeletalFlip
+, float const skeletalRotation
+) {
+  for (auto const & skeletal : skeletals) {
+    auto newSkeletalMatrix = skeletalMatrix;
+    auto newSkeletalFlip = skeletalFlip;
+    auto newSkeletalRotation = skeletalRotation;
+    ComputeCache(
+      instance, skeletal
+    , newSkeletalMatrix, newSkeletalFlip, newSkeletalRotation
+    );
+
+    ComputeCache(
+      instance, skeletal.children
+    , newSkeletalMatrix, newSkeletalFlip, newSkeletalRotation
+    );
+  }
 }
 
 } // -- namespace
@@ -588,7 +651,6 @@ void DisplayImGuiSkeleton(
   }
 }
 
-
 cJSON * SaveAnimationComponent(
   std::vector<pulcher::animation::Animator::Component> const & components
 ) {
@@ -763,7 +825,7 @@ cJSON * LoadJsonFile(std::string const & filename) {
   // load file
   auto file = std::ifstream{filename};
   if (file.eof() || !file.good()) {
-    spdlog::error("could not load player spritesheet");
+    spdlog::error("could not load spritesheet '{}'", filename);
     return nullptr;
   }
 
@@ -1061,6 +1123,13 @@ PUL_PLUGIN_DECL void Animation_UpdateFrame(
   for (auto entity : view) {
     auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
+    if (!self.instance.hasCalculatedCachedInfo) {
+      ::ComputeCache(
+        self.instance, self.instance.animator->skeleton
+      , glm::mat3(1.0f), false, 0.0f
+      );
+    }
+
     ::ComputeVertices(self.instance, true);
   }
 }
@@ -1073,15 +1142,6 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
 
     // bind pipeline & global uniforms
     sg_apply_pipeline(scene.AnimationSystem().sgPipeline);
-
-    glm::vec2 animationOrigin = glm::vec2(0);
-
-    sg_apply_uniforms(
-      SG_SHADERSTAGE_VS
-    , 0
-    , &animationOrigin.x
-    , sizeof(float) * 2ul
-    );
 
     std::array<float, 2> windowResolution {{
       static_cast<float>(pulcher::gfx::DisplayWidth())
@@ -1100,7 +1160,18 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     for (auto entity : view) {
       auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
 
+      self.instance.hasCalculatedCachedInfo = false;
+
       if (self.instance.drawCallCount == 0ul) { continue; }
+
+      sg_apply_bindings(self.instance.sgBindings);
+
+      sg_apply_uniforms(
+        SG_SHADERSTAGE_VS
+      , 0
+      , &self.instance.origin.x
+      , sizeof(float) * 2ul
+      );
 
       // must update entire animation buffer
       sg_update_buffer(
@@ -1114,10 +1185,28 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
         self.instance.originBufferData.size() * sizeof(glm::vec3)
       );
 
-      sg_apply_bindings(self.instance.sgBindings);
       sg_draw(0, self.instance.drawCallCount, 1);
     }
   }
+}
+
+PUL_PLUGIN_DECL void Animation_UpdateCache(
+  pulcher::animation::Instance & instance
+) {
+  ::ComputeCache(
+    instance, instance.animator->skeleton, glm::mat3(1.0f), false, 0.0f
+  );
+  instance.hasCalculatedCachedInfo = true;
+}
+
+PUL_PLUGIN_DECL void Animation_UpdateCacheWithPrecalculatedMatrix(
+  pulcher::animation::Instance & instance
+, glm::mat3 const & skeletalMatrix
+) {
+  ::ComputeCache(
+    instance, instance.animator->skeleton, skeletalMatrix, false, 0.0f
+  );
+  instance.hasCalculatedCachedInfo = true;
 }
 
 PUL_PLUGIN_DECL void Animation_UiRender(
@@ -1221,7 +1310,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
       ImGui::Separator();
       ImGui::Text("skeleton");
       ImGui::Separator();
-      ImGui::Text("");
+      ImGui::Text(" ");
       DisplayImGuiSkeleton(
         scene, animator, scene.AnimationSystem(), animator.skeleton
       );
