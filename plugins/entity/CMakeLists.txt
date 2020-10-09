@@ -1,5 +1,7 @@
 add_library(plugin-entity SHARED)
-target_sources(plugin-entity PRIVATE src/source.cpp)
+
+target_include_directories(plugin-entity PUBLIC "include/")
+target_sources(plugin-entity PRIVATE src/source.cpp src/player.cpp)
 
 target_link_libraries(
   plugin-entity
