@@ -41,16 +41,11 @@ namespace pulcher::physics {
     size_t AddQuery(IntersectorPoint const & intersector);
     size_t AddQuery(IntersectorRay const & intersector);
 
-    pulcher::physics::IntersectionResults RetrieveQuery(size_t);
-
     std::vector<pulcher::physics::IntersectorPoint> intersectorPoints;
     std::vector<pulcher::physics::IntersectorRay>   intersectorRays;
 
     std::vector<pulcher::physics::IntersectionResults> intersectorResultsPoints;
     std::vector<pulcher::physics::IntersectionResults> intersectorResultsRays;
-
-    // Swaps buffers around
-    void Submit();
   };
 
 }

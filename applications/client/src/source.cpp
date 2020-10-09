@@ -181,7 +181,6 @@ void ProcessLogic(
   , pulcher::gfx::DisplayHeight()
   , scene.PlayerController()
   );
-  plugin.physics.ProcessPhysics(scene);
   plugin.entity.EntityUpdate(plugin, scene);
   plugin.animation.UpdateFrame(plugin, scene);
 }

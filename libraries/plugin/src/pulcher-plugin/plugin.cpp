@@ -148,7 +148,8 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
       ctx.LoadFunction(unit.ProcessTileset,   "Physics_ProcessTileset");
       ctx.LoadFunction(unit.ClearMapGeometry, "Physics_ClearMapGeometry");
       ctx.LoadFunction(unit.LoadMapGeometry,  "Physics_LoadMapGeometry");
-      ctx.LoadFunction(unit.ProcessPhysics,   "Physics_ProcessPhysics");
+      ctx.LoadFunction(unit.IntersectionRaycast, "Physics_IntersectionRaycast");
+      ctx.LoadFunction(unit.IntersectionPoint, "Physics_IntersectionPoint");
       ctx.LoadFunction(unit.UiRender,         "Physics_UiRender");
     } break;
   }

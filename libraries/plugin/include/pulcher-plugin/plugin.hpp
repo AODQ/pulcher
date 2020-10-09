@@ -12,6 +12,9 @@ namespace pulcher::animation { struct Instance; }
 namespace pulcher::animation { struct System; }
 namespace pulcher::core { struct SceneBundle; }
 namespace pulcher::gfx { struct Image; }
+namespace pulcher::physics { struct IntersectionResults; }
+namespace pulcher::physics { struct IntersectorPoint; }
+namespace pulcher::physics { struct IntersectorRay; }
 namespace pulcher::physics { struct Tileset; }
 namespace pulcher::plugin { struct Info; }
 
@@ -89,7 +92,16 @@ namespace pulcher::plugin {
     , std::vector<std::span<size_t>>                 const & mapTileIndices
     , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
     ) = nullptr;
-    void (*ProcessPhysics)(pulcher::core::SceneBundle &) = nullptr;
+    void (*IntersectionRaycast)(
+      pulcher::core::SceneBundle const & scene
+    , pulcher::physics::IntersectorRay const & ray
+    , pulcher::physics::IntersectionResults & intersectionResults
+    ) = nullptr;
+    void (*IntersectionPoint)(
+      pulcher::core::SceneBundle const & scene
+    , pulcher::physics::IntersectorPoint const & ray
+    , pulcher::physics::IntersectionResults & intersectionResults
+    ) = nullptr;
     void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
   };
 
