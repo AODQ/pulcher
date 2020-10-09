@@ -31,8 +31,8 @@ void pulcher::core::Inventory::ChangeWeapon(pulcher::core::WeaponType type) {
 char const * ToStr(pulcher::core::WeaponType weaponType) {
   switch (weaponType) {
     default: return "N/A";
-    case pulcher::core::WeaponType::BadFetus:    return "bad fetus";
-    case pulcher::core::WeaponType::DopplerBeam: return "doppler baem";
+    case pulcher::core::WeaponType::BadFetus:    return "bad-fetus";
+    case pulcher::core::WeaponType::DopplerBeam: return "doppler-beam";
     case pulcher::core::WeaponType::Grannibal:   return "grannibal";
     case pulcher::core::WeaponType::Manshredder: return "manshredder";
     case pulcher::core::WeaponType::Pericaliya:  return "pericaliya";
@@ -40,7 +40,7 @@ char const * ToStr(pulcher::core::WeaponType weaponType) {
     case pulcher::core::WeaponType::Unarmed:     return "unarmed";
     case pulcher::core::WeaponType::Volnias:     return "volnias";
     case pulcher::core::WeaponType::Wallbanger:  return "wallbanger";
-    case pulcher::core::WeaponType::ZeusStinger: return "zeus stinger";
+    case pulcher::core::WeaponType::ZeusStinger: return "zeus-stinger";
   }
 }
 

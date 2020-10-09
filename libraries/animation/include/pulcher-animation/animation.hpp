@@ -101,6 +101,7 @@ namespace pulcher::animation {
       size_t componentIt = 0ul;
       bool flip = false;
       float angle = 0.0f;
+      bool visible = true;
 
       glm::mat3 cachedLocalSkeletalMatrix = glm::mat3(1.0f);
 
@@ -122,6 +123,8 @@ namespace pulcher::animation {
     sg_buffer sgBufferUvCoord = {};
     sg_bindings sgBindings = {};
     size_t drawCallCount = 0ul;
+
+    bool visible = true;
 
     // keep origin/uv coord buffer data around for streaming updates
     std::vector<glm::vec2> uvCoordBufferData;

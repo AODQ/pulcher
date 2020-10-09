@@ -92,12 +92,12 @@ namespace pulcher::plugin {
     , std::vector<std::span<size_t>>                 const & mapTileIndices
     , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
     ) = nullptr;
-    void (*IntersectionRaycast)(
+    bool (*IntersectionRaycast)(
       pulcher::core::SceneBundle const & scene
     , pulcher::physics::IntersectorRay const & ray
     , pulcher::physics::IntersectionResults & intersectionResults
     ) = nullptr;
-    void (*IntersectionPoint)(
+    bool (*IntersectionPoint)(
       pulcher::core::SceneBundle const & scene
     , pulcher::physics::IntersectorPoint const & ray
     , pulcher::physics::IntersectionResults & intersectionResults

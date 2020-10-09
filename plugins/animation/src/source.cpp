@@ -215,6 +215,10 @@ void ComputeVertices(
 
     origin = stateInfo.cachedLocalSkeletalMatrix * origin;
 
+    // produce degenerate triangle if not visible
+    if (!stateInfo.visible)
+      { origin = glm::vec3(-99999.0f); }
+
     instance.originBufferData[indexOffset] =
         glm::vec3(origin.x, origin.y, static_cast<float>(piece.renderOrder));
   }
@@ -1162,7 +1166,10 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
 
       self.instance.hasCalculatedCachedInfo = false;
 
-      if (self.instance.drawCallCount == 0ul) { continue; }
+      if (
+          !self.instance.visible
+       || self.instance.drawCallCount == 0ul
+      ) { continue; }
 
       sg_apply_bindings(self.instance.sgBindings);
 

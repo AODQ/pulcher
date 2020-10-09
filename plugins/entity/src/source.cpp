@@ -86,8 +86,6 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
     , pulcher::animation::ComponentInstance
     >();
 
-  auto & physicsQueries = scene.PhysicsQueries();
-
   for (auto entity : view) {
     plugin::entity::UpdatePlayer(
       plugin, scene
@@ -120,7 +118,15 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       );
       ImGui::DragFloat2("origin", &self.origin.x, 16.125f);
       ImGui::DragFloat2("velocity", &self.velocity.x, 0.025f);
+      ImGui::DragFloat2("acceleration", &self.acceleration.x, 0.025f);
       ImGui::Checkbox("sleeping", &self.sleeping);
+      ImGui::Checkbox("grounded", &self.grounded);
+      if (ImGui::Button("Give all weapons")) {
+        for (auto & weapon : self.inventory.weapons) {
+          weapon.pickedUp = true;
+          weapon.ammunition = 500u;
+        }
+      }
       if (ImGui::TreeNode("inventory")) {
         for (auto & weapon : self.inventory.weapons) {
           ImGui::PushID(Idx(weapon.type));

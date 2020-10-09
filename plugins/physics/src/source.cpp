@@ -388,18 +388,17 @@ PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
   ::LoadSokolInfo();
 }
 
-PUL_PLUGIN_DECL void Physics_IntersectionRaycast(
-  pulcher::core::SceneBundle const & scene
+PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
+  pulcher::core::SceneBundle const &
 , pulcher::physics::IntersectorRay const & ray
 , pulcher::physics::IntersectionResults & intersectionResults
 ) {
-  bool hasIntersection = false;
   intersectionResults = {};
   // TODO this is slow and can be optimized by using SDFs
   pulcher::physics::BresenhamLine(
     ray.beginOrigin, ray.endOrigin
   , [&](int32_t x, int32_t y) {
-      if (hasIntersection) { return; }
+      if (intersectionResults.collision) { return; }
       auto origin = glm::i32vec2(x, y);
       // -- get physics tile from acceleration structure
 
@@ -428,7 +427,6 @@ PUL_PLUGIN_DECL void Physics_IntersectionRaycast(
       if (
         physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f
       ) {
-        hasIntersection = true;
         intersectionResults =
           pulcher::physics::IntersectionResults {
             true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx,
@@ -437,10 +435,12 @@ PUL_PLUGIN_DECL void Physics_IntersectionRaycast(
       }
     }
   );
+
+  return intersectionResults.collision;
 }
 
-PUL_PLUGIN_DECL void Physics_IntersectionPoint(
-  pulcher::core::SceneBundle const & scene
+PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
+  pulcher::core::SceneBundle const &
 , pulcher::physics::IntersectorPoint const & point
 , pulcher::physics::IntersectionResults & intersectionResults
 ) {
@@ -455,14 +455,14 @@ PUL_PLUGIN_DECL void Physics_IntersectionPoint(
     , ::tilemapLayer.width, ::tilemapLayer.tileInfo.size()
     )
   ) {
-    return;
+    return false;
   }
 
   auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
   auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
 
   if (!tileInfo.Valid()) {
-    return;
+    return false;
   }
 
   pulcher::physics::Tile const & physicsTile =
@@ -474,7 +474,11 @@ PUL_PLUGIN_DECL void Physics_IntersectionPoint(
       pulcher::physics::IntersectionResults {
         true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
       };
+
+    return true;
   }
+
+  return false;
 }
 
 PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle & scene) {
