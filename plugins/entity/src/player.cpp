@@ -8,6 +8,16 @@
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/log.hpp>
 
+#include <imgui/imgui.hpp>
+
+namespace {
+  float inputAccelMultiplier = 0.5f;
+  float jumpingAccel = -16.0f;
+  float gravity = 1.0f;
+  float friction = 0.95f;
+  float horizontalGroundedVelocityStop = 0.2f;
+}
+
 void plugin::entity::UpdatePlayer(
   pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
 , pulcher::core::ComponentPlayer & player
@@ -18,37 +28,47 @@ void plugin::entity::UpdatePlayer(
   auto & controller = scene.PlayerController().current;
 
   { // -- process inputs / events
-    player.velocity.x = static_cast<float>(controller.movementHorizontal);
-    player.velocity.y = static_cast<float>(controller.movementVertical);
-    if (controller.dash) { player.velocity *= 4.0f; }
+    float inputAccel = static_cast<float>(controller.movementHorizontal);
+    inputAccel *= ::inputAccelMultiplier;
+
+    player.velocity += inputAccel;
+    /* if (controller.dash) { player.velocity *= 4.0f; } */
 
     if (player.grounded) {
-      player.acceleration.y = 0.0f;
+      player.velocity.y = 0.0f;
     }
 
     player.jumping = controller.jump;
     if (player.grounded && player.jumping) {
-      player.acceleration.y = -16.0f;
+      player.velocity.y = ::jumpingAccel;
     }
 
     if (!player.grounded)
-      { player.acceleration.y += 1.0f; }
+      { player.velocity.y += ::gravity; }
 
-    player.velocity += player.acceleration;
-    player.acceleration *= 0.95f;
+    if (player.grounded) {
+      player.velocity.x *= ::friction;
+    }
+
+    if (
+        inputAccel == 0.0f && player.grounded
+     && glm::abs(player.velocity.x) < ::horizontalGroundedVelocityStop
+    ) {
+      player.velocity.x = 0.0f;
+    }
 
     // if grounded and velocity downwards, redirect it horizontally i guess
-    if (player.grounded && player.velocity.y > 0.0f) {
-      player.acceleration.x += glm::sign(player.acceleration.x) * glm::abs(player.velocity.y);
-      player.velocity.y = 0.0f;
-    }
+    /* if (player.grounded && player.velocity.y > 0.0f) { */
+    /*   player.velocity.x += */
+    /*     glm::sign(player.velocity.x) * glm::abs(player.velocity.y); */
+    /*   player.velocity.y = 0.0f; */
+    /* } */
   }
 
   { // -- apply physics
 
     float groundedPotential = 0.0f;
 
-    glm::vec2 centerOrigin = player.origin - glm::vec2(0.0f, 30.0f);
     glm::vec2 groundedFloorOrigin = player.origin - glm::vec2(0, 2);
     glm::vec2 floorOrigin = player.origin;
 
@@ -111,6 +131,9 @@ void plugin::entity::UpdatePlayer(
           plugin.physics.IntersectionRaycast(scene, ray, results)
         ) {
           player.origin.y = results.origin.y;
+        } else {
+          spdlog::debug("adding velocity {}", player.velocity.y);
+          player.origin.y += groundedPotential;
         }
       }
     }
@@ -252,4 +275,27 @@ void plugin::entity::UpdatePlayer(
       );
     }
   }
+}
+
+void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle & scene) {
+  ImGui::Begin("Physics");
+
+  ImGui::Separator();
+  ImGui::Separator();
+
+  ImGui::SliderFloat(
+    "input accel multiplier", &::inputAccelMultiplier, 0.001f, 2.0f
+  );
+  ImGui::SliderFloat("gravity", &::gravity, 0.001f, 2.0f);
+  ImGui::SliderFloat("jumping accel", &::jumpingAccel, -0.001f, -64.0f);
+  ImGui::SliderFloat("friction", &::friction, 0.5f, 1.0f);
+  ImGui::SliderFloat(
+    "horizontal grounded velocity stop"
+  , &::horizontalGroundedVelocityStop, 0.001f, 2.0f
+  );
+
+  ImGui::Separator();
+  ImGui::Separator();
+
+  ImGui::End();
 }

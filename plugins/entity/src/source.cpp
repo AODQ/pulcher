@@ -178,6 +178,8 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
     ImGui::Separator();
   });
   ImGui::End();
+
+  plugin::entity::UiRenderPlayer(scene);
 }
 
 } // -- extern C
