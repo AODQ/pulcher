@@ -20,6 +20,24 @@ namespace pulcher::core {
   , Size
   };
 
+  struct ImmutableWeaponInfo {
+    WeaponType type;
+    size_t requiredHands = 0;
+  };
+
+  std::array<ImmutableWeaponInfo, Idx(WeaponType::Size)> constexpr weaponInfo {{
+    { WeaponType::BadFetus, 1 }
+  , { WeaponType::DopplerBeam, 2 }
+  , { WeaponType::Grannibal, 2 }
+  , { WeaponType::Manshredder, 1 }
+  , { WeaponType::Pericaliya, 1 }
+  , { WeaponType::PMF, 1 }
+  , { WeaponType::Unarmed, 0 }
+  , { WeaponType::Volnias, 2 }
+  , { WeaponType::Wallbanger, 1 }
+  , { WeaponType::ZeusStinger, 2 }
+  }};
+
   struct WeaponInfo {
     WeaponType type;
     bool pickedUp = false;

@@ -175,17 +175,38 @@ void plugin::entity::UpdatePlayer(
       playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
     }
 
+    bool playerDirFlip = playerAnim.instance.pieceToState["legs"].flip;
+
     if (
         controller.movementHorizontal
      == pulcher::controls::Controller::Movement::Right
     ) {
-      playerAnim.instance.pieceToState["legs"].flip = true;
+      playerDirFlip = true;
     }
     else if (
         controller.movementHorizontal
      == pulcher::controls::Controller::Movement::Left
     ) {
-      playerAnim.instance.pieceToState["legs"].flip = false;
+      playerDirFlip = false;
+    }
+
+    playerAnim.instance.pieceToState["legs"].flip = playerDirFlip;
+
+    auto const & currentWeaponInfo =
+      pulcher::core::weaponInfo[Idx(player.inventory.currentWeapon)];
+
+    switch (currentWeaponInfo.requiredHands) {
+      case 0: break;
+      case 1:
+        if (playerDirFlip)
+          playerAnim.instance.pieceToState["arm-back"].Apply("equip-1H");
+        else
+          playerAnim.instance.pieceToState["arm-front"].Apply("equip-1H");
+      break;
+      case 2:
+        playerAnim.instance.pieceToState["arm-back"].Apply("equip-2H");
+        playerAnim.instance.pieceToState["arm-front"].Apply("equip-2H");
+      break;
     }
 
     float const angle =
