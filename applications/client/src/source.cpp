@@ -223,54 +223,169 @@ void ProcessRendering(
 
   static glm::vec3 screenClearColor = glm::vec3(0.7f, 0.4f, .4f);
 
-  ImGui::Begin("Diagnostics");
-  ImGui::Text("WARNING: RELOADING plugins will not save animation yet!!");
-  ImGui::Text("progress WILL be lost");
-  if (ImGui::Button("Reload plugins")) {
-    ::ShutdownPluginInfo(plugin, scene);
-    pulcher::plugin::UpdatePlugins(plugin);
-    ::LoadPluginInfo(plugin, scene);
+  { // -- render scene
+    sg_pass_action passAction = {};
+    passAction.colors[0].action = SG_ACTION_CLEAR;
+    passAction.colors[0].val[0] = screenClearColor.r;
+    passAction.colors[0].val[1] = screenClearColor.g;
+    passAction.colors[0].val[2] = screenClearColor.b;
+    passAction.depth.action = SG_ACTION_CLEAR;
+    passAction.depth.val = 1.0f;
+
+    sg_begin_pass(pulcher::gfx::ScenePass(), &passAction);
+
+    plugin.map.Render(scene);
+    plugin.animation.RenderAnimations(plugin, scene);
+
+    sg_end_pass();
   }
-  ImGui::ColorEdit3("screen clear", &screenClearColor.x);
-  pul::imgui::Text("CPU frames %lu", numCpuFrames);
-  ImGui::End();
 
-  sg_pass_action passAction = {};
-  passAction.colors[0].action = SG_ACTION_CLEAR;
-  passAction.colors[0].val[0] = screenClearColor.r;
-  passAction.colors[0].val[1] = screenClearColor.g;
-  passAction.colors[0].val[2] = screenClearColor.b;
-  passAction.depth.action = SG_ACTION_CLEAR;
-  passAction.depth.val = 1.0f;
-
-  sg_begin_pass(pulcher::gfx::ScenePass(), &passAction);
-
-  plugin.map.Render(scene);
-  plugin.animation.RenderAnimations(plugin, scene);
-
-  sg_end_pass();
-
-  sg_commit();
-
-  sg_begin_default_pass(
-    &passAction
-  , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
-  );
-
-
-  ImGui::Begin("scene");
-    ImGui::Image(
-      reinterpret_cast<void *>(pulcher::gfx::SceneImageColor().id)
-    , ImVec2(scene.config.framebufferWidth, scene.config.framebufferHeight)
-    , ImVec2(0, 1)
-    , ImVec2(1, 0)
+  { // -- render UI
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(
+      ImVec2(pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight())
     );
-  ImGui::End();
+    ImGui::SetNextWindowBgAlpha(0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin(
+      "background"
+    , nullptr
+    ,   ImGuiWindowFlags_NoDecoration
+      | ImGuiWindowFlags_NoScrollWithMouse
+      | ImGuiWindowFlags_NoBringToFrontOnFocus
+      | ImGuiWindowFlags_MenuBar
+      | ImGuiWindowFlags_NoCollapse
+      | ImGuiWindowFlags_NoResize
+      | ImGuiWindowFlags_NoMove
+      | ImGuiWindowFlags_NoNavFocus
+      | ImGuiWindowFlags_NoTitleBar
+      | ImGuiWindowFlags_NoDocking
+    );
 
-  plugin.userInterface.UiDispatch(plugin, scene);
-  simgui_render();
+    static auto const dockId = ImGui::GetID("DockBackground");
+    ImGui::DockSpace(
+      dockId
+    , ImVec2(0.0f, 0.0f)
+    , ImGuiDockNodeFlags_PassthruCentralNode
+    );
+    ImGui::PopStyleVar(3);
 
-  sg_end_pass();
+    ImGui::BeginMenuBar();
+
+    ImGui::Begin("Diagnostics");
+    ImGui::Text("WARNING: RELOADING plugins will not save animation yet!!");
+    ImGui::Text("progress WILL be lost");
+    if (ImGui::Button("Reload plugins")) {
+      ::ShutdownPluginInfo(plugin, scene);
+      pulcher::plugin::UpdatePlugins(plugin);
+      ::LoadPluginInfo(plugin, scene);
+    }
+    ImGui::ColorEdit3("screen clear", &screenClearColor.x);
+    pul::imgui::Text("CPU frames %lu", numCpuFrames);
+    ImGui::End();
+
+    sg_pass_action passAction = {};
+    passAction.colors[0].action = SG_ACTION_CLEAR;
+    passAction.colors[0].val[0] = screenClearColor.r;
+    passAction.colors[0].val[1] = screenClearColor.g;
+    passAction.colors[0].val[2] = screenClearColor.b;
+    passAction.colors[0].val[3] = 1.0f;
+    passAction.depth.action = SG_ACTION_CLEAR;
+    passAction.depth.val = 1.0f;
+
+    sg_begin_default_pass(
+      &passAction
+    , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
+    );
+
+
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(screenClearColor.r, screenClearColor.g, screenClearColor.b, 1.0f));
+    ImGui::Begin("scene");
+      static bool zoomImage = false;
+      static bool zoomOriginSet = false;
+      static bool zoomOriginSetting = false;
+      static glm::vec2 zoomOrigin = {};
+      ImGui::Image(
+        reinterpret_cast<void *>(pulcher::gfx::SceneImageColor().id)
+      , ImVec2(scene.config.framebufferWidth, scene.config.framebufferHeight)
+      , ImVec2(0, 1)
+      , ImVec2(1, 0)
+      , ImVec4(1, 1, 1, 1)
+      , ImVec4(1, 1, 1, 1)
+      );
+
+      if (zoomImage && ImGui::IsItemHovered()) {
+        ImGuiIO & io = ImGui::GetIO();
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        ImVec2 mousePos = io.MousePos;
+
+        if (zoomOriginSetting && ImGui::IsItemClicked()) {
+          zoomOriginSet = true;
+          zoomOriginSetting = false;
+          zoomOrigin = glm::vec2(mousePos.x, mousePos.y);
+        }
+
+        if (zoomOriginSet) { mousePos = ImVec2(zoomOrigin.x, zoomOrigin.y); }
+
+        ImGui::BeginTooltip();
+        float
+          regionSize = 64.0f
+        , regionX = glm::abs(mousePos.x - pos.x - regionSize*0.5f)
+        , regionY = glm::abs(mousePos.y - pos.y + regionSize*0.5f)
+        , zoom = 4.0f
+        ;
+
+        float const
+          texW = scene.config.framebufferWidth
+        , texH = scene.config.framebufferHeight
+        ;
+
+        regionX = glm::clamp(regionX, 0.0f, texW - regionSize);
+        regionY = glm::clamp(regionY, 0.0f, texH - regionSize);
+
+        ImGui::Image(
+          reinterpret_cast<void *>(pulcher::gfx::SceneImageColor().id)
+        , ImVec2(regionSize * zoom, regionSize * zoom)
+        , ImVec2(regionX / texW, (regionY + regionSize) / texH)
+        , ImVec2((regionX + regionSize) / texW, regionY / texH)
+        , ImVec4(1, 1, 1, 1)
+        , ImVec4(1, 1, 1, 0.5f)
+        );
+
+        ImGui::EndTooltip();
+
+        pul::imgui::Text("Min: ({:.2f}, {:.2f})", regionX, regionY);
+        pul::imgui::Text(
+          "Max: ({:.2f}, {:.2f})", regionX + regionSize, regionY + regionSize
+        );
+      }
+
+      ImGui::Checkbox("zoom image", &zoomImage);
+
+      if (zoomImage) {
+        if (!zoomOriginSetting && ImGui::Button("set image zoom origin"))
+          { zoomOriginSetting = true; }
+
+        if (zoomOriginSetting)
+          { ImGui::Text("click image to set zoom origin"); }
+
+        ImGui::Checkbox("zoom origin set", &zoomOriginSet);
+      }
+
+    ImGui::End();
+    ImGui::PopStyleColor();
+
+    ImGui::EndMenuBar();
+
+    ImGui::End();
+
+    plugin.userInterface.UiDispatch(plugin, scene);
+    simgui_render();
+
+    sg_end_pass();
+  }
 
   sg_commit();
 
