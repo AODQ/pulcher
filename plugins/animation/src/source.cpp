@@ -1148,8 +1148,8 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     sg_apply_pipeline(scene.AnimationSystem().sgPipeline);
 
     std::array<float, 2> windowResolution {{
-      static_cast<float>(pulcher::gfx::DisplayWidth())
-    , static_cast<float>(pulcher::gfx::DisplayHeight())
+      static_cast<float>(scene.config.framebufferWidth)
+    , static_cast<float>(scene.config.framebufferHeight)
     }};
 
     sg_apply_uniforms(

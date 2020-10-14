@@ -31,9 +31,15 @@ namespace {
 auto StartupOptions() -> argparse::ArgumentParser {
   auto options = argparse::ArgumentParser("pulcher-client", "0.0.1");
   options
-    .add_argument("-r")
+    .add_argument("-w")
     .help(("window resolution (0x0 means display resolution)"))
     .default_value(std::string{"0x0"})
+  ;
+
+  options
+    .add_argument("-r")
+    .help(("framebuffer resolution"))
+    .default_value(std::string{"960x720"})
   ;
 
   options
@@ -52,9 +58,11 @@ auto CreateUserConfig(argparse::ArgumentParser const & userResults)
   pulcher::core::Config config;
 
   std::string windowResolution;
+  std::string framebufferResolution;
 
   try {
-    windowResolution = userResults.get<std::string>("-r");
+    windowResolution = userResults.get<std::string>("-w");
+    framebufferResolution = userResults.get<std::string>("-r");
     if (userResults.get<bool>("-d")) {
       spdlog::set_level(spdlog::level::debug);
     }
@@ -77,12 +85,32 @@ auto CreateUserConfig(argparse::ArgumentParser const & userResults)
     spdlog::error("window resolution incorrect format, must use WxH");
   }
 
+  if (
+      auto xLen = framebufferResolution.find("x");
+      xLen != std::string::npos && xLen < framebufferResolution.size()-1ul
+  ) {
+    config.framebufferWidth =
+      static_cast<uint16_t>(std::stoi(framebufferResolution.substr(0ul, xLen)));
+    config.framebufferHeight =
+      static_cast<uint16_t>(
+        std::stoi(
+          framebufferResolution.substr(xLen+1ul, framebufferResolution.size())
+        )
+      );
+  } else {
+    spdlog::error("framebuffer resolution incorrect format, must use WxH");
+  }
+
   return config;
 }
 
 void PrintUserConfig(pulcher::core::Config const & config) {
   spdlog::info(
     "window dimensions {}x{}", config.windowWidth, config.windowHeight
+  );
+  spdlog::info(
+    "framebuffer dimensions {}x{}"
+  , config.framebufferWidth, config.framebufferHeight
   );
 }
 
@@ -233,7 +261,7 @@ void ProcessRendering(
   ImGui::Begin("scene");
     ImGui::Image(
       reinterpret_cast<void *>(pulcher::gfx::SceneImageColor().id)
-    , ImVec2(960, 720)
+    , ImVec2(scene.config.framebufferWidth, scene.config.framebufferHeight)
     , ImVec2(0, 1)
     , ImVec2(1, 0)
     );
@@ -312,6 +340,7 @@ int main(int argc, char const ** argv) {
   pulcher::plugin::Info plugin = InitializePlugins();
 
   pulcher::core::SceneBundle sceneBundle;
+  sceneBundle.config = userConfig;
   ::LoadPluginInfo(plugin, sceneBundle);
 
   ImGuiApplyStyling();

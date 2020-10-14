@@ -8,5 +8,6 @@ namespace pulcher::core {
     std::string networkIpAddress;
     uint16_t networkPortAddress = 6599u;
     uint16_t windowWidth = 0ul, windowHeight = 0ul;
+    uint16_t framebufferWidth = 0ul, framebufferHeight = 0ul;
   };
 }

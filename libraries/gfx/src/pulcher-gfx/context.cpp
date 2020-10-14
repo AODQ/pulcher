@@ -120,8 +120,8 @@ bool pulcher::gfx::InitializeContext(pulcher::core::Config & config) {
   {
     sg_image_desc desc = {};
     desc.render_target = true;
-    desc.width = 960;
-    desc.height = 720;
+    desc.width = config.framebufferWidth;
+    desc.height = config.framebufferHeight;
     desc.num_mipmaps = 1;
     desc.usage = SG_USAGE_IMMUTABLE;
     /* desc.pixel_format = SG_PIXELFORMAT_BGRA8; */
@@ -143,8 +143,8 @@ bool pulcher::gfx::InitializeContext(pulcher::core::Config & config) {
   {
     sg_image_desc desc = {};
     desc.render_target = true;
-    desc.width = 960;
-    desc.height = 720;
+    desc.width = config.framebufferWidth;
+    desc.height = config.framebufferHeight;
     desc.num_mipmaps = 1;
     desc.usage = SG_USAGE_IMMUTABLE;
     desc.pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL;

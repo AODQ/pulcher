@@ -1,5 +1,6 @@
 #pragma once
 
+#include <pulcher-core/config.hpp>
 #include <pulcher-util/pimpl.hpp>
 
 #include <glm/glm.hpp>
@@ -14,6 +15,8 @@ namespace pulcher::physics { struct Queries; }
 namespace pulcher::core {
   struct SceneBundle {
     glm::i32vec2 cameraOrigin = {};
+
+    pulcher::core::Config config = {};
 
     pulcher::animation::System & AnimationSystem();
     pulcher::controls::Controller & PlayerController();
