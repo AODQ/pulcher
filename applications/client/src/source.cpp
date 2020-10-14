@@ -212,18 +212,38 @@ void ProcessRendering(
   passAction.colors[0].val[0] = screenClearColor.r;
   passAction.colors[0].val[1] = screenClearColor.g;
   passAction.colors[0].val[2] = screenClearColor.b;
+  passAction.depth.action = SG_ACTION_CLEAR;
+  passAction.depth.val = 1.0f;
+
+  sg_begin_pass(pulcher::gfx::ScenePass(), &passAction);
+
+  plugin.map.Render(scene);
+  plugin.animation.RenderAnimations(plugin, scene);
+
+  sg_end_pass();
+
+  sg_commit();
+
   sg_begin_default_pass(
     &passAction
   , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
   );
 
+
+  ImGui::Begin("scene");
+    ImGui::Image(
+      reinterpret_cast<void *>(pulcher::gfx::SceneImageColor().id)
+    , ImVec2(960, 720)
+    , ImVec2(0, 1)
+    , ImVec2(1, 0)
+    );
+  ImGui::End();
+
   plugin.userInterface.UiDispatch(plugin, scene);
-
-  plugin.map.Render(scene);
-  plugin.animation.RenderAnimations(plugin, scene);
-
   simgui_render();
+
   sg_end_pass();
+
   sg_commit();
 
   pulcher::gfx::EndFrame();

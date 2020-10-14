@@ -6,6 +6,7 @@
 struct GLFWwindow;
 
 namespace pulcher::core { struct Config; }
+struct sg_pass;
 
 namespace pulcher::gfx {
   bool InitializeContext(pulcher::core::Config & config);
@@ -17,6 +18,9 @@ namespace pulcher::gfx {
   void EndFrame();
 
   void Shutdown();
+
+  sg_pass & ScenePass();
+  sg_image & SceneImageColor();
 }
 
 #define PUL_SHADER(...) \

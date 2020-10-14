@@ -11,6 +11,10 @@
 namespace {
 GLFWwindow * displayWindow;
 
+sg_image sceneImageColor = {};
+sg_image sceneImageDepth = {};
+sg_pass  scenePass  = {};
+
 void InitializeSokol() {
   sg_desc description = {};
   sg_setup(&description);
@@ -113,6 +117,63 @@ bool pulcher::gfx::InitializeContext(pulcher::core::Config & config) {
 
   ::InitializeSokol();
 
+  {
+    sg_image_desc desc = {};
+    desc.render_target = true;
+    desc.width = 960;
+    desc.height = 720;
+    desc.num_mipmaps = 1;
+    desc.usage = SG_USAGE_IMMUTABLE;
+    /* desc.pixel_format = SG_PIXELFORMAT_BGRA8; */
+    desc.sample_count = 1;
+    desc.min_filter = SG_FILTER_NEAREST;
+    desc.mag_filter = SG_FILTER_NEAREST;
+    desc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
+    desc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
+    desc.wrap_w = SG_WRAP_CLAMP_TO_EDGE;
+    desc.border_color = SG_BORDERCOLOR_OPAQUE_BLACK;
+    desc.max_anisotropy = 1;
+    desc.min_lod = 0.0f;
+    desc.max_lod = std::numeric_limits<float>::max();
+    desc.content.subimage[0][0].ptr = nullptr;
+    desc.content.subimage[0][0].size = 0;
+    ::sceneImageColor = sg_make_image(desc);
+  }
+
+  {
+    sg_image_desc desc = {};
+    desc.render_target = true;
+    desc.width = 960;
+    desc.height = 720;
+    desc.num_mipmaps = 1;
+    desc.usage = SG_USAGE_IMMUTABLE;
+    desc.pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL;
+    desc.sample_count = 1;
+    desc.min_filter = SG_FILTER_NEAREST;
+    desc.mag_filter = SG_FILTER_NEAREST;
+    desc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
+    desc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
+    desc.wrap_w = SG_WRAP_CLAMP_TO_EDGE;
+    desc.border_color = SG_BORDERCOLOR_OPAQUE_BLACK;
+    desc.max_anisotropy = 1;
+    desc.min_lod = 0.0f;
+    desc.max_lod = std::numeric_limits<float>::max();
+    desc.content.subimage[0][0].ptr = nullptr;
+    desc.content.subimage[0][0].size = 0;
+    ::sceneImageDepth = sg_make_image(desc);
+  }
+
+  {
+    sg_pass_desc desc = {};
+    desc.color_attachments[0].image = ::sceneImageColor;
+    desc.color_attachments[0].mip_level = 0;
+    desc.color_attachments[0].face = 0;
+    desc.depth_stencil_attachment.image = ::sceneImageDepth;
+    desc.depth_stencil_attachment.mip_level = 0;
+    desc.depth_stencil_attachment.face = 0;
+    ::scenePass = sg_make_pass(desc);
+  }
+
   return true;
 }
 
@@ -150,3 +211,9 @@ void pulcher::gfx::Shutdown() {
   glfwDestroyWindow(pulcher::gfx::DisplayWindow());
   glfwTerminate();
 }
+
+sg_pass & pulcher::gfx::ScenePass() {
+  return ::scenePass;
+}
+
+sg_image & pulcher::gfx::SceneImageColor() { return ::sceneImageColor; }
