@@ -256,7 +256,6 @@ void ProcessRendering(
     ,   ImGuiWindowFlags_NoDecoration
       | ImGuiWindowFlags_NoScrollWithMouse
       | ImGuiWindowFlags_NoBringToFrontOnFocus
-      | ImGuiWindowFlags_MenuBar
       | ImGuiWindowFlags_NoCollapse
       | ImGuiWindowFlags_NoResize
       | ImGuiWindowFlags_NoMove
@@ -272,8 +271,6 @@ void ProcessRendering(
     , ImGuiDockNodeFlags_PassthruCentralNode
     );
     ImGui::PopStyleVar(3);
-
-    ImGui::BeginMenuBar();
 
     ImGui::Begin("Diagnostics");
     ImGui::Text("WARNING: RELOADING plugins will not save animation yet!!");
@@ -389,7 +386,10 @@ void ProcessRendering(
     );
 
 
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(screenClearColor.r, screenClearColor.g, screenClearColor.b, 1.0f));
+    ImGui::PushStyleColor(
+      ImGuiCol_ChildBg
+    , ImVec4(screenClearColor.r, screenClearColor.g, screenClearColor.b, 1.0f)
+    );
     ImGui::Begin("scene");
       static bool zoomImage = false;
       static bool zoomOriginSet = false;
@@ -404,7 +404,7 @@ void ProcessRendering(
       , ImVec4(1, 1, 1, 1)
       );
 
-      if (zoomImage && ImGui::IsItemHovered()) {
+      if (zoomImage) {
         ImGuiIO & io = ImGui::GetIO();
         ImVec2 pos = ImGui::GetCursorScreenPos();
         ImVec2 mousePos = io.MousePos;
@@ -417,7 +417,7 @@ void ProcessRendering(
 
         if (zoomOriginSet) { mousePos = ImVec2(zoomOrigin.x, zoomOrigin.y); }
 
-        ImGui::BeginTooltip();
+        ImGui::SameLine();
         float
           regionSize = 64.0f
         , regionX = glm::abs(mousePos.x - pos.x - regionSize*0.5f)
@@ -442,8 +442,6 @@ void ProcessRendering(
         , ImVec4(1, 1, 1, 0.5f)
         );
 
-        ImGui::EndTooltip();
-
         pul::imgui::Text("Min: ({:.2f}, {:.2f})", regionX, regionY);
         pul::imgui::Text(
           "Max: ({:.2f}, {:.2f})", regionX + regionSize, regionY + regionSize
@@ -464,8 +462,6 @@ void ProcessRendering(
 
     ImGui::End();
     ImGui::PopStyleColor();
-
-    ImGui::EndMenuBar();
 
     ImGui::End();
 
