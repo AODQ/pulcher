@@ -26,24 +26,41 @@ namespace pulcher::physics {
       steep = true;
     }
 
-    if (f0.x > f1.x)
-      { std::swap(f0, f1); }
+    if (f0.x > f1.x) {
+      int32_t
+        dx = f0.x-f1.x
+      , dy = f1.y-f0.y
+      , derror = glm::abs(dy)*2
+      , error = 0.0f
+      , stepy = f1.y > f0.y ? +1.0f : -1.0f
+      ;
 
-    int32_t
-      dx = f1.x-f0.x
-    , dy = f1.y-f0.y
-    , derror = glm::abs(dy)*2
-    , error = 0.0f
-    , stepy = f1.y > f0.y ? +1.0f : -1.0f
-    ;
+      for (glm::ivec2 f = f0; f.x >= f1.x; -- f.x) {
+        if (steep) { fn(f.y, f.x); } else { fn(f.x, f.y); }
+        error += derror;
+        if (error > dx) {
+          f.y += stepy;
+          error -= dx*2;
+        }
+      }
+    } else {
+      int32_t
+        dx = f1.x-f0.x
+      , dy = f1.y-f0.y
+      , derror = glm::abs(dy)*2
+      , error = 0.0f
+      , stepy = f1.y > f0.y ? +1.0f : -1.0f
+      ;
 
-    for (glm::ivec2 f = f0; f.x <= f1.x; ++ f.x) {
-      if (steep) { fn(f.y, f.x); } else { fn(f.x, f.y); }
-      error += derror;
-      if (error > dx) {
-        f.y += stepy;
-        error -= dx*2;
+      for (glm::ivec2 f = f0; f.x <= f1.x; ++ f.x) {
+        if (steep) { fn(f.y, f.x); } else { fn(f.x, f.y); }
+        error += derror;
+        if (error > dx) {
+          f.y += stepy;
+          error -= dx*2;
+        }
       }
     }
+
   }
 }
