@@ -12,11 +12,14 @@
 #include <imgui/imgui.hpp>
 
 namespace {
-  float inputAccelMultiplier = 0.5f;
-  float inputWalkAccelMultiplier = 0.1f;
-  float gravity = 1.0f;
-  float jumpingAccel = -14.0f;
-  float friction = 0.85f;
+  float inputGroundAccelMultiplier = 1.0f;
+  float inputAirAccelMultiplier = 0.05f;
+  float inputWalkAccelMultiplier = 0.4f;
+  float inputCrouchAccelMultiplier = 0.2f;
+  float gravity = 0.7f;
+  float jumpingAccelHorizontal = 2.0f;
+  float jumpingAccelVertical = 9.5f;
+  float friction = 0.75f;
   float dashMultiplier = 3.0f;
   float dashMinimumVelocity = 16.0f;
   float dashCooldown = 300.0f;
@@ -34,48 +37,48 @@ void plugin::entity::UpdatePlayer(
   auto & controllerPrev = scene.PlayerController().previous;
 
   { // -- process inputs / events
-    float inputAccel = static_cast<float>(controller.movementHorizontal);
-    inputAccel *=
-      controller.walk ? ::inputWalkAccelMultiplier : ::inputAccelMultiplier;
 
-    player.velocity.x += inputAccel;
-
-    if (player.dashCooldown > 0.0f)
-      { player.dashCooldown -= pulcher::util::MsPerFrame(); }
-
-    if (
-      !controllerPrev.dash && controller.dash && player.dashCooldown <= 0.0f
-    ) {
-
-      float velocityMultiplier = ::dashMultiplier;
-      if (glm::length(player.velocity) < ::dashMinimumVelocity) {
-        velocityMultiplier = ::dashMinimumVelocity;
-      }
-      player.velocity +=
-          glm::vec2(
-            controller.movementHorizontal, controller.movementVertical
-          )
-        * velocityMultiplier
-      ;
-      player.dashCooldown = ::dashCooldown;
-    }
-
-    if (player.grounded) {
-      player.velocity.y = 0.0f;
-    }
-
-    player.jumping = controller.jump;
-    if (player.grounded && player.jumping) {
-      player.velocity.y = ::jumpingAccel;
-    }
-
+    // -- gravity
     if (!player.grounded)
       { player.velocity.y += ::gravity; }
 
-    if (player.grounded) {
+    // -- process jumping
+    player.jumping = controller.jump;
+
+    if (player.grounded && player.jumping) {
+      if (
+          controller.movementHorizontal
+       == pulcher::controls::Controller::Movement::None
+      ) {
+        player.velocity.y = -::jumpingAccelVertical;
+        player.grounded = false;
+      } else {
+        // redirect momentum
+        player.velocity =
+          (glm::abs(player.velocity.x) + ::jumpingAccelHorizontal)
+        * glm::normalize(glm::vec2(glm::sign(player.velocity.x)*0.5f, -0.5f));
+        player.grounded = false;
+      }
+    }
+
+    // -- process horizontal movement
+    float inputAccel = static_cast<float>(controller.movementHorizontal);
+
+    inputAccel *=
+      (player.grounded && !player.jumping) ?
+        ::inputGroundAccelMultiplier : ::inputAirAccelMultiplier;
+
+    if (controller.walk) { inputAccel *= ::inputWalkAccelMultiplier; }
+    if (controller.crouch) { inputAccel *= ::inputWalkAccelMultiplier; }
+
+    player.velocity.x += inputAccel;
+
+    // -- process friction
+    if (player.grounded && !player.jumping) {
       player.velocity.x *= ::friction;
     }
 
+    // -- process horizontal ground stop
     if (
         inputAccel == 0.0f && player.grounded
      && glm::abs(player.velocity.x) < ::horizontalGroundedVelocityStop
@@ -83,12 +86,31 @@ void plugin::entity::UpdatePlayer(
       player.velocity.x = 0.0f;
     }
 
-    // if grounded and velocity downwards, redirect it horizontally i guess
-    /* if (player.grounded && player.velocity.y > 0.0f) { */
-    /*   player.velocity.x += */
-    /*     glm::sign(player.velocity.x) * glm::abs(player.velocity.y); */
-    /*   player.velocity.y = 0.0f; */
-    /* } */
+    // -- process dashing
+    if (player.dashCooldown > 0.0f)
+      { player.dashCooldown -= pulcher::util::MsPerFrame(); }
+
+    if (
+      !controllerPrev.dash && controller.dash && player.dashCooldown <= 0.0f
+    ) {
+      float velocityMultiplier = ::dashMultiplier;
+      if (glm::length(player.velocity) < ::dashMinimumVelocity) {
+        velocityMultiplier = ::dashMinimumVelocity;
+      }
+      auto direction =
+        glm::vec2(
+          controller.movementHorizontal, controller.movementVertical
+        );
+
+      if (player.grounded) {
+        direction.y -= 0.5f;
+      }
+
+      spdlog::debug("dir {} nor {} vel {} ", direction, glm::normalize(direction), velocityMultiplier);
+
+      player.velocity += glm::normalize(direction) * velocityMultiplier;
+      player.dashCooldown = ::dashCooldown;
+    }
   }
 
   { // -- apply physics
@@ -164,7 +186,9 @@ void plugin::entity::UpdatePlayer(
       }
     }
 
-    { // gravity/ground check
+    // gravity/ground check
+    if (player.velocity.y >= 0.0f)
+    {
       auto point =
         pulcher::physics::IntersectorRay::Construct(
           floorOrigin, floorOrigin + glm::vec2(0.0f, 1.0f)
@@ -314,19 +338,20 @@ void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle &) {
   ImGui::Separator();
   ImGui::Separator();
 
-  ImGui::DragFloat("input accel multiplier", &::inputAccelMultiplier, 0.001f);
-  ImGui::DragFloat(
-    "input walk accel multiplier", &::inputWalkAccelMultiplier, 0.001f
-  );
-  ImGui::DragFloat("gravity", &::gravity, 0.001f);
-  ImGui::DragFloat("jumping accel", &::jumpingAccel, 0.001f);
+  ImGui::DragFloat("input ground accel", &::inputGroundAccelMultiplier, 0.005f);
+  ImGui::DragFloat("input air accel", &::inputAirAccelMultiplier, 0.005f);
+  ImGui::DragFloat("input walk accel", &::inputWalkAccelMultiplier, 0.005f);
+  ImGui::DragFloat("input crouch accel", &::inputCrouchAccelMultiplier, 0.005f);
+  ImGui::DragFloat("gravity", &::gravity, 0.005f);
+  ImGui::DragFloat("jump accel vertical", &::jumpingAccelVertical, 0.005f);
+  ImGui::DragFloat("jump accel horizontal", &::jumpingAccelHorizontal, 0.005f);
   ImGui::DragFloat("friction", &::friction, 0.001f);
-  ImGui::DragFloat("dashMultiplier", &::dashMultiplier, 0.001f);
-  ImGui::DragFloat("dashMinimumVelocity", &dashMinimumVelocity, 0.001f);
-  ImGui::DragFloat("dashCooldown (ms)", &::dashCooldown, 0.001f);
+  ImGui::DragFloat("dashMultiplier", &::dashMultiplier, 0.005f);
+  ImGui::DragFloat("dashMinimumVelocity", &dashMinimumVelocity, 0.01f);
+  ImGui::DragFloat("dashCooldown (ms)", &::dashCooldown, 0.1f);
   ImGui::DragFloat(
     "horizontal grounded velocity stop"
-  , &::horizontalGroundedVelocityStop, 0.001f
+  , &::horizontalGroundedVelocityStop, 0.005f
   );
 
   ImGui::Separator();
