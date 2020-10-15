@@ -19,6 +19,7 @@
 #include <glad/glad.hpp>
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>
+#include <process.hpp>
 
 #include <chrono>
 #include <string>
@@ -282,9 +283,96 @@ void ProcessRendering(
       pulcher::plugin::UpdatePlugins(plugin);
       ::LoadPluginInfo(plugin, scene);
     }
+    ImGui::SliderFloat(
+      "ms / frame", &pulcher::util::MsPerFrame(), 1000.0f/90.0f, 1000.0f/0.9f
+    , "%.3f", 4.0f
+    );
     ImGui::ColorEdit3("screen clear", &screenClearColor.x);
-    pul::imgui::Text("CPU frames %lu", numCpuFrames);
+    pul::imgui::Text("CPU frames {}", numCpuFrames);
+
     ImGui::End();
+
+    // check for update every 10s
+    static bool updateReady = false;
+    static std::string updateDetails = {};
+    static bool hasGitCheckThreadInit = false;
+    if (!hasGitCheckThreadInit) {
+      hasGitCheckThreadInit = true;
+      std::thread gitCheckThread = std::thread([&]() {
+        while (!updateReady) {
+          auto remoteProc = TinyProcessLib::Process("git remote update");
+          remoteProc.get_exit_status();
+
+          std::string output = {};
+
+          auto checkProc =
+            TinyProcessLib::Process(
+              "git status -uno", "",
+              [&](char const * bytes, size_t n) {
+                for (size_t i = 0ul; i < n; ++ i) { output += bytes[i]; }
+              },
+              [&](char const * bytes, size_t n) {
+                for (size_t i = 0ul; i < n; ++ i) { output += bytes[i]; }
+              },
+              true
+            );
+
+          checkProc.get_exit_status();
+
+          // on fatal error just stop trying to check for updates
+          if (output.find("fatal:") != std::string::npos) {
+            break;
+          }
+
+          if (output.find("Your branch is behind") != std::string::npos) {
+            updateReady = true;
+            updateDetails = output;
+          }
+
+          if (output.find("HEAD detached at") != std::string::npos) {
+            updateReady = true;
+            updateDetails = output;
+          }
+
+          std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+        }
+      });
+      gitCheckThread.detach();
+    }
+
+    if (updateReady) {
+      ImGui::Begin("UPDATE");
+
+      ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0.5, 0.5, 1));
+      pul::imgui::Text("There is an update ready to load now !");
+      ImGui::PopStyleColor();
+      if (ImGui::Button("Click to update")) {
+        {
+          auto proc = TinyProcessLib::Process("git stash");
+          proc.get_exit_status();
+        }
+        {
+          auto proc = TinyProcessLib::Process("git pull --ff-only");
+          proc.get_exit_status();
+        }
+
+        spdlog::info("Closing pulcher");
+        // TODO exit normally
+
+        exit(0);
+      }
+
+      if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        pul::imgui::Text(
+          "THIS WILL CLOSE PULCHER, SAVE BEFORE CLICKING!"
+        );
+        ImGui::EndTooltip();
+      }
+
+      pul::imgui::Text("Details: {}", updateDetails);
+      ImGui::End();
+    }
 
     sg_pass_action passAction = {};
     passAction.colors[0].action = SG_ACTION_CLEAR;

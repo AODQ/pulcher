@@ -19,7 +19,7 @@ target_link_libraries(
   pulcher-client
   PRIVATE
     argparse pulcher-core pulcher-gfx pulcher-plugin
-    pulcher-physics pulcher-controls spdlog
+    pulcher-physics pulcher-controls spdlog tiny-process-library
 )
 
 install(
