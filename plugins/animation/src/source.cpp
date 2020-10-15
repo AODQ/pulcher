@@ -184,7 +184,7 @@ void ComputeVertices(
   // updates
   bool hasUpdate = forceUpdate;
   if (state.msDeltaTime > 0.0f) {
-    stateInfo.deltaTime += pulcher::util::msPerFrame;
+    stateInfo.deltaTime += pulcher::util::MsPerFrame();
     if (stateInfo.deltaTime > state.msDeltaTime) {
       stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
       stateInfo.componentIt = (stateInfo.componentIt + 1) % components.size();
@@ -1302,7 +1302,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
       );
 
       if (animPlaying) {
-        animMsTimer += pulcher::util::msPerFrame;
+        animMsTimer += pulcher::util::MsPerFrame();
 
         animMsTimer =
             animLoop

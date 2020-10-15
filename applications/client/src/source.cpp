@@ -562,9 +562,9 @@ int main(int argc, char const ** argv) {
     // -- logic, 90 Hz
     msToCalculate += deltaMs;
     size_t calculatedFrames = 0ul;
-    while (msToCalculate >= pulcher::util::msPerFrame) {
+    while (msToCalculate >= pulcher::util::MsPerFrame()) {
       ++ calculatedFrames;
-      msToCalculate -= pulcher::util::msPerFrame;
+      msToCalculate -= pulcher::util::MsPerFrame();
       ::ProcessLogic(plugin, sceneBundle);
     }
 
