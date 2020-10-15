@@ -17,8 +17,9 @@ namespace {
   float inputWalkAccelMultiplier = 0.4f;
   float inputCrouchAccelMultiplier = 0.2f;
   float gravity = 0.7f;
-  float jumpingAccelHorizontal = 2.0f;
-  float jumpingAccelVertical = 9.5f;
+  float jumpingHorizontalAccel = 2.0f;
+  float jumpingVerticalAccel = 9.5f;
+  float jumpingHorizontalTheta = 9.5f;
   float friction = 0.75f;
   float dashMultiplier = 3.0f;
   float dashMinimumVelocity = 16.0f;
@@ -50,15 +51,19 @@ void plugin::entity::UpdatePlayer(
           controller.movementHorizontal
        == pulcher::controls::Controller::Movement::None
       ) {
-        player.velocity.y = -::jumpingAccelVertical;
-        player.grounded = false;
+        player.velocity.y = -::jumpingVerticalAccel;
       } else {
-        // redirect momentum
-        player.velocity =
-          (glm::abs(player.velocity.x) + ::jumpingAccelHorizontal)
-        * glm::normalize(glm::vec2(glm::sign(player.velocity.x)*0.5f, -0.5f));
-        player.grounded = false;
+
+        float thetaRad = glm::radians(::jumpingHorizontalTheta);
+
+        player.velocity.y += -::jumpingHorizontalAccel * glm::sin(thetaRad);
+
+        player.velocity.x +=
+          glm::sign(player.velocity.x)
+        * ::jumpingHorizontalAccel * glm::cos(thetaRad)
+        ;
       }
+      player.grounded = false;
     }
 
     // -- process horizontal movement
@@ -109,6 +114,8 @@ void plugin::entity::UpdatePlayer(
       spdlog::debug("dir {} nor {} vel {} ", direction, glm::normalize(direction), velocityMultiplier);
 
       player.velocity += glm::normalize(direction) * velocityMultiplier;
+      player.grounded = false;
+
       player.dashCooldown = ::dashCooldown;
     }
   }
@@ -153,7 +160,6 @@ void plugin::entity::UpdatePlayer(
           pulcher::physics::IntersectionResults resultsY;
           plugin.physics.IntersectionRaycast(scene, rayY, resultsY)
         ) {
-          spdlog::debug("collis");
           // if there is an intersection check
           if (player.origin.y < resultsY.origin.y) {
             player.velocity.y = glm::min(0.0f, player.velocity.y);
@@ -173,7 +179,6 @@ void plugin::entity::UpdatePlayer(
           pulcher::physics::IntersectionResults resultsX;
           plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
         ) {
-          spdlog::debug("collis: {} : {}", player.origin.x, resultsX.origin.x);
           // if there is an intersection check
           if (player.origin.x < resultsX.origin.x) {
             player.velocity.x = glm::min(0.0f, player.velocity.x);
@@ -343,8 +348,9 @@ void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle &) {
   ImGui::DragFloat("input walk accel", &::inputWalkAccelMultiplier, 0.005f);
   ImGui::DragFloat("input crouch accel", &::inputCrouchAccelMultiplier, 0.005f);
   ImGui::DragFloat("gravity", &::gravity, 0.005f);
-  ImGui::DragFloat("jump accel vertical", &::jumpingAccelVertical, 0.005f);
-  ImGui::DragFloat("jump accel horizontal", &::jumpingAccelHorizontal, 0.005f);
+  ImGui::DragFloat("jump vertical accel", &::jumpingVerticalAccel, 0.005f);
+  ImGui::DragFloat("jump hor accel", &::jumpingHorizontalAccel, 0.005f);
+  ImGui::DragFloat("jump hor theta", &::jumpingHorizontalTheta, 0.1f);
   ImGui::DragFloat("friction", &::friction, 0.001f);
   ImGui::DragFloat("dashMultiplier", &::dashMultiplier, 0.005f);
   ImGui::DragFloat("dashMinimumVelocity", &dashMinimumVelocity, 0.01f);
