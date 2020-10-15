@@ -25,6 +25,10 @@ namespace pulcher::physics {
     // inputs
     glm::i32vec2 beginOrigin;
     glm::i32vec2 endOrigin;
+
+    static IntersectorRay Construct(
+      glm::vec2 const beginOrigin, glm::vec2 const endOrigin
+    );
   };
 
   struct IntersectionResults {
@@ -32,9 +36,6 @@ namespace pulcher::physics {
     glm::i32vec2 origin = glm::i32vec2(0);
 
     size_t imageTileIdx = -1ul, tilesetIdx = -1ul;
-
-    // TODO below can be removed in release I suppose
-    glm::i32vec2 debugBeginOrigin = glm::i32vec2(0);
   };
 
   struct Queries {

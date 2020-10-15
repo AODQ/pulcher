@@ -429,8 +429,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
       ) {
         intersectionResults =
           pulcher::physics::IntersectionResults {
-            true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx,
-            ray.beginOrigin
+            true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
           };
       }
     }
@@ -548,7 +547,6 @@ PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle & scene) {
       lines.reserve(queries.intersectorResultsRays.size()*2);
       // update queries
       for (auto & query : queries.intersectorResultsRays) {
-        lines.emplace_back(query.debugBeginOrigin);
         lines.emplace_back(query.origin);
         collisions.emplace_back(static_cast<float>(query.collision));
         collisions.emplace_back(static_cast<float>(query.collision));

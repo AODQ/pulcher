@@ -21,7 +21,7 @@ namespace pulcher::controls {
       , movementVertical = Movement::None
       ;
 
-      bool jump = false, dash = false, crouch = false;
+      bool jump = false, dash = false, crouch = false, walk = false;
 
       bool shoot = false;
 

@@ -6,16 +6,21 @@
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/consts.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <imgui/imgui.hpp>
 
 namespace {
   float inputAccelMultiplier = 0.5f;
-  float jumpingAccel = -16.0f;
+  float inputWalkAccelMultiplier = 0.1f;
   float gravity = 1.0f;
-  float friction = 0.95f;
-  float horizontalGroundedVelocityStop = 0.2f;
+  float jumpingAccel = -14.0f;
+  float friction = 0.85f;
+  float dashMultiplier = 3.0f;
+  float dashMinimumVelocity = 16.0f;
+  float dashCooldown = 300.0f;
+  float horizontalGroundedVelocityStop = 0.5f;
 }
 
 void plugin::entity::UpdatePlayer(
@@ -26,13 +31,34 @@ void plugin::entity::UpdatePlayer(
 
   auto & registry = scene.EnttRegistry();
   auto & controller = scene.PlayerController().current;
+  auto & controllerPrev = scene.PlayerController().previous;
 
   { // -- process inputs / events
     float inputAccel = static_cast<float>(controller.movementHorizontal);
-    inputAccel *= ::inputAccelMultiplier;
+    inputAccel *=
+      controller.walk ? ::inputWalkAccelMultiplier : ::inputAccelMultiplier;
 
-    player.velocity += inputAccel;
-    /* if (controller.dash) { player.velocity *= 4.0f; } */
+    player.velocity.x += inputAccel;
+
+    if (player.dashCooldown > 0.0f)
+      { player.dashCooldown -= pulcher::util::MsPerFrame(); }
+
+    if (
+      !controllerPrev.dash && controller.dash && player.dashCooldown <= 0.0f
+    ) {
+
+      float velocityMultiplier = ::dashMultiplier;
+      if (glm::length(player.velocity) < ::dashMinimumVelocity) {
+        velocityMultiplier = ::dashMinimumVelocity;
+      }
+      player.velocity +=
+          glm::vec2(
+            controller.movementHorizontal, controller.movementVertical
+          )
+        * velocityMultiplier
+      ;
+      player.dashCooldown = ::dashCooldown;
+    }
 
     if (player.grounded) {
       player.velocity.y = 0.0f;
@@ -66,83 +92,87 @@ void plugin::entity::UpdatePlayer(
   }
 
   { // -- apply physics
-
-    float groundedPotential = 0.0f;
-
     glm::vec2 groundedFloorOrigin = player.origin - glm::vec2(0, 2);
     glm::vec2 floorOrigin = player.origin;
 
-    if (player.grounded) {
-      {
-        // first check if we can move freely horizontally
-        pulcher::physics::IntersectorRay ray;
-        ray.beginOrigin = groundedFloorOrigin;
-        ray.endOrigin =
-          groundedFloorOrigin + glm::vec2(player.velocity.x, 0.0f);
-        if (
-          pulcher::physics::IntersectionResults results;
-          !plugin.physics.IntersectionRaycast(scene, ray, results)
-        ) {
-          player.origin.x += player.velocity.x;
-        } else {
-          player.velocity.x = 0.0f;
+    { // free movement check
+      auto ray =
+        pulcher::physics::IntersectorRay::Construct(
+          groundedFloorOrigin
+        , groundedFloorOrigin + glm::vec2(player.velocity)
+        );
+      if (
+        pulcher::physics::IntersectionResults results;
+        !plugin.physics.IntersectionRaycast(scene, ray, results)
+      ) {
+        player.origin += player.velocity;
+      } else {
+        // first 'clamp' the player to some bounds
+        if (ray.beginOrigin.x < ray.endOrigin.x) {
+          player.origin.x = results.origin.x - 1.0f;
+        } else if (ray.beginOrigin.x > ray.endOrigin.x) {
+          player.origin.x = results.origin.x + 1.0f;
         }
-      }
 
-      {
-        // check for vertical movement
-        pulcher::physics::IntersectorRay ray;
-        ray.beginOrigin = groundedFloorOrigin;
-        ray.endOrigin =
-          groundedFloorOrigin + glm::vec2(player.velocity.y, 0.0f);
-        if (
-          pulcher::physics::IntersectionResults results;
-          !plugin.physics.IntersectionRaycast(scene, ray, results)
-        ) {
-          player.origin.y += player.velocity.y;
-        } else {
-          groundedPotential = player.velocity.y;
-          player.velocity.y = 0.0f;
+        if (ray.beginOrigin.y < ray.endOrigin.y) {
+          player.origin.y = results.origin.y - 1.0f;
+        } else if (ray.beginOrigin.y > ray.endOrigin.y) {
+          // the groundedFloorOrigin is -(0, 2), so we need to account for that
+          player.origin.y = results.origin.y + 3.0f;
         }
-      }
-    } else {
-      {
-        // first check if we can move freely
-        pulcher::physics::IntersectorRay ray;
-        ray.beginOrigin = glm::round(floorOrigin);
-        ray.endOrigin = glm::round(floorOrigin + player.velocity);
-        if (
-          pulcher::physics::IntersectionResults results;
-          !plugin.physics.IntersectionRaycast(scene, ray, results)
-        ) {
-          player.origin += player.velocity;
-        } else {
-          groundedPotential = player.velocity.y;
-          player.velocity = glm::vec2(0.0f);
-        }
-      }
 
-      if (groundedPotential != 0.0f) {
-        pulcher::physics::IntersectorRay ray;
-        ray.beginOrigin = floorOrigin;
-        ray.endOrigin = floorOrigin + glm::vec2(0.0f, groundedPotential);
+        // then check how the velocity should be redirected
+        auto rayY =
+          pulcher::physics::IntersectorRay::Construct(
+            player.origin + glm::vec2(0.0f, +1.0)
+          , player.origin + glm::vec2(0.0f, -3.0f)
+          );
         if (
-          pulcher::physics::IntersectionResults results;
-          plugin.physics.IntersectionRaycast(scene, ray, results)
+          pulcher::physics::IntersectionResults resultsY;
+          plugin.physics.IntersectionRaycast(scene, rayY, resultsY)
         ) {
-          player.origin.y = results.origin.y;
-        } else {
-          spdlog::debug("adding velocity {}", player.velocity.y);
-          player.origin.y += groundedPotential;
+          spdlog::debug("collis");
+          // if there is an intersection check
+          if (player.origin.y < resultsY.origin.y) {
+            player.velocity.y = glm::min(0.0f, player.velocity.y);
+          } else if (player.origin.y > resultsY.origin.y) {
+            player.velocity.y = glm::max(0.0f, player.velocity.y);
+          } else {
+            player.velocity.y = 0.0f;
+          }
+        }
+
+        auto rayX =
+          pulcher::physics::IntersectorRay::Construct(
+            player.origin + glm::vec2(+2.0f, 0.0)
+          , player.origin + glm::vec2(-2.0f, 0.0f)
+          );
+        if (
+          pulcher::physics::IntersectionResults resultsX;
+          plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
+        ) {
+          spdlog::debug("collis: {} : {}", player.origin.x, resultsX.origin.x);
+          // if there is an intersection check
+          if (player.origin.x < resultsX.origin.x) {
+            player.velocity.x = glm::min(0.0f, player.velocity.x);
+          } else if (player.origin.x > resultsX.origin.x) {
+            player.velocity.x = glm::max(0.0f, player.velocity.x);
+          } else {
+            player.velocity.x = 0.0f;
+          }
         }
       }
     }
 
     { // gravity/ground check
-      pulcher::physics::IntersectorPoint point;
-      point.origin = floorOrigin + glm::vec2(0.0f, 1.0f);
+      auto point =
+        pulcher::physics::IntersectorRay::Construct(
+          floorOrigin, floorOrigin + glm::vec2(0.0f, 1.0f)
+        );
       pulcher::physics::IntersectionResults results;
-      player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
+      player.grounded = plugin.physics.IntersectionRaycast(
+        scene, point, results
+      );
     }
 
   }
@@ -273,25 +303,30 @@ void plugin::entity::UpdatePlayer(
       plugin.animation.UpdateCacheWithPrecalculatedMatrix(
         weaponAnimation, handState.cachedLocalSkeletalMatrix
       );
+
     }
   }
 }
 
-void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle & scene) {
+void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle &) {
   ImGui::Begin("Physics");
 
   ImGui::Separator();
   ImGui::Separator();
 
-  ImGui::SliderFloat(
-    "input accel multiplier", &::inputAccelMultiplier, 0.001f, 2.0f
+  ImGui::DragFloat("input accel multiplier", &::inputAccelMultiplier, 0.001f);
+  ImGui::DragFloat(
+    "input walk accel multiplier", &::inputWalkAccelMultiplier, 0.001f
   );
-  ImGui::SliderFloat("gravity", &::gravity, 0.001f, 2.0f);
-  ImGui::SliderFloat("jumping accel", &::jumpingAccel, -0.001f, -64.0f);
-  ImGui::SliderFloat("friction", &::friction, 0.5f, 1.0f);
-  ImGui::SliderFloat(
+  ImGui::DragFloat("gravity", &::gravity, 0.001f);
+  ImGui::DragFloat("jumping accel", &::jumpingAccel, 0.001f);
+  ImGui::DragFloat("friction", &::friction, 0.001f);
+  ImGui::DragFloat("dashMultiplier", &::dashMultiplier, 0.001f);
+  ImGui::DragFloat("dashMinimumVelocity", &dashMinimumVelocity, 0.001f);
+  ImGui::DragFloat("dashCooldown (ms)", &::dashCooldown, 0.001f);
+  ImGui::DragFloat(
     "horizontal grounded velocity stop"
-  , &::horizontalGroundedVelocityStop, 0.001f, 2.0f
+  , &::horizontalGroundedVelocityStop, 0.001f
   );
 
   ImGui::Separator();

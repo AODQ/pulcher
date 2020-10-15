@@ -6,9 +6,11 @@
 
 namespace pulcher::core {
   struct ComponentPlayer {
-    glm::vec2 origin = {};
+    glm::vec2 origin = {902.0f, 1120.0f};
     glm::vec2 velocity = {};
     glm::vec2 acceleration = {};
+
+    float dashCooldown = 0.0f;
 
     bool sleeping = false;
 
