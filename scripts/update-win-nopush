@@ -12,4 +12,7 @@ git add imgui.ini
 git add pulcher-client.exe
 git add *.dll
 
+git commit -m "update pulcher binaries"
+git push
+
 popd

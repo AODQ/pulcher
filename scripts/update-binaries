@@ -1,5 +1,8 @@
 #!/usr/bin/sh
+
+commitM="$*"
 pushd ../build/pulcher-binaries
+git stash
 git checkout linux
 cp -r ../install-release-linux/bin/plugins/ .
 cp ../install-release-linux/bin/imgui.ini .
@@ -11,11 +14,12 @@ git add imgui.ini
 git add pulcher-client
 git add lib/
 
-git commit -m "update pulcher binaries"
+git commit -m "${commitM}"
 git push
 popd
 
 pushd ../build/pulcher-binaries
+git stash
 git checkout win64
 cp -r ../install-release-win64/bin/plugins/ .
 cp ../install-release-win64/bin/imgui.ini .
@@ -27,6 +31,6 @@ git add imgui.ini
 git add pulcher-client.exe
 git add *.dll
 
-git commit -m "update pulcher binaries"
+git commit -m "${commitM}"
 git push
 popd
