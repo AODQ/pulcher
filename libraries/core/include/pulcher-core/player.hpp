@@ -16,6 +16,9 @@ namespace pulcher::core {
 
     bool jumping = false;
     bool grounded = false;
+    bool landing = false; // landing until animation timer ends
+
+    // consider having previous frame info too?
 
     pulcher::core::Inventory inventory;
 

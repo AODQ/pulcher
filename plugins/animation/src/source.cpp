@@ -173,6 +173,8 @@ void ComputeVertices(
 
   auto & components = *componentsPtr;
 
+  PUL_ASSERT_CMP(components.size(), >, 0ul, return;);
+
   PUL_ASSERT_CMP(
     stateInfo.componentIt, <, components.size()
   , stateInfo.componentIt = components.size()-1;
@@ -182,13 +184,25 @@ void ComputeVertices(
 
   // update delta time and if animation update is necessary, apply uv coord
   // updates
+  // TODO this should be done outside of rendering
   bool hasUpdate = forceUpdate;
-  if (state.msDeltaTime > 0.0f) {
+  if (state.msDeltaTime > 0.0f && !stateInfo.animationFinished) {
     stateInfo.deltaTime += pulcher::util::MsPerFrame();
     if (stateInfo.deltaTime > state.msDeltaTime) {
-      stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
-      stateInfo.componentIt = (stateInfo.componentIt + 1) % components.size();
-      hasUpdate = true;
+      if (state.loops) {
+        stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
+        stateInfo.componentIt = (stateInfo.componentIt + 1) % components.size();
+        hasUpdate = true;
+      } else {
+        if (stateInfo.componentIt < components.size()-1) {
+          stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
+          stateInfo.componentIt = stateInfo.componentIt + 1;
+          hasUpdate = true;
+        } else {
+          stateInfo.deltaTime = 0.0f;
+          stateInfo.animationFinished = true;
+        }
+      }
     }
   }
 
@@ -552,9 +566,7 @@ void DisplayImGuiComponent(
   if (animShowPreviousSprite > 0.0f) {
     ::ImGuiRenderSpritesheetTile(
       animator.spritesheet, piece
-    , components[
-        (components.size() + componentIt - 1) % components.size()
-      ]
+    , components[(components.size() + componentIt - 1) % components.size()]
     , animShowPreviousSprite
     );
   }
@@ -605,12 +617,6 @@ void DisplayImGuiComponents(
 , pulcher::animation::Animator::Piece & piece
 , std::vector<pulcher::animation::Animator::Component> & components
 ) {
-
-  if (ImGui::Button("Set animation timer")) {
-    animMaxTime =
-      static_cast<size_t>(0.5f + components.size() * state.msDeltaTime);
-  }
-
   if (components.size() > 0ul)
   { // display image
     size_t componentIt = static_cast<size_t>(animMsTimer / state.msDeltaTime);
@@ -797,6 +803,10 @@ cJSON * SaveAnimation(pulcher::animation::Animator& animator) {
         stateJson, "rotate-pixels"
       , cJSON_CreateInt(state.rotatePixels)
       );
+      cJSON_AddItemToObject(
+        stateJson, "loops"
+      , cJSON_CreateInt(state.loops)
+      );
 
       cJSON * componentPartsJson = cJSON_CreateArray();
       cJSON_AddItemToObject(stateJson, "components", componentPartsJson);
@@ -976,6 +986,13 @@ void LoadAnimation(
 
         state.rotationMirrored =
           cJSON_GetObjectItemCaseSensitive(stateJson, "rotation-mirrored")
+            ->valueint
+        ;
+
+        spdlog::debug("getting {}", stateLabel);
+
+        state.loops =
+          cJSON_GetObjectItemCaseSensitive(stateJson, "loops")
             ->valueint
         ;
 
@@ -1308,9 +1325,13 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
           pul::imgui::Text("part - '{}'", stateInfoPair.first);
           pul::imgui::Text("\tdelta-time {}", stateInfo.deltaTime);
+          pul::imgui::Text(
+            "\tanimation-finished {}", stateInfo.animationFinished
+          );
           pul::imgui::Text("\tcomponent-it {}", stateInfo.componentIt);
           pul::imgui::Text("\tflip {}", stateInfo.flip);
           pul::imgui::Text("\tangle {}", stateInfo.angle);
+          pul::imgui::Text("\tvisible {}", stateInfo.visible);
         }
 
         ImGui::TreePop();
@@ -1407,8 +1428,8 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           auto & state = statePair.second;
           (void)state;
 
-          ImGui::SliderFloat(
-            "delta time", &statePair.second.msDeltaTime, 0.0f, 1000.0f
+          ImGui::DragFloat(
+            "delta time", &statePair.second.msDeltaTime, 1.0f
           );
 
           auto & componentParts = statePair.second.components;
@@ -1418,6 +1439,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           ImGui::Checkbox("rotation mirrored", &state.rotationMirrored);
           ImGui::SameLine();
           ImGui::Checkbox("rotate pixels", &state.rotatePixels);
+          ImGui::Checkbox("loops", &state.loops);
 
           if (ImGui::Button("add range part")) {
             componentParts.emplace_back();

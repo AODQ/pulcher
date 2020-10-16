@@ -53,6 +53,7 @@ namespace pulcher::animation {
       float msDeltaTime;
       bool rotationMirrored = false;
       bool rotatePixels = false;
+      bool loops = false;
 
       size_t ComponentPartIdxLookup(float const angle);
 
@@ -102,13 +103,16 @@ namespace pulcher::animation {
       bool flip = false;
       float angle = 0.0f;
       bool visible = true;
+      bool animationFinished = false;
 
       glm::mat3 cachedLocalSkeletalMatrix = glm::mat3(1.0f);
 
       void Apply(std::string const & nLabel) {
         if (label != nLabel) {
           label = nLabel;
+          /* deltaTime = 0.0f; */
           componentIt = 0ul;
+          animationFinished = false;
         }
       }
     };

@@ -18,10 +18,11 @@ namespace {
   float inputAirAccelMultiplier = 0.05f;
   float inputWalkAccelMultiplier = 0.4f;
   float inputCrouchAccelMultiplier = 0.2f;
-  float gravity = 0.7f;
-  float jumpingHorizontalAccel = 8.0f;
-  float jumpingVerticalAccel = 9.5f;
-  float jumpingHorizontalTheta = 85.0f;
+  float gravity = 0.3f;
+  float jumpingHorizontalAccel = 6.0f;
+  float jumpingHorizontalAccelMax = 7.0f;
+  float jumpingVerticalAccel = 9.0f;
+  float jumpingHorizontalTheta = 65.0f;
   float friction = 0.9f;
   float dashMultiplier = 4.0f;
   float dashMinimumVelocity = 3.0f;
@@ -220,30 +221,21 @@ void plugin::entity::UpdatePlayer(
       }
     }
 
-    // gravity/ground check
-    if (player.velocity.y >= 0.0f)
-    {
-      auto point =
-        pulcher::physics::IntersectorRay::Construct(
-          floorOrigin, floorOrigin + glm::vec2(0.0f, 1.0f)
-        );
-      pulcher::physics::IntersectionResults results;
-      player.grounded = plugin.physics.IntersectionRaycast(
-        scene, point, results
-      );
-    }
-
   }
 
   const float velocityXAbs = glm::abs(player.velocity.x);
 
-  bool grounded = true;
-
   { // -- apply animations
 
     // -- set leg animation
-    if (grounded) {
-      if (controller.crouch) {
+
+    if (player.grounded) { // grounded animations
+      if (!prevGrounded || player.landing) {
+        player.landing = true;
+        auto & stateInfo = playerAnim.instance.pieceToState["legs"];
+        stateInfo.Apply("landing");
+        if (stateInfo.animationFinished) { player.landing = false; }
+      } else if (controller.crouch) {
         if (velocityXAbs < 0.1f) {
           playerAnim.instance.pieceToState["legs"].Apply("crouch-idle");
         } else {
@@ -259,12 +251,38 @@ void plugin::entity::UpdatePlayer(
       else {
         playerAnim.instance.pieceToState["legs"].Apply("run");
       }
-    } else {
-      playerAnim.instance.pieceToState["legs"].Apply("air-idle");
+    } else { // air animations
+
+      if (frameVerticalJump) {
+        playerAnim.instance.pieceToState["legs"].Apply("jump-high");
+      } else if (frameHorizontalJump) {
+        static bool swap = false;
+        swap ^= 1;
+        spdlog::debug("swap {}", swap);
+        playerAnim
+          .instance.pieceToState["legs"]
+          .Apply(swap ? "jump-strafe-0" : "jump-strafe-1");
+      } else if (frameVerticalDash) {
+        playerAnim.instance.pieceToState["legs"].Apply("dash-vertical");
+      } else if (frameHorizontalDash) {
+        static bool swap = false;
+        swap ^= 1;
+        playerAnim
+          .instance.pieceToState["legs"]
+          .Apply(swap ? "dash-horizontal-0" : "dash-horizontal-1");
+      } else if (frameStartGrounded) {
+        // logically can only have falled down
+        playerAnim.instance.pieceToState["legs"].Apply("air-idle");
+      } else {
+        auto & stateInfo = playerAnim.instance.pieceToState["legs"];
+        if (stateInfo.label == "jump-high" && stateInfo.animationFinished) {
+          stateInfo.Apply("air-idle");
+        }
+      }
     }
 
     // -- arm animation
-    if (grounded) {
+    if (player.grounded) {
       if (controller.crouch) {
         playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
         playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
@@ -382,6 +400,9 @@ void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle &) {
   ImGui::DragFloat("gravity", &::gravity, 0.005f);
   ImGui::DragFloat("jump vertical accel", &::jumpingVerticalAccel, 0.005f);
   ImGui::DragFloat("jump hor accel", &::jumpingHorizontalAccel, 0.005f);
+  ImGui::DragFloat(
+    "jump hor accel limit", &::jumpingHorizontalAccelMax, 0.005f
+  );
   ImGui::DragFloat("jump hor theta", &::jumpingHorizontalTheta, 0.1f);
   ImGui::DragFloat("friction", &::friction, 0.001f);
   ImGui::DragFloat("dashMultiplier", &::dashMultiplier, 0.005f);
