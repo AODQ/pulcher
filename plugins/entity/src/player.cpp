@@ -40,6 +40,48 @@ void plugin::entity::UpdatePlayer(
   auto & controller = scene.PlayerController().current;
   auto & controllerPrev = scene.PlayerController().previous;
 
+  // error checking
+  if (glm::abs(player.velocity.x) > 1000.0f) {
+    spdlog::error("player velocity too high (for now)");
+    player.velocity.x = 0.0f;
+  }
+
+  if (glm::abs(player.velocity.y) > 1000.0f) {
+    spdlog::error("player velocity too high (for now)");
+    player.velocity.y = 0.0f;
+  }
+
+  if (
+      glm::isnan(player.velocity.x) || glm::isnan(player.velocity.y)
+   || glm::isinf(player.velocity.x) || glm::isinf(player.velocity.y)
+  ) {
+    spdlog::error("floating point corruption on player velocity");
+    player.velocity.x = 0.0f;
+    player.velocity.y = 0.0f;
+    player.storedVelocity.x = 0.0f;
+    player.storedVelocity.y = 0.0f;
+  }
+
+  bool
+    frameVerticalJump   = false
+  , frameHorizontalJump = false
+  , frameVerticalDash   = false
+  , frameHorizontalDash = false
+  ;
+
+  bool prevGrounded = player.grounded;
+
+  // gravity/ground check
+  if (player.velocity.y >= 0.0f)
+  {
+    pulcher::physics::IntersectorPoint point;
+    point.origin = player.origin + glm::vec2(0.0f, 1.0f);
+    pulcher::physics::IntersectionResults results;
+    player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
+  }
+
+  bool frameStartGrounded = player.grounded;
+
   using MovementControl = pulcher::controls::Controller::Movement;
 
   { // -- process inputs / events
@@ -58,17 +100,23 @@ void plugin::entity::UpdatePlayer(
     if (player.grounded && player.jumping) {
       if (controller.movementHorizontal == MovementControl::None) {
         player.velocity.y = -::jumpingVerticalAccel;
+        frameVerticalJump = true;
       } else {
 
         float thetaRad = glm::radians(::jumpingHorizontalTheta);
 
         player.velocity.y += -::jumpingHorizontalAccel * glm::sin(thetaRad);
 
-        player.velocity.x =
-          player.storedVelocity.x
-        + glm::sign(static_cast<float>(controller.movementHorizontal))
-        * ::jumpingHorizontalAccel * glm::cos(thetaRad)
-        ;
+        player.velocity.x = player.storedVelocity.x;
+
+        if (glm::abs(player.velocity.x) < jumpingHorizontalAccelMax) {
+          player.velocity.x +=
+            + glm::sign(static_cast<float>(controller.movementHorizontal))
+            * ::jumpingHorizontalAccel * glm::cos(thetaRad)
+          ;
+        }
+
+        frameHorizontalJump = true;
       }
       player.grounded = false;
     }
@@ -136,6 +184,12 @@ void plugin::entity::UpdatePlayer(
         , ::dashMinimumVelocity
         );
 
+      if (controller.movementHorizontal == MovementControl::None) {
+        frameVerticalDash = true;
+      } else {
+        frameHorizontalDash = true;
+      }
+
       auto direction =
         glm::vec2(
           controller.movementHorizontal, controller.movementVertical
@@ -152,7 +206,6 @@ void plugin::entity::UpdatePlayer(
 
   { // -- apply physics
     glm::vec2 groundedFloorOrigin = player.origin - glm::vec2(0, 2);
-    glm::vec2 floorOrigin = player.origin;
 
     { // free movement check
       auto ray =
