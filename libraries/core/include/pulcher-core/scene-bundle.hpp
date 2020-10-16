@@ -16,6 +16,8 @@ namespace pulcher::core {
   struct SceneBundle {
     glm::i32vec2 cameraOrigin = {};
 
+    size_t numCpuFrames = 0ul;
+
     pulcher::core::Config config = {};
 
     pulcher::animation::System & AnimationSystem();

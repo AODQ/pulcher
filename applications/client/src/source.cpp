@@ -585,6 +585,7 @@ int main(int argc, char const ** argv) {
       ::ProcessLogic(plugin, sceneBundle);
     }
 
+    sceneBundle.numCpuFrames = calculatedFrames;
 
     // -- rendering, unlimited Hz
     ::ProcessRendering(plugin, sceneBundle, deltaMs, calculatedFrames);

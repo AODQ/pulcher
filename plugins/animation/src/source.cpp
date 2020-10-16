@@ -599,6 +599,46 @@ void DisplayImGuiComponent(
   ImGui::Columns(1);
 }
 
+void DisplayImGuiComponents(
+  pulcher::animation::Animator & animator
+, pulcher::animation::Animator::State & state
+, pulcher::animation::Animator::Piece & piece
+, std::vector<pulcher::animation::Animator::Component> & components
+) {
+
+  if (ImGui::Button("Set animation timer")) {
+    animMaxTime =
+      static_cast<size_t>(0.5f + components.size() * state.msDeltaTime);
+  }
+
+  if (components.size() > 0ul)
+  { // display image
+    size_t componentIt = static_cast<size_t>(animMsTimer / state.msDeltaTime);
+    componentIt %= components.size();
+
+    // render w/ previous sprite alpha if requested
+
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    if (animShowPreviousSprite > 0.0f) {
+      ::ImGuiRenderSpritesheetTile(
+        animator.spritesheet,
+        piece
+      , components[(components.size() + componentIt - 1) % components.size()]
+      );
+    }
+    ImGui::SetCursorScreenPos(pos);
+    ::ImGuiRenderSpritesheetTile(
+      animator.spritesheet, piece, components[componentIt]
+    );
+
+    ImGui::Separator();
+  }
+
+  for (size_t it = 0ul; it < components.size(); ++ it) {
+    DisplayImGuiComponent(animator, piece, components, it);
+  }
+}
+
 void DisplayImGuiSkeleton(
   pulcher::core::SceneBundle & scene
 , pulcher::animation::Animator & animator
@@ -1302,7 +1342,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
       );
 
       if (animPlaying) {
-        animMsTimer += pulcher::util::MsPerFrame();
+        animMsTimer += pulcher::util::MsPerFrame() * scene.numCpuFrames;
 
         animMsTimer =
             animLoop
@@ -1372,44 +1412,6 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           );
 
           auto & componentParts = statePair.second.components;
-
-          /* if (components.size() > 0ul) */
-          /* { // display image */
-          /*   size_t componentIt = */
-          /*     static_cast<size_t>(animMsTimer / statePair.second.msDeltaTime); */
-          /*   componentIt %= components.size(); */
-
-          /*   // render w/ previous sprite alpha if requested */
-
-          /*   ImVec2 pos = ImGui::GetCursorScreenPos(); */
-          /*   if (animShowPreviousSprite > 0.0f) { */
-          /*     ::ImGuiRenderSpritesheetTile( */
-          /*       instance, piece */
-          /*     , components[ */
-          /*         (components.size() + componentIt - 1) % components.size() */
-          /*       ] */
-          /*     , animShowPreviousSprite */
-          /*     ); */
-          /*   } */
-          /*   ImGui::SetCursorScreenPos(pos); */
-          /*   ::ImGuiRenderSpritesheetTile( */
-          /*     instance, piece, components[componentIt] */
-          /*   ); */
-
-          /*   ImGui::Separator(); */
-          /* } */
-
-          /* if (ImGui::Button("Set animation timer")) { */
-          /*   animMaxTime = */
-          /*     static_cast<size_t>( */
-          /*       0.5f + components.size() * statePair.second.msDeltaTime */
-          /*     ); */
-          /* } */
-
-/*           // insert at 0, important for when component is size 0 also */
-/*           if (ImGui::Button("+")) { */
-/*             components.emplace(components.begin()); */
-/*           } */
 
           bool angleRangeChanged = false;
 
@@ -1536,15 +1538,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
               componentsDefault.emplace_back();
             }
 
-            for (
-              size_t componentIt = 0ul;
-              componentIt < componentsDefault.size();
-              ++ componentIt
-            ) {
-              DisplayImGuiComponent(
-                animator, piece, componentsDefault, componentIt
-              );
-            }
+            DisplayImGuiComponents(animator, state, piece, componentsDefault);
 
             if (componentsFlipped.size() > 0ul) {
 
@@ -1553,15 +1547,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
               ImGui::PushID(1);
 
-              for (
-                size_t componentIt = 0ul;
-                componentIt < componentsFlipped.size();
-                ++ componentIt
-              ) {
-                DisplayImGuiComponent(
-                  animator, piece, componentsFlipped, componentIt
-                );
-              }
+              DisplayImGuiComponents(animator, state, piece, componentsFlipped);
 
               ImGui::PopID();
             } else {

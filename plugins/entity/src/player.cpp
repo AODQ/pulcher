@@ -23,7 +23,7 @@ namespace {
   float jumpingVerticalAccel = 9.5f;
   float jumpingHorizontalTheta = 85.0f;
   float friction = 0.9f;
-  float dashMultiplier = 2.0f;
+  float dashMultiplier = 4.0f;
   float dashMinimumVelocity = 3.0f;
   float dashCooldown = 300.0f;
   float horizontalGroundedVelocityStop = 0.5f;
