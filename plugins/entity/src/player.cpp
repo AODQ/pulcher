@@ -24,8 +24,8 @@ namespace {
   float jumpingVerticalAccel = 9.0f;
   float jumpingHorizontalTheta = 65.0f;
   float friction = 0.9f;
-  float dashMultiplier = 4.0f;
-  float dashMinimumVelocity = 3.0f;
+  float dashMultiplier = 1.0f;
+  float dashMinimumVelocity = 6.0f;
   float dashCooldown = 300.0f;
   float horizontalGroundedVelocityStop = 0.5f;
 }
@@ -294,15 +294,31 @@ void plugin::entity::UpdatePlayer(
         } else {
           playerAnim.instance.pieceToState["legs"].Apply("crouch-walk");
         }
-      }
-      else if (velocityXAbs < 0.1f) {
-        playerAnim.instance.pieceToState["legs"].Apply("stand");
-      }
-      else if (velocityXAbs < 1.5f) {
-        playerAnim.instance.pieceToState["legs"].Apply("walk");
-      }
-      else {
-        playerAnim.instance.pieceToState["legs"].Apply("run");
+      } else {
+        // check walk/run animation turns before applying stand/walk/run
+        auto & legInfo = playerAnim.instance.pieceToState["legs"];
+
+        bool const applyTurning =
+            controller.movementHorizontal != MovementControl::None
+         && (
+             glm::sign(static_cast<float>(controller.movementHorizontal))
+          != glm::sign(player.velocity.x)
+            )
+         && player.velocity.x < 4.0f
+        ;
+
+        if (legInfo.label == "run-turn") {
+          if (legInfo.animationFinished) { legInfo.Apply("run"); }
+        } else if (legInfo.label == "walk-turn") {
+          if (legInfo.animationFinished) { legInfo.Apply("walk"); }
+        } else if (velocityXAbs < 0.1f) {
+          playerAnim.instance.pieceToState["legs"].Apply("stand");
+        }
+        else if (velocityXAbs < 1.5f) {
+          legInfo.Apply(applyTurning ? "walk-turn" : "walk");
+        } else {
+          legInfo.Apply(applyTurning ? "run-turn" : "run");
+        }
       }
     } else { // air animations
 
