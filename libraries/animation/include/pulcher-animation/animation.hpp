@@ -107,8 +107,8 @@ namespace pulcher::animation {
 
       glm::mat3 cachedLocalSkeletalMatrix = glm::mat3(1.0f);
 
-      void Apply(std::string const & nLabel) {
-        if (label != nLabel) {
+      void Apply(std::string const & nLabel, bool force = false) {
+        if (force || label != nLabel) {
           label = nLabel;
           /* deltaTime = 0.0f; */
           componentIt = 0ul;

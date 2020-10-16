@@ -106,7 +106,6 @@ void plugin::entity::UpdatePlayer(
         float thetaRad = glm::radians(::jumpingHorizontalTheta);
 
         player.velocity.y += -::jumpingHorizontalAccel * glm::sin(thetaRad);
-
         player.velocity.x = player.storedVelocity.x;
 
         if (glm::abs(player.velocity.x) < jumpingHorizontalAccelMax) {
@@ -323,7 +322,7 @@ void plugin::entity::UpdatePlayer(
     } else { // air animations
 
       if (frameVerticalJump) {
-        playerAnim.instance.pieceToState["legs"].Apply("jump-high");
+        playerAnim.instance.pieceToState["legs"].Apply("jump-high", true);
       } else if (frameHorizontalJump) {
         static bool swap = false;
         swap ^= 1;
