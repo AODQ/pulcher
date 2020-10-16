@@ -356,29 +356,33 @@ void ProcessRendering(
       ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0.5, 0.5, 1));
       pul::imgui::Text("There is an update ready to load now !");
       ImGui::PopStyleColor();
-      if (ImGui::Button("Click to update")) {
-        {
-          auto proc = TinyProcessLib::Process("git stash");
-          proc.get_exit_status();
+
+      // updating files while they're open only works on linux, not Win64
+      #ifdef __unix__
+        if (ImGui::Button("Click to update")) {
+          {
+            auto proc = TinyProcessLib::Process("git stash");
+            proc.get_exit_status();
+          }
+          {
+            auto proc = TinyProcessLib::Process("git pull --ff-only");
+            proc.get_exit_status();
+          }
+
+          spdlog::info("Closing pulcher");
+          // TODO exit normally
+
+          exit(0);
         }
-        {
-          auto proc = TinyProcessLib::Process("git pull --ff-only");
-          proc.get_exit_status();
+
+        if (ImGui::IsItemHovered()) {
+          ImGui::BeginTooltip();
+          pul::imgui::Text(
+            "THIS WILL CLOSE PULCHER, SAVE BEFORE CLICKING!"
+          );
+          ImGui::EndTooltip();
         }
-
-        spdlog::info("Closing pulcher");
-        // TODO exit normally
-
-        exit(0);
-      }
-
-      if (ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip();
-        pul::imgui::Text(
-          "THIS WILL CLOSE PULCHER, SAVE BEFORE CLICKING!"
-        );
-        ImGui::EndTooltip();
-      }
+      #endif
 
       pul::imgui::Text("Details: {}", updateDetails);
       ImGui::End();
