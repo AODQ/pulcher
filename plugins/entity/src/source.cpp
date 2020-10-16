@@ -118,8 +118,10 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       );
       ImGui::DragFloat2("origin", &self.origin.x, 16.125f);
       ImGui::DragFloat2("velocity", &self.velocity.x, 0.025f);
-      ImGui::DragFloat2("acceleration", &self.acceleration.x, 0.025f);
-      ImGui::Checkbox("sleeping", &self.sleeping);
+      ImGui::DragFloat2("stored velocity", &self.storedVelocity.x, 0.025f);
+      pul::imgui::Text("midair dashes left {}", self.midairDashesLeft);
+      pul::imgui::Text("dash cooldown {:.2f}", self.dashCooldown);
+      pul::imgui::Text("run timer {:.2f}", self.runTimer);
       ImGui::Checkbox("grounded", &self.grounded);
       if (ImGui::Button("Give all weapons")) {
         for (auto & weapon : self.inventory.weapons) {

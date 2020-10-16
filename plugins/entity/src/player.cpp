@@ -12,17 +12,19 @@
 #include <imgui/imgui.hpp>
 
 namespace {
-  float inputGroundAccelMultiplier = 1.0f;
+  int32_t maxAirDashes = 1u;
+  float inputGroundAccelTime = 244.0f;
+  float inputGroundAccelMultiplier = 0.335f;
   float inputAirAccelMultiplier = 0.05f;
   float inputWalkAccelMultiplier = 0.4f;
   float inputCrouchAccelMultiplier = 0.2f;
   float gravity = 0.7f;
-  float jumpingHorizontalAccel = 2.0f;
+  float jumpingHorizontalAccel = 8.0f;
   float jumpingVerticalAccel = 9.5f;
-  float jumpingHorizontalTheta = 9.5f;
-  float friction = 0.75f;
-  float dashMultiplier = 3.0f;
-  float dashMinimumVelocity = 16.0f;
+  float jumpingHorizontalTheta = 85.0f;
+  float friction = 0.9f;
+  float dashMultiplier = 2.0f;
+  float dashMinimumVelocity = 3.0f;
   float dashCooldown = 300.0f;
   float horizontalGroundedVelocityStop = 0.5f;
 }
@@ -37,6 +39,8 @@ void plugin::entity::UpdatePlayer(
   auto & controller = scene.PlayerController().current;
   auto & controllerPrev = scene.PlayerController().previous;
 
+  using MovementControl = pulcher::controls::Controller::Movement;
+
   { // -- process inputs / events
 
     // -- gravity
@@ -46,11 +50,12 @@ void plugin::entity::UpdatePlayer(
     // -- process jumping
     player.jumping = controller.jump;
 
+    if (!player.jumping) {
+      player.storedVelocity = player.velocity;
+    }
+
     if (player.grounded && player.jumping) {
-      if (
-          controller.movementHorizontal
-       == pulcher::controls::Controller::Movement::None
-      ) {
+      if (controller.movementHorizontal == MovementControl::None) {
         player.velocity.y = -::jumpingVerticalAccel;
       } else {
 
@@ -58,8 +63,9 @@ void plugin::entity::UpdatePlayer(
 
         player.velocity.y += -::jumpingHorizontalAccel * glm::sin(thetaRad);
 
-        player.velocity.x +=
-          glm::sign(player.velocity.x)
+        player.velocity.x =
+          player.storedVelocity.x
+        + glm::sign(static_cast<float>(controller.movementHorizontal))
         * ::jumpingHorizontalAccel * glm::cos(thetaRad)
         ;
       }
@@ -69,9 +75,27 @@ void plugin::entity::UpdatePlayer(
     // -- process horizontal movement
     float inputAccel = static_cast<float>(controller.movementHorizontal);
 
-    inputAccel *=
-      (player.grounded && !player.jumping) ?
-        ::inputGroundAccelMultiplier : ::inputAirAccelMultiplier;
+    if (
+        controllerPrev.movementHorizontal != controller.movementHorizontal
+     || controller.movementHorizontal == MovementControl::None
+    ) {
+      player.runTimer = 0.0f;
+    } else {
+      player.runTimer =
+        glm::min(
+          player.runTimer + pulcher::util::MsPerFrame()
+        , ::inputGroundAccelTime
+        );
+    }
+
+    if (player.grounded) {
+      inputAccel *=
+        (player.runTimer / ::inputGroundAccelTime)
+      * ::inputGroundAccelMultiplier
+      ;
+    } else {
+      inputAccel *=  ::inputAirAccelMultiplier;
+    }
 
     if (controller.walk) { inputAccel *= ::inputWalkAccelMultiplier; }
     if (controller.crouch) { inputAccel *= ::inputWalkAccelMultiplier; }
@@ -95,28 +119,33 @@ void plugin::entity::UpdatePlayer(
     if (player.dashCooldown > 0.0f)
       { player.dashCooldown -= pulcher::util::MsPerFrame(); }
 
+    // player has a limited amount of dashes in air, so reset that if grounded
+    if (player.grounded) {
+      player.midairDashesLeft = ::maxAirDashes;
+    }
+
     if (
-      !controllerPrev.dash && controller.dash && player.dashCooldown <= 0.0f
+      !controllerPrev.dash && controller.dash
+    && player.dashCooldown <= 0.0f
+    && player.midairDashesLeft > 0
     ) {
-      float velocityMultiplier = ::dashMultiplier;
-      if (glm::length(player.velocity) < ::dashMinimumVelocity) {
-        velocityMultiplier = ::dashMinimumVelocity;
-      }
+      float const velocityMultiplier =
+        glm::max(
+          ::dashMultiplier + glm::length(player.velocity)
+        , ::dashMinimumVelocity
+        );
+
       auto direction =
         glm::vec2(
           controller.movementHorizontal, controller.movementVertical
         );
+      if (player.grounded) { direction.y -= 0.5f; }
 
-      if (player.grounded) {
-        direction.y -= 0.5f;
-      }
-
-      spdlog::debug("dir {} nor {} vel {} ", direction, glm::normalize(direction), velocityMultiplier);
-
-      player.velocity += glm::normalize(direction) * velocityMultiplier;
+      player.velocity = velocityMultiplier * glm::normalize(direction);
       player.grounded = false;
 
       player.dashCooldown = ::dashCooldown;
+      -- player.midairDashesLeft;
     }
   }
 
@@ -343,7 +372,10 @@ void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle &) {
   ImGui::Separator();
   ImGui::Separator();
 
+  ImGui::PushItemWidth(74.0f);
+  ImGui::DragInt("max air dashes", &::maxAirDashes, 0.25f, 0, 10);
   ImGui::DragFloat("input ground accel", &::inputGroundAccelMultiplier, 0.005f);
+  ImGui::DragFloat("input ground time", &::inputGroundAccelTime, 0.005f);
   ImGui::DragFloat("input air accel", &::inputAirAccelMultiplier, 0.005f);
   ImGui::DragFloat("input walk accel", &::inputWalkAccelMultiplier, 0.005f);
   ImGui::DragFloat("input crouch accel", &::inputCrouchAccelMultiplier, 0.005f);
@@ -359,6 +391,7 @@ void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle &) {
     "horizontal grounded velocity stop"
   , &::horizontalGroundedVelocityStop, 0.005f
   );
+  ImGui::PopItemWidth();
 
   ImGui::Separator();
   ImGui::Separator();
