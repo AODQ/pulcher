@@ -69,7 +69,7 @@ void plugin::entity::UpdatePlayer(
   , frameHorizontalDash = false
   ;
 
-  bool prevGrounded = player.grounded;
+  bool const prevGrounded = player.grounded;
 
   // gravity/ground check
   if (player.velocity.y >= 0.0f)
@@ -80,7 +80,7 @@ void plugin::entity::UpdatePlayer(
     player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
   }
 
-  bool frameStartGrounded = player.grounded;
+  bool const frameStartGrounded = player.grounded;
 
   using MovementControl = pulcher::controls::Controller::Movement;
 
@@ -169,9 +169,9 @@ void plugin::entity::UpdatePlayer(
       { player.dashCooldown -= pulcher::util::MsPerFrame(); }
 
     // player has a limited amount of dashes in air, so reset that if grounded
-    if (player.grounded) {
-      player.midairDashesLeft = ::maxAirDashes;
-    }
+    // at the start of frame
+    if (frameStartGrounded)
+      { player.midairDashesLeft = ::maxAirDashes; }
 
     if (
       !controllerPrev.dash && controller.dash
@@ -327,10 +327,6 @@ void plugin::entity::UpdatePlayer(
         // logically can only have falled down
         playerAnim.instance.pieceToState["legs"].Apply("air-idle");
       } else {
-        auto & stateInfo = playerAnim.instance.pieceToState["legs"];
-        if (stateInfo.label == "jump-high" && stateInfo.animationFinished) {
-          stateInfo.Apply("air-idle");
-        }
       }
     }
 
