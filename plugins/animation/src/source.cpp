@@ -1324,6 +1324,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           auto & stateInfo = stateInfoPair.second;
 
           pul::imgui::Text("part - '{}'", stateInfoPair.first);
+          pul::imgui::Text("\tlabel '{}'", stateInfo.label);
           pul::imgui::Text("\tdelta-time {}", stateInfo.deltaTime);
           pul::imgui::Text(
             "\tanimation-finished {}", stateInfo.animationFinished
