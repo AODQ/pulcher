@@ -181,7 +181,19 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
   });
   ImGui::End();
 
-  plugin::entity::UiRenderPlayer(scene);
+  auto view =
+    registry.view<
+      ComponentControllable, pulcher::core::ComponentPlayer, ComponentCamera
+    , pulcher::animation::ComponentInstance
+    >();
+
+  for (auto entity : view) {
+    plugin::entity::UiRenderPlayer(
+      scene
+    , view.get<pulcher::core::ComponentPlayer>(entity)
+    , view.get<pulcher::animation::ComponentInstance>(entity)
+    );
+  }
 }
 
 } // -- extern C

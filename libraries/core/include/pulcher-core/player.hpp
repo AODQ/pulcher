@@ -15,6 +15,7 @@ namespace pulcher::core {
     float runTimer = 0.0f;
 
     bool jumping = false;
+    bool hasReleasedJump = false;
     bool grounded = false;
     bool landing = false; // landing until animation timer ends
 

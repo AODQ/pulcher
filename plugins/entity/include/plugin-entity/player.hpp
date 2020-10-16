@@ -12,5 +12,9 @@ namespace plugin::entity {
   , pulcher::animation::ComponentInstance & playerAnimation
   );
 
-  void UiRenderPlayer(pulcher::core::SceneBundle & scene);
+  void UiRenderPlayer(
+    pulcher::core::SceneBundle & scene
+  , pulcher::core::ComponentPlayer & player
+  , pulcher::animation::ComponentInstance & playerAnimation
+  );
 }

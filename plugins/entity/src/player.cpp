@@ -4,6 +4,7 @@
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
+#include <pulcher-gfx/imgui.hpp>
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
@@ -14,8 +15,8 @@
 namespace {
   int32_t maxAirDashes = 1u;
   float inputGroundAccelTime = 244.0f;
-  float inputGroundAccelMultiplier = 0.335f;
-  float inputAirAccelMultiplier = 0.05f;
+  float inputGroundAccel = 0.335f;
+  float inputAirAccel = 0.05f;
   float inputWalkAccelMultiplier = 0.4f;
   float inputCrouchAccelMultiplier = 0.2f;
   float gravity = 0.3f;
@@ -23,8 +24,9 @@ namespace {
   float jumpingHorizontalAccelMax = 7.0f;
   float jumpingVerticalAccel = 9.0f;
   float jumpingHorizontalTheta = 65.0f;
-  float friction = 0.9f;
-  float dashMultiplier = 1.0f;
+  float frictionAir = 1.0f;
+  float frictionGrounded = 0.9f;
+  float dashAccel = 1.0f;
   float dashMinimumVelocity = 6.0f;
   float dashCooldown = 300.0f;
   float horizontalGroundedVelocityStop = 0.5f;
@@ -95,6 +97,12 @@ void plugin::entity::UpdatePlayer(
 
     if (!player.jumping) {
       player.storedVelocity = player.velocity;
+      player.hasReleasedJump = true;
+    }
+
+    // make sure that jumping only happens if player has released jump yet
+    if (player.grounded && !player.hasReleasedJump) {
+      player.jumping = false;
     }
 
     if (player.grounded && player.jumping) {
@@ -118,6 +126,7 @@ void plugin::entity::UpdatePlayer(
         frameHorizontalJump = true;
       }
       player.grounded = false;
+      player.hasReleasedJump = false;
     }
 
     // -- process horizontal movement
@@ -138,22 +147,21 @@ void plugin::entity::UpdatePlayer(
 
     if (player.grounded) {
       inputAccel *=
-        (player.runTimer / ::inputGroundAccelTime)
-      * ::inputGroundAccelMultiplier
+        (player.runTimer / ::inputGroundAccelTime) * ::inputGroundAccel
       ;
     } else {
-      inputAccel *=  ::inputAirAccelMultiplier;
+      inputAccel *= ::inputAirAccel;
     }
 
     if (controller.walk) { inputAccel *= ::inputWalkAccelMultiplier; }
-    if (controller.crouch) { inputAccel *= ::inputWalkAccelMultiplier; }
+    if (controller.crouch) { inputAccel *= ::inputCrouchAccelMultiplier; }
 
     player.velocity.x += inputAccel;
 
     // -- process friction
-    if (player.grounded && !player.jumping) {
-      player.velocity.x *= ::friction;
-    }
+    player.velocity.x *=
+      player.grounded && !player.jumping ? ::frictionGrounded : ::frictionAir
+    ;
 
     // -- process horizontal ground stop
     if (
@@ -179,11 +187,10 @@ void plugin::entity::UpdatePlayer(
     ) {
       float const velocityMultiplier =
         glm::max(
-          ::dashMultiplier + glm::length(player.velocity)
-        , ::dashMinimumVelocity
+          ::dashAccel + glm::length(player.velocity), ::dashMinimumVelocity
         );
 
-      if (controller.movementHorizontal == MovementControl::None) {
+      if (controller.movementVertical != MovementControl::None) {
         frameVerticalDash = true;
       } else {
         frameHorizontalDash = true;
@@ -193,6 +200,15 @@ void plugin::entity::UpdatePlayer(
         glm::vec2(
           controller.movementHorizontal, controller.movementVertical
         );
+
+      // if no keys are pressed just guess where player wants to go
+      if (
+          controller.movementHorizontal == MovementControl::None
+       && controller.movementVertical == MovementControl::None
+      ) {
+        direction.x = player.velocity.x >= 0.0f ? +1.0f : -1.0f;
+      }
+
       if (player.grounded) { direction.y -= 0.5f; }
 
       player.velocity = velocityMultiplier * glm::normalize(direction);
@@ -448,38 +464,124 @@ void plugin::entity::UpdatePlayer(
   }
 }
 
-void plugin::entity::UiRenderPlayer(pulcher::core::SceneBundle &) {
+void plugin::entity::UiRenderPlayer(
+  pulcher::core::SceneBundle &
+, pulcher::core::ComponentPlayer & player
+, pulcher::animation::ComponentInstance & playerAnim
+) {
   ImGui::Begin("Physics");
 
   ImGui::Separator();
   ImGui::Separator();
 
   ImGui::PushItemWidth(74.0f);
-  ImGui::DragInt("max air dashes", &::maxAirDashes, 0.25f, 0, 10);
-  ImGui::DragFloat("input ground accel", &::inputGroundAccelMultiplier, 0.005f);
-  ImGui::DragFloat("input ground time", &::inputGroundAccelTime, 0.005f);
-  ImGui::DragFloat("input air accel", &::inputAirAccelMultiplier, 0.005f);
-  ImGui::DragFloat("input walk accel", &::inputWalkAccelMultiplier, 0.005f);
-  ImGui::DragFloat("input crouch accel", &::inputCrouchAccelMultiplier, 0.005f);
-  ImGui::DragFloat("gravity", &::gravity, 0.005f);
-  ImGui::DragFloat("jump vertical accel", &::jumpingVerticalAccel, 0.005f);
-  ImGui::DragFloat("jump hor accel", &::jumpingHorizontalAccel, 0.005f);
-  ImGui::DragFloat(
-    "jump hor accel limit", &::jumpingHorizontalAccelMax, 0.005f
+  ImGui::DragFloat("input ground accel", &::inputGroundAccel, 0.005f);
+  pul::imgui::ItemTooltip(
+    "base acceleration added to velocity per frame when on\n"
+    "ground (no matter if walking/crouch); texels"
   );
-  ImGui::DragFloat("jump hor theta", &::jumpingHorizontalTheta, 0.1f);
-  ImGui::DragFloat("friction", &::friction, 0.001f);
-  ImGui::DragFloat("dashMultiplier", &::dashMultiplier, 0.005f);
-  ImGui::DragFloat("dashMinimumVelocity", &dashMinimumVelocity, 0.01f);
-  ImGui::DragFloat("dashCooldown (ms)", &::dashCooldown, 0.1f);
+  ImGui::DragFloat("input ground time", &::inputGroundAccelTime, 0.005f);
+  pul::imgui::ItemTooltip(
+    "time it takes to reach max ground acceleration; milliseconds"
+  );
+  ImGui::DragFloat("input walk accel", &::inputWalkAccelMultiplier, 0.005f);
+  pul::imgui::ItemTooltip(
+    "acceleration to multiply 'input ground accel' by when walking"
+  );
+  ImGui::DragFloat("input crouch accel", &::inputCrouchAccelMultiplier, 0.005f);
+  pul::imgui::ItemTooltip(
+    "acceleration to multiply 'input ground accel' by when crouching"
+  );
   ImGui::DragFloat(
     "horizontal grounded velocity stop"
   , &::horizontalGroundedVelocityStop, 0.005f
+  );
+  pul::imgui::ItemTooltip(
+    "if the player is grounded and below this threshold, the velocity will be\n"
+    "instantly set to 0"
+  );
+  ImGui::DragFloat("input air accel", &::inputAirAccel, 0.005f);
+  pul::imgui::ItemTooltip(
+    "base acceleration added to velocity per frame when in air; texels"
+  );
+  ImGui::DragFloat("gravity", &::gravity, 0.005f);
+  pul::imgui::ItemTooltip(
+    "acceleration added downwards per frame from gravity; texels"
+  );
+  ImGui::DragFloat("jump vertical accel", &::jumpingVerticalAccel, 0.005f);
+  pul::imgui::ItemTooltip(
+    "acceleration upwards set the frame a vertical jump is made; texels"
+  );
+  ImGui::DragFloat("jump hor accel", &::jumpingHorizontalAccel, 0.005f);
+  pul::imgui::ItemTooltip(
+    "acceleration horizontally set the frame a horizontal jump is made; texels"
+  );
+  ImGui::DragFloat(
+    "jump hor accel limit", &::jumpingHorizontalAccelMax, 0.005f
+  );
+  pul::imgui::ItemTooltip(
+    "maximum horizontal velocity before the 'jump hor accel' is removed\n"
+    "thus further horizontal jumps do not add a horizontal acceleration; texels"
+  );
+  ImGui::DragFloat("jump hor theta", &::jumpingHorizontalTheta, 0.1f);
+  pul::imgui::ItemTooltip(
+    "the angle which horizontal jump is directed towards; degrees"
+  );
+  ImGui::DragFloat("friction grounded", &::frictionGrounded, 0.001f);
+  pul::imgui::ItemTooltip(
+    "amount to multiply velocity by when player is grounded"
+  );
+  ImGui::DragFloat("friction air", &::frictionAir, 0.001f);
+  pul::imgui::ItemTooltip(
+    "amount to multiply velocity by when player is in air"
+  );
+  ImGui::DragFloat("dash accel", &::dashAccel, 0.005f);
+  pul::imgui::ItemTooltip(
+    "amount to add to velocity the frame a dash is made; texels"
+  );
+  ImGui::DragFloat("dash min velocity", &dashMinimumVelocity, 0.01f);
+  pul::imgui::ItemTooltip(
+    "gives a minimal threshold for velocity on dash, thus ensuring that on\n"
+    "dash, the player is moving by at least this velocity; texels"
+  );
+  ImGui::DragInt("max air dashes", &::maxAirDashes, 0.25f, 0, 10);
+  pul::imgui::ItemTooltip("maximum amount of dashes that can occur in air");
+  ImGui::DragFloat("dash cooldown", &::dashCooldown, 0.1f);
+  pul::imgui::ItemTooltip(
+    "minimal amount of time needed to transpire between each dash; milliseconds"
   );
   ImGui::PopItemWidth();
 
   ImGui::Separator();
   ImGui::Separator();
+
+  ImGui::End();
+
+  ImGui::Begin("HUD (debug/wip)");
+
+  pul::imgui::Text(
+    "Speed (horizontal) {}", static_cast<int32_t>(player.velocity.x*90.0f)
+  );
+  pul::imgui::Text(
+    "Speed (vertical) {}", static_cast<int32_t>(player.velocity.y*90.0f)
+  );
+  pul::imgui::Text(
+    "Speed (total) {}", static_cast<int32_t>(glm::length(player.velocity)*90.0f)
+  );
+
+  static bool showVel = true;
+
+  ImGui::Checkbox("show velocity (might cause lag)", &showVel);
+
+  if (showVel) {
+    static std::vector<float> velocities;
+    if (velocities.size() == 0ul) velocities.resize(512);
+    std::rotate(velocities.begin(), velocities.begin()+1, velocities.end());
+    velocities.back() = glm::length(player.velocity)*90.0f;
+
+
+    ImGui::PlotLines("velocity tracker", velocities.data(), velocities.size());
+  }
 
   ImGui::End();
 }

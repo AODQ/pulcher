@@ -17,10 +17,19 @@
 #include <array>
 
 namespace pul::imgui {
-  template <typename... T> void Text(char const * label, T && ... fmts) {
+  template <typename ... T> void Text(char const * label, T && ... fmts) {
     ImGui::TextUnformatted(
       fmt::format(label, std::forward<T>(fmts)...).c_str()
     );
+  }
+
+  template <typename ... T>
+  void ItemTooltip(char const * label, T && ... fmts) {
+    if (ImGui::IsItemHovered()) {
+      ImGui::SetTooltip(
+        "%s", fmt::format(label, std::forward<T>(fmts)...).c_str()
+      );
+    }
   }
 
   template <typename T>
