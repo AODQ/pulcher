@@ -321,12 +321,25 @@ void ProcessRendering(
             break;
           }
 
-          if (output.find("Your branch is behind") != std::string::npos) {
-            updateReady = true;
-            updateDetails = output;
-          }
+          if (
+              output.find("Your branch is behind") != std::string::npos
+           || output.find("HEAD detached at") != std::string::npos
+          ) {
+            output += "\n\n -- revision log --\n\n";
 
-          if (output.find("HEAD detached at") != std::string::npos) {
+            auto logProc =
+              TinyProcessLib::Process(
+                "git log ..@{u}", "",
+                [&](char const * bytes, size_t n) {
+                  for (size_t i = 0ul; i < n; ++ i) { output += bytes[i]; }
+                },
+                [&](char const * bytes, size_t n) {
+                  for (size_t i = 0ul; i < n; ++ i) { output += bytes[i]; }
+                },
+                true
+              );
+            logProc.get_exit_status();
+
             updateReady = true;
             updateDetails = output;
           }
