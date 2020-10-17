@@ -110,7 +110,7 @@ namespace pulcher::animation {
       void Apply(std::string const & nLabel, bool force = false) {
         if (force || label != nLabel) {
           label = nLabel;
-          /* deltaTime = 0.0f; */
+          deltaTime = 0.0f;
           componentIt = 0ul;
           animationFinished = false;
         }
