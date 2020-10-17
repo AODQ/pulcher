@@ -398,7 +398,7 @@ void plugin::entity::UpdatePlayer(
         playerAnim
           .instance.pieceToState["legs"]
           .Apply(swap ? "dash-horizontal-0" : "dash-horizontal-1");
-      } else if (frameStartGrounded) {
+      } else if (prevGrounded) {
         // logically can only have falled down
         playerAnim.instance.pieceToState["legs"].Apply("air-idle");
       } else {
