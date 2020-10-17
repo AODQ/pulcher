@@ -4,7 +4,7 @@
 
 void pulcher::controls::UpdateControls(
   GLFWwindow * window
-, uint32_t displayWidth, uint32_t displayHeight
+, uint32_t playerCenterX, uint32_t playerCenterY
 , pulcher::controls::Controller & controller
 ) {
 
@@ -17,9 +17,10 @@ void pulcher::controls::UpdateControls(
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     current.lookDirection = {
-      (static_cast<float>(xpos) - displayWidth*0.5f) / displayWidth
-    , (static_cast<float>(ypos) - displayHeight*0.5f) / displayHeight
+      (static_cast<float>(xpos) - playerCenterX)
+    , (static_cast<float>(ypos) - playerCenterY)
     };
+    current.lookDirection = glm::normalize(current.lookDirection);
   }
 
   current.movementHorizontal =

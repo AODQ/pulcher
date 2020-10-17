@@ -206,8 +206,8 @@ void ProcessLogic(
 ) {
   pulcher::controls::UpdateControls(
     pulcher::gfx::DisplayWindow()
-  , pulcher::gfx::DisplayWidth()
-  , pulcher::gfx::DisplayHeight()
+  , scene.playerCenter.x
+  , scene.playerCenter.y
   , scene.PlayerController()
   );
   plugin.entity.EntityUpdate(plugin, scene);
@@ -412,6 +412,15 @@ void ProcessRendering(
       static bool zoomOriginSet = false;
       static bool zoomOriginSetting = false;
       static glm::vec2 zoomOrigin = {};
+
+      { // set screen center
+        ImVec2 imageCenter = ImGui::GetCursorScreenPos();
+        imageCenter.x += scene.config.framebufferWidth*0.5f;
+        imageCenter.y += scene.config.framebufferHeight*0.5f;
+        imageCenter.y -= 32.0f; // player center
+        scene.playerCenter = glm::u32vec2(imageCenter.x, imageCenter.y);
+      }
+
       ImGui::Image(
         reinterpret_cast<void *>(pulcher::gfx::SceneImageColor().id)
       , ImVec2(scene.config.framebufferWidth, scene.config.framebufferHeight)

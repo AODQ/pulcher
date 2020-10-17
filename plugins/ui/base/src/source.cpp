@@ -3,6 +3,7 @@
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
+#include <pulcher-gfx/imgui.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/log.hpp>
 
@@ -82,8 +83,9 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
     ::RenderKey(current.jump, "jump", "");
     ::RenderKey(current.dash, "dash", "");
     ::RenderKey(current.crouch, "crouch", "");
+    ::RenderKey(current.walk, "walk", "");
 
-    ImGui::NextColumn();
+    ImGui::Columns(0);
 
   ImGui::End();
 

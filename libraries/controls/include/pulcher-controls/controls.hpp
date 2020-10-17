@@ -33,7 +33,7 @@ namespace pulcher::controls {
 
   void UpdateControls(
     GLFWwindow * window
-  , uint32_t displayWidth, uint32_t displayHeight
+  , uint32_t playerCenterX, uint32_t playerCenterY
   , pulcher::controls::Controller & controller
   );
 

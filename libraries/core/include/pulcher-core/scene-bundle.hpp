@@ -20,6 +20,8 @@ namespace pulcher::core {
 
     pulcher::core::Config config = {};
 
+    glm::u32vec2 playerCenter = {};
+
     pulcher::animation::System & AnimationSystem();
     pulcher::controls::Controller & PlayerController();
     pulcher::physics::Queries & PhysicsQueries();
