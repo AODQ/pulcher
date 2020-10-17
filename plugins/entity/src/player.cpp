@@ -16,7 +16,9 @@ namespace {
   int32_t maxAirDashes = 1u;
   float inputRunAccelTarget = 3.0f;
   float inputRunAccelTime = 0.3f;
-  float inputAirAccel = 0.05f;
+  float inputAirAccelPreThresholdTime = 1.6f;
+  float inputAirAccelPostThreshold = 0.05f;
+  float inputAirAccelThreshold = 9.0f;
   float inputWalkAccelTarget = 1.0f;
   float inputWalkAccelTime = 0.5f;
   float inputCrouchAccelTarget = 1.0f;
@@ -188,7 +190,15 @@ void plugin::entity::UpdatePlayer(
         }
       }
     } else {
-      inputAccel *= ::inputAirAccel;
+      if (facingDirection*player.velocity.x <= ::inputAirAccelThreshold) {
+        inputAccel *=
+          ::CalculateAccelFromTarget(
+            ::inputAirAccelPreThresholdTime
+          , ::inputAirAccelThreshold
+          );
+      } else {
+        inputAccel *= ::inputAirAccelPostThreshold;
+      }
       frictionApplies = false;
     }
 
@@ -552,10 +562,32 @@ void plugin::entity::UiRenderPlayer(
     "if the player is grounded and below this threshold, the velocity will be\n"
     "instantly set to 0"
   );
-  ImGui::DragFloat("input air accel", &::inputAirAccel, 0.005f);
-  pul::imgui::ItemTooltip(
-    "base acceleration added to velocity per frame when in air; texels"
+
+  ImGui::DragFloat(
+    "air accel pre-threshold time", &inputAirAccelPreThresholdTime, 0.005f
   );
+  pul::imgui::ItemTooltip(
+    "amount of time it takes to reach air threshold from a base velocity of 0\n"
+    "while in mid-air; currently {:.3f} texels/frame will be added;\n"
+    "milliseconds"
+  , ::CalculateAccelFromTarget(
+      ::inputAirAccelPreThresholdTime, ::inputAirAccelThreshold
+    )
+  );
+  ImGui::DragFloat(
+    "air accel post-threshold", &inputAirAccelPostThreshold, 0.005f
+  );
+  pul::imgui::ItemTooltip(
+    "acceleration added per frame when velocity in air is post-threshold"
+  );
+  ImGui::DragFloat(
+    "air accel threshold", &inputAirAccelThreshold, 0.05f
+  );
+  pul::imgui::ItemTooltip(
+    "acceleration target while in mid-aur, once this has been reached\n"
+    "the player will use the air accel post-threshold up to 'infinity'"
+  );
+
   ImGui::DragFloat("gravity", &::gravity, 0.005f);
   pul::imgui::ItemTooltip(
     "acceleration added downwards per frame from gravity; texels"
