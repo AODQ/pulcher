@@ -117,7 +117,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
         "weapon anim ID {}", static_cast<size_t>(self.weaponAnimation)
       );
       ImGui::DragFloat2("origin", &self.origin.x, 16.125f);
-      ImGui::DragFloat2("velocity", &self.velocity.x, 0.025f);
+      ImGui::DragFloat2("velocity", &self.velocity.x, 0.25f);
       ImGui::DragFloat2("stored velocity", &self.storedVelocity.x, 0.025f);
       pul::imgui::Text("midair dashes left {}", self.midairDashesLeft);
       pul::imgui::Text("dash cooldown {:.2f}", self.dashCooldown);
