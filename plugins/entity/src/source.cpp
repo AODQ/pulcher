@@ -122,6 +122,9 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       pul::imgui::Text("midair dashes left {}", self.midairDashesLeft);
       pul::imgui::Text("dash cooldown {:.2f}", self.dashCooldown);
       ImGui::Checkbox("grounded", &self.grounded);
+      ImGui::Checkbox("wall cling left", &self.wallClingLeft);
+      ImGui::SameLine();
+      ImGui::Checkbox("wall cling right", &self.wallClingRight);
       if (ImGui::Button("Give all weapons")) {
         for (auto & weapon : self.inventory.weapons) {
           weapon.pickedUp = true;

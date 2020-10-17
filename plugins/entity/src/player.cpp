@@ -95,6 +95,7 @@ void plugin::entity::UpdatePlayer(
   , frameHorizontalJump = false
   , frameVerticalDash   = false
   , frameHorizontalDash = false
+  , frameWalljump       = false
   ;
 
   bool const prevGrounded = player.grounded;
@@ -106,6 +107,25 @@ void plugin::entity::UpdatePlayer(
     point.origin = player.origin + glm::vec2(0.0f, 1.0f);
     pulcher::physics::IntersectionResults results;
     player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
+  }
+
+  player.wallClingLeft = false;
+  player.wallClingRight = false;
+
+  if (!player.grounded) {
+    pulcher::physics::IntersectorPoint point;
+    point.origin = player.origin + glm::vec2(-3.0f, -4.0f);
+    pulcher::physics::IntersectionResults results;
+    player.wallClingLeft =
+      plugin.physics.IntersectionPoint(scene, point, results);
+  }
+
+  if (!player.grounded) {
+    pulcher::physics::IntersectorPoint point;
+    point.origin = player.origin + glm::vec2(+3.0f, -4.0f);
+    pulcher::physics::IntersectionResults results;
+    player.wallClingRight =
+      plugin.physics.IntersectionPoint(scene, point, results);
   }
 
   bool const frameStartGrounded = player.grounded;
@@ -156,6 +176,26 @@ void plugin::entity::UpdatePlayer(
       }
       player.grounded = false;
       player.hasReleasedJump = false;
+    }
+
+    // -- process walljumping
+
+    // with jump you can hold space, this is not true for walljumps tho
+    if (player.jumping && !controllerPrev.jump) {
+      if (player.wallClingLeft || player.wallClingRight) {
+        player.grounded = false;
+
+        float const totalVel = glm::length(player.velocity) + 4.0f;
+
+        float const thetaRad =
+          (player.wallClingRight ? -pul::Pi*0.25f : 0.0f) + glm::radians(-75.0f)
+        ;
+
+        player.velocity.y = glm::sin(thetaRad) * totalVel;
+        player.velocity.x = glm::cos(thetaRad) * totalVel;
+
+        frameWalljump = true;
+      }
     }
 
     // -- process horizontal movement
@@ -398,6 +438,12 @@ void plugin::entity::UpdatePlayer(
         playerAnim
           .instance.pieceToState["legs"]
           .Apply(swap ? "dash-horizontal-0" : "dash-horizontal-1");
+      } else if (frameWalljump) {
+        static bool swap = false;
+        swap ^= 1;
+        playerAnim
+          .instance.pieceToState["legs"]
+          .Apply(swap ? "walljump-0" : "walljump-1");
       } else if (prevGrounded) {
         // logically can only have falled down
         playerAnim.instance.pieceToState["legs"].Apply("air-idle");

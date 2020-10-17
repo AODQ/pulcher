@@ -17,6 +17,7 @@ namespace pulcher::core {
     bool crouching = false;
     bool hasReleasedJump = false;
     bool grounded = false;
+    bool wallClingLeft = false, wallClingRight = false;
     bool landing = false; // landing until animation timer ends
 
     // consider having previous frame info too?
