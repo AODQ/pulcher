@@ -12,9 +12,9 @@ namespace pulcher::core {
 
     float dashCooldown = 0.0f;
     int32_t midairDashesLeft = 0;
-    float runTimer = 0.0f;
 
     bool jumping = false;
+    bool crouching = false;
     bool hasReleasedJump = false;
     bool grounded = false;
     bool landing = false; // landing until animation timer ends

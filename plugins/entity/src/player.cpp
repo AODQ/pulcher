@@ -14,22 +14,46 @@
 
 namespace {
   int32_t maxAirDashes = 1u;
-  float inputGroundAccelTime = 244.0f;
-  float inputGroundAccel = 0.335f;
+  float inputRunAccelTarget = 3.0f;
+  float inputRunAccelTime = 0.3f;
   float inputAirAccel = 0.05f;
-  float inputWalkAccelMultiplier = 0.4f;
-  float inputCrouchAccelMultiplier = 0.2f;
+  float inputWalkAccelTarget = 1.0f;
+  float inputWalkAccelTime = 0.5f;
+  float inputCrouchAccelTarget = 1.0f;
+  float inputCrouchAccelTime = 1.0f;
   float gravity = 0.3f;
   float jumpingHorizontalAccel = 6.0f;
   float jumpingHorizontalAccelMax = 7.0f;
   float jumpingVerticalAccel = 9.0f;
   float jumpingHorizontalTheta = 65.0f;
-  float frictionAir = 1.0f;
   float frictionGrounded = 0.9f;
   float dashAccel = 1.0f;
   float dashMinimumVelocity = 6.0f;
   float dashCooldown = 300.0f;
   float horizontalGroundedVelocityStop = 0.5f;
+
+float CalculateAccelFromTarget(float timeMs, float targetTexels) {
+  return targetTexels / timeMs / 90.0f * 2.0f;
+}
+
+void ApplyGroundedMovement(
+  float const facingDirection, float const playerVelocityX
+, float const accelTime, float const accelTarget
+, bool & inoutFrictionApplies, float & inoutInputAccel
+) {
+  inoutInputAccel *= CalculateAccelFromTarget(accelTime, accelTarget);
+
+  // check if we have not reached the target, in which case no
+  // friction is applied. However if this frame would reach the target,
+  // limit the capacity; which is why we use `<=` check instead of `<`
+  if (facingDirection*playerVelocityX <= accelTarget) {
+    inoutFrictionApplies = false;
+    if (facingDirection*(playerVelocityX + inoutInputAccel) > accelTarget) {
+      inoutInputAccel = facingDirection*accelTarget - playerVelocityX;
+    }
+  }
+}
+
 }
 
 void plugin::entity::UpdatePlayer(
@@ -92,6 +116,9 @@ void plugin::entity::UpdatePlayer(
     if (!player.grounded)
       { player.velocity.y += ::gravity; }
 
+    // -- process crouching
+    player.crouching = controller.crouch;
+
     // -- process jumping
     player.jumping = controller.jump;
 
@@ -131,37 +158,44 @@ void plugin::entity::UpdatePlayer(
 
     // -- process horizontal movement
     float inputAccel = static_cast<float>(controller.movementHorizontal);
+    float const facingDirection = inputAccel;
 
-    if (
-        controllerPrev.movementHorizontal != controller.movementHorizontal
-     || controller.movementHorizontal == MovementControl::None
-    ) {
-      player.runTimer = 0.0f;
-    } else {
-      player.runTimer =
-        glm::min(
-          player.runTimer + pulcher::util::MsPerFrame()
-        , ::inputGroundAccelTime
-        );
-    }
+    bool frictionApplies = true;
 
     if (player.grounded) {
-      inputAccel *=
-        (player.runTimer / ::inputGroundAccelTime) * ::inputGroundAccel
-      ;
+      if (player.jumping) {
+        // this frame the player will jump
+        frictionApplies = false;
+      } else if (controller.movementHorizontal != MovementControl::None) {
+        if (controller.walk) {
+          ApplyGroundedMovement(
+            facingDirection, player.velocity.x
+          , ::inputWalkAccelTime, ::inputWalkAccelTarget
+          , frictionApplies, inputAccel
+          );
+        } else if (controller.crouch) {
+          ApplyGroundedMovement(
+            facingDirection, player.velocity.x
+          , ::inputCrouchAccelTime, ::inputCrouchAccelTarget
+          , frictionApplies, inputAccel
+          );
+        } else {
+          ApplyGroundedMovement(
+            facingDirection, player.velocity.x
+          , ::inputRunAccelTime, ::inputRunAccelTarget
+          , frictionApplies, inputAccel
+          );
+        }
+      }
     } else {
       inputAccel *= ::inputAirAccel;
+      frictionApplies = false;
     }
-
-    if (controller.walk) { inputAccel *= ::inputWalkAccelMultiplier; }
-    if (controller.crouch) { inputAccel *= ::inputCrouchAccelMultiplier; }
 
     player.velocity.x += inputAccel;
 
     // -- process friction
-    player.velocity.x *=
-      player.grounded && !player.jumping ? ::frictionGrounded : ::frictionAir
-    ;
+    if (frictionApplies) { player.velocity.x *= ::frictionGrounded; }
 
     // -- process horizontal ground stop
     if (
@@ -298,7 +332,7 @@ void plugin::entity::UpdatePlayer(
     // -- set leg animation
 
     if (player.grounded) { // grounded animations
-      if (!prevGrounded || player.landing) {
+      if (!player.crouching && (!prevGrounded || player.landing)) {
         player.landing = true;
         auto & stateInfo = playerAnim.instance.pieceToState["legs"];
         stateInfo.Apply("landing");
@@ -467,7 +501,7 @@ void plugin::entity::UpdatePlayer(
 void plugin::entity::UiRenderPlayer(
   pulcher::core::SceneBundle &
 , pulcher::core::ComponentPlayer & player
-, pulcher::animation::ComponentInstance & playerAnim
+, pulcher::animation::ComponentInstance &
 ) {
   ImGui::Begin("Physics");
 
@@ -475,23 +509,41 @@ void plugin::entity::UiRenderPlayer(
   ImGui::Separator();
 
   ImGui::PushItemWidth(74.0f);
-  ImGui::DragFloat("input ground accel", &::inputGroundAccel, 0.005f);
+  ImGui::DragFloat("run target time", &::inputRunAccelTime, 0.005f);
   pul::imgui::ItemTooltip(
-    "base acceleration added to velocity per frame when on\n"
-    "ground (no matter if walking/crouch); texels"
+    "amount of time it takes to reach target from a base velocity of 0\n"
+    "while running; currently {:.3f} texels/frame will be added; milliseconds"
+  , ::CalculateAccelFromTarget(::inputRunAccelTime, ::inputRunAccelTarget)
   );
-  ImGui::DragFloat("input ground time", &::inputGroundAccelTime, 0.005f);
+  ImGui::DragFloat("run target accel", &::inputRunAccelTarget, 0.005f);
   pul::imgui::ItemTooltip(
-    "time it takes to reach max ground acceleration; milliseconds"
+    "acceleration target while running, once this has been reached\n"
+    "the player will no longer be able to run any faster"
   );
-  ImGui::DragFloat("input walk accel", &::inputWalkAccelMultiplier, 0.005f);
+  ImGui::DragFloat("walk target time", &::inputWalkAccelTime, 0.005f);
   pul::imgui::ItemTooltip(
-    "acceleration to multiply 'input ground accel' by when walking"
+    "amount of time it takes to reach target from a base velocity of 0\n"
+    "while walking; currently {:.3f} texels/frame will be added; milliseconds"
+  , ::CalculateAccelFromTarget(::inputWalkAccelTime, ::inputWalkAccelTarget)
   );
-  ImGui::DragFloat("input crouch accel", &::inputCrouchAccelMultiplier, 0.005f);
+  ImGui::DragFloat("walk target accel", &::inputWalkAccelTarget, 0.005f);
   pul::imgui::ItemTooltip(
-    "acceleration to multiply 'input ground accel' by when crouching"
+    "acceleration target while walking, once this has been reached\n"
+    "the player will no longer be able to walk any faster"
   );
+
+  ImGui::DragFloat("crouch target time", &::inputCrouchAccelTime, 0.005f);
+  pul::imgui::ItemTooltip(
+    "amount of time it takes to reach target from a base velocity of 0\n"
+    "while crouching; currently {:.3f} texels/frame will be added; milliseconds"
+  , ::CalculateAccelFromTarget(::inputCrouchAccelTime, ::inputCrouchAccelTarget)
+  );
+  ImGui::DragFloat("crouch target accel", &::inputCrouchAccelTarget, 0.005f);
+  pul::imgui::ItemTooltip(
+    "acceleration target while crouching, once this has been reached\n"
+    "the player will no longer be able to crouch any faster"
+  );
+
   ImGui::DragFloat(
     "horizontal grounded velocity stop"
   , &::horizontalGroundedVelocityStop, 0.005f
@@ -530,10 +582,6 @@ void plugin::entity::UiRenderPlayer(
   ImGui::DragFloat("friction grounded", &::frictionGrounded, 0.001f);
   pul::imgui::ItemTooltip(
     "amount to multiply velocity by when player is grounded"
-  );
-  ImGui::DragFloat("friction air", &::frictionAir, 0.001f);
-  pul::imgui::ItemTooltip(
-    "amount to multiply velocity by when player is in air"
   );
   ImGui::DragFloat("dash accel", &::dashAccel, 0.005f);
   pul::imgui::ItemTooltip(
