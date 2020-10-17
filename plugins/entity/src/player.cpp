@@ -56,6 +56,62 @@ void ApplyGroundedMovement(
   }
 }
 
+void UpdatePlayerWeapon(
+  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
+, pulcher::core::ComponentPlayer & player
+, pulcher::animation::ComponentInstance &
+) {
+  /* auto & registry = scene.EnttRegistry(); */
+  auto & controller = scene.PlayerController().current;
+  auto & controllerPrev = scene.PlayerController().previous;
+
+  if (!controllerPrev.weaponSwitchNext && controller.weaponSwitchNext) {
+    player.inventory.ChangeWeapon(
+      static_cast<pulcher::core::WeaponType>(
+        (Idx(player.inventory.currentWeapon)+1)
+      % Idx(pulcher::core::WeaponType::Size)
+      )
+    );
+  }
+
+  if (!controllerPrev.weaponSwitchPrev && controller.weaponSwitchPrev) {
+    player.inventory.ChangeWeapon(
+      static_cast<pulcher::core::WeaponType>(
+        (
+          Idx(pulcher::core::WeaponType::Size)
+        + Idx(player.inventory.currentWeapon)-1
+        )
+      % Idx(pulcher::core::WeaponType::Size)
+      )
+    );
+  }
+
+  if (!(controller.shoot && !controllerPrev.shoot)) { return; }
+
+  auto & weapon = player.inventory.weapons[Idx(player.inventory.currentWeapon)];
+  switch (player.inventory.currentWeapon) {
+    default: break;
+    case pulcher::core::WeaponType::Volnias:
+      auto ray =
+        pulcher::physics::IntersectorRay::Construct(
+          player.origin - glm::vec2(0, 32.0f)
+        , player.origin - glm::vec2(0, 32.0f)
+        + glm::normalize(controller.lookDirection) * 512.0f
+        );
+      if (
+        pulcher::physics::IntersectionResults results;
+        plugin.physics.IntersectionRaycast(scene, ray, results)
+      ) {
+        if (glm::length(player.origin - glm::vec2(results.origin)) < 64.0f) {
+          player.velocity +=
+            glm::normalize(player.origin - glm::vec2(results.origin)) * 10.0f;
+          player.grounded = false;
+        }
+      }
+    break;
+  }
+}
+
 }
 
 void plugin::entity::UpdatePlayer(
@@ -552,6 +608,8 @@ void plugin::entity::UpdatePlayer(
 
     }
   }
+
+  ::UpdatePlayerWeapon(plugin, scene, player, playerAnim);
 }
 
 void plugin::entity::UiRenderPlayer(

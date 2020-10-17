@@ -35,6 +35,9 @@ void pulcher::controls::UpdateControls(
     + (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) * +1
     );
 
+  current.weaponSwitchNext = (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS);
+  current.weaponSwitchPrev = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
+
   current.jump = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
   current.dash = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
   current.walk = glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS;

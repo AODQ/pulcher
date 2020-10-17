@@ -25,6 +25,8 @@ namespace pulcher::controls {
 
       bool shoot = false;
 
+      bool weaponSwitchNext = false, weaponSwitchPrev = false;
+
       glm::vec2 lookDirection = { 0.0f, 0.0f };
     };
 
