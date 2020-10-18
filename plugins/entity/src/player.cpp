@@ -458,13 +458,14 @@ void plugin::entity::UpdatePlayer(
     }
   }
 
-  UpdatePlayerPhysics(plugin, scene, player, playerAnim);
+  UpdatePlayerPhysics(plugin, scene, player);
 
   const float velocityXAbs = glm::abs(player.velocity.x);
 
   { // -- apply animations
 
     // -- set leg animation
+    auto & legInfo = playerAnim.instance.pieceToState["legs"];
 
     if (player.grounded) { // grounded animations
       if (!player.crouching && (!prevGrounded || player.landing)) {
@@ -472,36 +473,33 @@ void plugin::entity::UpdatePlayer(
         auto & stateInfo = playerAnim.instance.pieceToState["legs"];
         stateInfo.Apply("landing");
         if (stateInfo.animationFinished) { player.landing = false; }
-      } else if (controller.crouch) {
-        if (velocityXAbs < 0.1f) {
-          playerAnim.instance.pieceToState["legs"].Apply("crouch-idle");
-        } else {
-          playerAnim.instance.pieceToState["legs"].Apply("crouch-walk");
-        }
       } else {
         // check walk/run animation turns before applying stand/walk/run
-        auto & legInfo = playerAnim.instance.pieceToState["legs"];
+        bool const applyTurning = false;
 
-        bool const applyTurning =
-            controller.movementHorizontal != MovementControl::None
-         && (
-             glm::sign(static_cast<float>(controller.movementHorizontal))
-          != glm::sign(player.velocity.x)
-            )
-         && player.velocity.x < 4.0f
+        bool const moving =
+          controller.movementHorizontal != MovementControl::None
         ;
+
+        bool const running = !controller.walk && !controller.crouch && moving;
+        bool const crouching = controller.crouch && moving;
+        bool const walking = controller.walk && !controller.crouch && moving;
 
         if (legInfo.label == "run-turn") {
           if (legInfo.animationFinished) { legInfo.Apply("run"); }
         } else if (legInfo.label == "walk-turn") {
           if (legInfo.animationFinished) { legInfo.Apply("walk"); }
-        } else if (velocityXAbs < 0.1f) {
-          playerAnim.instance.pieceToState["legs"].Apply("stand");
-        }
-        else if (velocityXAbs < 1.5f) {
+        } else if (walking && velocityXAbs <= inputWalkAccelTarget) {
           legInfo.Apply(applyTurning ? "walk-turn" : "walk");
-        } else {
+        } else if (crouching && velocityXAbs <= inputCrouchAccelTarget) {
+          legInfo.Apply("crouch-walk");
+        } else if (running && velocityXAbs <= inputRunAccelTarget) {
           legInfo.Apply(applyTurning ? "run-turn" : "run");
+        } else {
+          if (controller.crouch)
+            { legInfo.Apply("crouch-idle"); }
+          else
+            { legInfo.Apply("stand"); }
         }
       }
     } else { // air animations
@@ -533,6 +531,10 @@ void plugin::entity::UpdatePlayer(
         // logically can only have falled down
         playerAnim.instance.pieceToState["legs"].Apply("air-idle");
       } else {
+        if (legInfo.label == "dash-vertical" && legInfo.animationFinished) {
+          // switch to air idle
+          playerAnim.instance.pieceToState["legs"].Apply("air-idle");
+        }
       }
     }
 
@@ -542,17 +544,16 @@ void plugin::entity::UpdatePlayer(
         playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
         playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
       }
-      else if (velocityXAbs < 0.1f) {
-        playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
-        playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
-      }
-      else if (velocityXAbs < 1.5f) {
+      else if (legInfo.label == "walk" || legInfo.label == "walk-turn") {
         playerAnim.instance.pieceToState["arm-back"].Apply("unequip-walk");
         playerAnim.instance.pieceToState["arm-front"].Apply("unequip-walk");
       }
-      else {
+      else if (legInfo.label == "run" || legInfo.label == "run-turn") {
         playerAnim.instance.pieceToState["arm-back"].Apply("unequip-run");
         playerAnim.instance.pieceToState["arm-front"].Apply("unequip-run");
+      } else {
+        playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
+        playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
       }
     } else {
       playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
