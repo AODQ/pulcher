@@ -1,0 +1,30 @@
+We'll decide on speed, dmg and other factors on these weapons somewhere on the way, but here's basic description on what they're meant to do.
+
+Bad Fetus: Primary is a hitscan beam that pulls players that hit towards you, seconadry is a slow ricocheting projectile that implodes after a while.
+You can use primary beam to pick up a ball and throw it away further. Secondary projectile is affected by gravity, but not after it's thrown with primary.
+
+Doppler Beam: Primary, a rapid fire projectile. Secondary, a shotgun pattern with slow firerate. Projectiles in both firemodes are affected by gravity.
+
+Grannibal: Primary, a rocket launcher projectile. Secondary, a bouncing grenade projectile. Explodes after 500ms of first bounce. Projectiles in both firemodes are affected by gravity.
+
+Manshredder: Primary, a very short range hitscan. Secondary, a fast projectile that you can use for "rocket jumps", low dmg. Secondary projectile isn't affected by gravity.
+
+Pericaliya: Primary, a self guided rocket projectile. Secondary, this might need an image example to go with. Basically I want there to be three projectiles that fly on same line
+in relation with each other. If you keep holding the fire mode after firing, they will expand until you let go of the firemode, which is when the projectiles will pass through each 
+in a single point. This might be a completely stupid idea that might not work as nicely as I'm imagining it. Projectiles in this weapon aren't affected by gravity. 
+
+PMF: A huge projectile bomb that can be activated and fired separately. Primary firemode launches the projectile and secondary activates the bomb. Projectile is slow and very lightly
+affected by gravity. Bounces off of surfaces, until it explodes 5 seconds after activating. An unactivated projectile will self activate 10 seconds after you launched it.
+
+Punching/Unarmed: Primary, quick bunches. If you hold primary fire mode, you can charge a stronger punch. Secondary firemode is for guarding, which gives you 5-10% discount from all damage.
+5% if it hits you anywhere on your body, 10% if you block it directly with your arms. 
+
+Völnias: Primary is a chaingun that has a brief delay before projectiles start flying. Secondary can "load up" 5 projectiles for 5 times and then you can launch 25 projectiles in total
+like a shotgun. Projectiles in this weapon aren't affected by gravity and they're very quick.
+
+Wallbanger: Primary, medium fire rate projectiles that bounce off of walls. (can bounce only once, second hit makes the projectile explode). Secondary, a hitscan that passes through players
+and walls. It will create an explosion on the point of exit on the other side of a first wall it passes through. It doesn't go through the next wall and going through a player
+doesn't cause an explosion.
+
+Zeus Stinger: Primary is a railgun hitscan, doesn't go through players. Secondary is a small projectile that can bounce off of walls. Player can shoot the ball with primary fire mode, which
+causes the beam to bend 90 degrees depending on which side of the ball the player hits.
