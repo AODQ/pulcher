@@ -26,22 +26,16 @@ pulcher::physics::IntersectorRay pulcher::physics::IntersectorRay::Construct(
   return ray;
 }
 
-size_t pulcher::physics::Queries::AddQuery(
+void pulcher::physics::DebugQueries::Add(
   pulcher::physics::IntersectorPoint const & intersector
+, pulcher::physics::IntersectionResults results
 ) {
-  intersectorPoints.emplace_back(intersector);
-  return
-      (intersectorPoints.size()-1)
-    | Idx(pulcher::physics::IntersectorType::Point)
-  ;
+  intersectorPoints.emplace_back(intersector, results);
 }
 
-size_t pulcher::physics::Queries::AddQuery(
+void pulcher::physics::DebugQueries::Add(
   pulcher::physics::IntersectorRay const & intersector
+, pulcher::physics::IntersectionResults results
 ) {
-  intersectorRays.emplace_back(intersector);
-  return
-      (intersectorRays.size()-1)
-    | Idx(pulcher::physics::IntersectorType::Ray)
-  ;
+  intersectorRays.emplace_back(intersector, results);
 }

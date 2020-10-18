@@ -6,6 +6,7 @@
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
+#include <pulcher-physics/intersections.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/enum.hpp>
@@ -204,6 +205,12 @@ void ShutdownPluginInfo(
 void ProcessLogic(
   pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
 ) {
+
+  // clear debug physics queries
+  auto & queries = scene.PhysicsDebugQueries();
+  queries.intersectorRays.clear();
+  queries.intersectorPoints.clear();
+
   pulcher::controls::UpdateControls(
     pulcher::gfx::DisplayWindow()
   , scene.playerCenter.x
@@ -237,6 +244,7 @@ void ProcessRendering(
 
     plugin.map.Render(scene);
     plugin.animation.RenderAnimations(plugin, scene);
+    plugin.physics.RenderDebug(scene);
 
     sg_end_pass();
   }

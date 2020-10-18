@@ -145,12 +145,13 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
     } break;
     case pulcher::plugin::Type::Physics: {
       auto & unit = plugin.physics;
-      ctx.LoadFunction(unit.ProcessTileset,   "Physics_ProcessTileset");
-      ctx.LoadFunction(unit.ClearMapGeometry, "Physics_ClearMapGeometry");
-      ctx.LoadFunction(unit.LoadMapGeometry,  "Physics_LoadMapGeometry");
+      ctx.LoadFunction(unit.ProcessTileset,      "Physics_ProcessTileset");
+      ctx.LoadFunction(unit.ClearMapGeometry,    "Physics_ClearMapGeometry");
+      ctx.LoadFunction(unit.LoadMapGeometry,     "Physics_LoadMapGeometry");
       ctx.LoadFunction(unit.IntersectionRaycast, "Physics_IntersectionRaycast");
-      ctx.LoadFunction(unit.IntersectionPoint, "Physics_IntersectionPoint");
-      ctx.LoadFunction(unit.UiRender,         "Physics_UiRender");
+      ctx.LoadFunction(unit.IntersectionPoint,   "Physics_IntersectionPoint");
+      ctx.LoadFunction(unit.RenderDebug,         "Physics_RenderDebug");
+      ctx.LoadFunction(unit.UiRender,            "Physics_UiRender");
     } break;
   }
 }

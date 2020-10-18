@@ -38,15 +38,31 @@ namespace pulcher::physics {
     size_t imageTileIdx = -1ul, tilesetIdx = -1ul;
   };
 
-  struct Queries {
-    size_t AddQuery(IntersectorPoint const & intersector);
-    size_t AddQuery(IntersectorRay const & intersector);
+  // queries for debug purposes
+  struct DebugQueries {
+    void Add(
+      IntersectorPoint const & intersector
+    , pulcher::physics::IntersectionResults results
+    );
 
-    std::vector<pulcher::physics::IntersectorPoint> intersectorPoints;
-    std::vector<pulcher::physics::IntersectorRay>   intersectorRays;
+    void Add(
+      IntersectorRay const & intersector
+    , pulcher::physics::IntersectionResults results
+    );
 
-    std::vector<pulcher::physics::IntersectionResults> intersectorResultsPoints;
-    std::vector<pulcher::physics::IntersectionResults> intersectorResultsRays;
+    std::vector<
+      std::pair<
+        pulcher::physics::IntersectorPoint
+      , pulcher::physics::IntersectionResults
+      >
+     > intersectorPoints;
+
+    std::vector<
+      std::pair<
+        pulcher::physics::IntersectorRay
+      , pulcher::physics::IntersectionResults
+      >
+    > intersectorRays;
   };
 
 }

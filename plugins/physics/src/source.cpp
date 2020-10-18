@@ -16,6 +16,8 @@
 
 namespace {
 
+bool showPhysicsQueries = false;
+
 struct DebugRenderInfo {
   sg_buffer bufferOrigin;
   sg_buffer bufferCollision;
@@ -389,7 +391,7 @@ PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
 }
 
 PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
-  pulcher::core::SceneBundle const &
+  pulcher::core::SceneBundle & scene
 , pulcher::physics::IntersectorRay const & ray
 , pulcher::physics::IntersectionResults & intersectionResults
 ) {
@@ -435,15 +437,20 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
     }
   );
 
+  auto & queries = scene.PhysicsDebugQueries();
+  queries.Add(ray, intersectionResults);
+
   return intersectionResults.collision;
 }
 
 PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
-  pulcher::core::SceneBundle const &
+  pulcher::core::SceneBundle & scene
 , pulcher::physics::IntersectorPoint const & point
 , pulcher::physics::IntersectionResults & intersectionResults
 ) {
   intersectionResults = {};
+
+  auto & queries = scene.PhysicsDebugQueries();
 
   // -- get physics tile from acceleration structure
   size_t tileIdx;
@@ -454,6 +461,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
     , ::tilemapLayer.width, ::tilemapLayer.tileInfo.size()
     )
   ) {
+    queries.Add(point, {});
     return false;
   }
 
@@ -461,6 +469,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
   auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
 
   if (!tileInfo.Valid()) {
+    queries.Add(point, {});
     return false;
   }
 
@@ -474,31 +483,27 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
         true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
       };
 
+    queries.Add(point, intersectionResults);
     return true;
   }
 
+  queries.Add(point, {});
   return false;
 }
 
-PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle & scene) {
-  ImGui::Begin("Physics");
+PUL_PLUGIN_DECL void Physics_RenderDebug(pulcher::core::SceneBundle & scene) {
+  auto & queries = scene.PhysicsDebugQueries();
 
-  pul::imgui::Text("tilemap width {}", ::tilemapLayer.width);
-  pul::imgui::Text("tile info size {}", ::tilemapLayer.tileInfo.size());
-
-  auto & queries = scene.PhysicsQueries();
-
-  static bool showPhysicsQueries = false;
-  ImGui::Checkbox("show physics queries", &showPhysicsQueries);
-  if (showPhysicsQueries && queries.intersectorResultsPoints.size() > 0ul) {
+  if (::showPhysicsQueries && queries.intersectorPoints.size() > 0ul) {
     { // -- update buffers
       std::vector<glm::vec2> points;
       std::vector<float> collisions;
-      points.reserve(queries.intersectorResultsPoints.size());
+      points.reserve(queries.intersectorPoints.size());
       // update queries
-      for (auto & query : queries.intersectorResultsPoints) {
-        points.emplace_back(query.origin);
-        collisions.emplace_back(static_cast<float>(query.collision));
+      for (auto & query : queries.intersectorPoints) {
+        points.emplace_back(std::get<0>(query).origin);
+        collisions
+          .emplace_back(static_cast<float>(std::get<1>(query).collision));
       }
 
       sg_update_buffer(
@@ -537,19 +542,23 @@ PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle & scene) {
     );
 
     glPointSize(2);
-    sg_draw(0, queries.intersectorResultsPoints.size(), 1);
+    sg_draw(0, queries.intersectorPoints.size(), 1);
   }
 
-  if (showPhysicsQueries && queries.intersectorResultsRays.size() > 0ul) {
+  if (::showPhysicsQueries && queries.intersectorRays.size() > 0ul) {
     { // -- update buffers
       std::vector<glm::vec2> lines;
       std::vector<float> collisions;
-      lines.reserve(queries.intersectorResultsRays.size()*2);
+      lines.reserve(queries.intersectorRays.size()*2);
       // update queries
-      for (auto & query : queries.intersectorResultsRays) {
-        lines.emplace_back(query.origin);
-        collisions.emplace_back(static_cast<float>(query.collision));
-        collisions.emplace_back(static_cast<float>(query.collision));
+      for (auto & query : queries.intersectorRays) {
+        auto & queryRay = std::get<0>(query);
+        auto & queryResult = std::get<1>(query);
+        bool collision = queryResult.collision;
+        lines.emplace_back(queryRay.beginOrigin);
+        lines.emplace_back(collision ? queryResult.origin : queryRay.endOrigin);
+        collisions.emplace_back(static_cast<float>(collision));
+        collisions.emplace_back(static_cast<float>(collision));
       }
 
       sg_update_buffer(
@@ -589,8 +598,17 @@ PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle & scene) {
 
     glLineWidth(1.0f);
 
-    sg_draw(0, queries.intersectorResultsRays.size()*2, 1);
+    sg_draw(0, queries.intersectorRays.size()*2, 1);
   }
+}
+
+PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle & scene) {
+  ImGui::Begin("Physics");
+
+  pul::imgui::Text("tilemap width {}", ::tilemapLayer.width);
+  pul::imgui::Text("tile info size {}", ::tilemapLayer.tileInfo.size());
+
+  ImGui::Checkbox("show physics queries", &::showPhysicsQueries);
 
   ImGui::End();
 }

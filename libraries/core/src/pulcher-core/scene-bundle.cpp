@@ -9,7 +9,7 @@
 struct pulcher::core::SceneBundle::Impl {
   pulcher::animation::System animationSystem;
   pulcher::controls::Controller playerController;
-  pulcher::physics::Queries physicsQueries;
+  pulcher::physics::DebugQueries physicsQueries;
 
   entt::registry enttRegistry;
 };
@@ -25,7 +25,8 @@ pulcher::controls::Controller & pulcher::core::SceneBundle::PlayerController() {
   return impl->playerController;
 }
 
-pulcher::physics::Queries & pulcher::core::SceneBundle::PhysicsQueries() {
+pulcher::physics::DebugQueries &
+pulcher::core::SceneBundle::PhysicsDebugQueries() {
   return impl->physicsQueries;
 }
 

@@ -56,6 +56,108 @@ void ApplyGroundedMovement(
   }
 }
 
+void UpdatePlayerPhysics(
+  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
+, pulcher::core::ComponentPlayer & player
+, pulcher::animation::ComponentInstance & playerAnim
+) {
+  glm::vec2 groundedFloorOrigin = player.origin - glm::vec2(0, 2);
+
+  auto & debugQueries = scene.PhysicsDebugQueries();
+
+  auto ray =
+    pulcher::physics::IntersectorRay::Construct(
+      groundedFloorOrigin
+    , groundedFloorOrigin + glm::vec2(player.velocity)
+    );
+  if (
+    pulcher::physics::IntersectionResults results;
+    !plugin.physics.IntersectionRaycast(scene, ray, results)
+  ) {
+    player.origin += player.velocity;
+  } else {
+
+    if (player.grounded)
+    { // check if we can step up
+      auto stepRay =
+        pulcher::physics::IntersectorRay::Construct(
+          groundedFloorOrigin
+        , groundedFloorOrigin + glm::vec2(glm::sign(player.velocity.x)*4.0f, -16.0f)
+        );
+      if (
+        pulcher::physics::IntersectionResults stepResults;
+        !plugin.physics.IntersectionRaycast(scene, stepRay, stepResults)
+      ) {
+        // check if collision below
+        auto stepDownRay =
+          pulcher::physics::IntersectorRay::Construct(
+            groundedFloorOrigin + glm::vec2(glm::sign(player.velocity.x)*4.0f, -16.0f)
+          , groundedFloorOrigin + glm::vec2(glm::sign(player.velocity.x)*4.0f, 1.0f)
+          );
+        if (
+          pulcher::physics::IntersectionResults stepDownResults;
+          !plugin.physics.IntersectionRaycast(scene, stepDownRay, stepDownResults)
+        ) {
+          player.origin = stepDownResults.origin;
+        }
+      }
+    }
+
+    // first 'clamp' the player to some bounds
+    if (ray.beginOrigin.x < ray.endOrigin.x) {
+      player.origin.x = results.origin.x - 1.0f;
+    } else if (ray.beginOrigin.x > ray.endOrigin.x) {
+      player.origin.x = results.origin.x + 1.0f;
+    }
+
+    if (ray.beginOrigin.y < ray.endOrigin.y) {
+      player.origin.y = results.origin.y - 1.0f;
+    } else if (ray.beginOrigin.y > ray.endOrigin.y) {
+      // the groundedFloorOrigin is -(0, 2), so we need to account for that
+      player.origin.y = results.origin.y + 3.0f;
+    }
+
+    // then check how the velocity should be redirected
+    auto rayY =
+      pulcher::physics::IntersectorRay::Construct(
+        player.origin + glm::vec2(0.0f, +1.0)
+      , player.origin + glm::vec2(0.0f, -3.0f)
+      );
+    if (
+      pulcher::physics::IntersectionResults resultsY;
+      plugin.physics.IntersectionRaycast(scene, rayY, resultsY)
+    ) {
+      // if there is an intersection check
+      if (player.origin.y < resultsY.origin.y) {
+        player.velocity.y = glm::min(0.0f, player.velocity.y);
+      } else if (player.origin.y > resultsY.origin.y) {
+        player.velocity.y = glm::max(0.0f, player.velocity.y);
+      } else {
+        player.velocity.y = 0.0f;
+      }
+    }
+
+    auto rayX =
+      pulcher::physics::IntersectorRay::Construct(
+        player.origin + glm::vec2(+2.0f, 0.0)
+      , player.origin + glm::vec2(-2.0f, 0.0f)
+      );
+    if (
+      pulcher::physics::IntersectionResults resultsX;
+      plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
+    ) {
+      // if there is an intersection check
+      if (player.origin.x < resultsX.origin.x) {
+        player.velocity.x = glm::min(0.0f, player.velocity.x);
+      } else if (player.origin.x > resultsX.origin.x) {
+        player.velocity.x = glm::max(0.0f, player.velocity.x);
+      } else {
+        player.velocity.x = 0.0f;
+      }
+    }
+  }
+}
+
 void UpdatePlayerWeapon(
   pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
 , pulcher::core::ComponentPlayer & player
@@ -91,24 +193,24 @@ void UpdatePlayerWeapon(
   auto & weapon = player.inventory.weapons[Idx(player.inventory.currentWeapon)];
   switch (player.inventory.currentWeapon) {
     default: break;
-    case pulcher::core::WeaponType::Volnias:
+    case pulcher::core::WeaponType::Volnias: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
       auto ray =
         pulcher::physics::IntersectorRay::Construct(
-          player.origin - glm::vec2(0, 32.0f)
-        , player.origin - glm::vec2(0, 32.0f)
-        + glm::normalize(controller.lookDirection) * 512.0f
+          playerOrigin
+        , playerOrigin + glm::normalize(controller.lookDirection) * 512.0f
         );
       if (
         pulcher::physics::IntersectionResults results;
         plugin.physics.IntersectionRaycast(scene, ray, results)
       ) {
-        if (glm::length(player.origin - glm::vec2(results.origin)) < 64.0f) {
+        if (glm::length(playerOrigin - glm::vec2(results.origin)) < 64.0f) {
           player.velocity +=
-            glm::normalize(player.origin - glm::vec2(results.origin)) * 10.0f;
+            glm::normalize(playerOrigin - glm::vec2(results.origin)) * 10.0f;
           player.grounded = false;
         }
       }
-    break;
+    } break;
   }
 }
 
@@ -359,77 +461,7 @@ void plugin::entity::UpdatePlayer(
     }
   }
 
-  { // -- apply physics
-    glm::vec2 groundedFloorOrigin = player.origin - glm::vec2(0, 2);
-
-    { // free movement check
-      auto ray =
-        pulcher::physics::IntersectorRay::Construct(
-          groundedFloorOrigin
-        , groundedFloorOrigin + glm::vec2(player.velocity)
-        );
-      if (
-        pulcher::physics::IntersectionResults results;
-        !plugin.physics.IntersectionRaycast(scene, ray, results)
-      ) {
-        player.origin += player.velocity;
-      } else {
-        // first 'clamp' the player to some bounds
-        if (ray.beginOrigin.x < ray.endOrigin.x) {
-          player.origin.x = results.origin.x - 1.0f;
-        } else if (ray.beginOrigin.x > ray.endOrigin.x) {
-          player.origin.x = results.origin.x + 1.0f;
-        }
-
-        if (ray.beginOrigin.y < ray.endOrigin.y) {
-          player.origin.y = results.origin.y - 1.0f;
-        } else if (ray.beginOrigin.y > ray.endOrigin.y) {
-          // the groundedFloorOrigin is -(0, 2), so we need to account for that
-          player.origin.y = results.origin.y + 3.0f;
-        }
-
-        // then check how the velocity should be redirected
-        auto rayY =
-          pulcher::physics::IntersectorRay::Construct(
-            player.origin + glm::vec2(0.0f, +1.0)
-          , player.origin + glm::vec2(0.0f, -3.0f)
-          );
-        if (
-          pulcher::physics::IntersectionResults resultsY;
-          plugin.physics.IntersectionRaycast(scene, rayY, resultsY)
-        ) {
-          // if there is an intersection check
-          if (player.origin.y < resultsY.origin.y) {
-            player.velocity.y = glm::min(0.0f, player.velocity.y);
-          } else if (player.origin.y > resultsY.origin.y) {
-            player.velocity.y = glm::max(0.0f, player.velocity.y);
-          } else {
-            player.velocity.y = 0.0f;
-          }
-        }
-
-        auto rayX =
-          pulcher::physics::IntersectorRay::Construct(
-            player.origin + glm::vec2(+2.0f, 0.0)
-          , player.origin + glm::vec2(-2.0f, 0.0f)
-          );
-        if (
-          pulcher::physics::IntersectionResults resultsX;
-          plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
-        ) {
-          // if there is an intersection check
-          if (player.origin.x < resultsX.origin.x) {
-            player.velocity.x = glm::min(0.0f, player.velocity.x);
-          } else if (player.origin.x > resultsX.origin.x) {
-            player.velocity.x = glm::max(0.0f, player.velocity.x);
-          } else {
-            player.velocity.x = 0.0f;
-          }
-        }
-      }
-    }
-
-  }
+  UpdatePlayerPhysics(plugin, scene, player, playerAnim);
 
   const float velocityXAbs = glm::abs(player.velocity.x);
 

@@ -10,7 +10,7 @@ namespace entt { template <typename> class basic_registry; }
 namespace entt { using registry = basic_registry<entity>; }
 namespace pulcher::animation { struct System; }
 namespace pulcher::controls { struct Controller; }
-namespace pulcher::physics { struct Queries; }
+namespace pulcher::physics { struct DebugQueries; }
 
 namespace pulcher::core {
   struct SceneBundle {
@@ -24,7 +24,7 @@ namespace pulcher::core {
 
     pulcher::animation::System & AnimationSystem();
     pulcher::controls::Controller & PlayerController();
-    pulcher::physics::Queries & PhysicsQueries();
+    pulcher::physics::DebugQueries & PhysicsDebugQueries();
 
     entt::registry & EnttRegistry();
 
