@@ -59,11 +59,8 @@ void ApplyGroundedMovement(
 void UpdatePlayerPhysics(
   pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
 , pulcher::core::ComponentPlayer & player
-, pulcher::animation::ComponentInstance & playerAnim
 ) {
   glm::vec2 groundedFloorOrigin = player.origin - glm::vec2(0, 2);
-
-  auto & debugQueries = scene.PhysicsDebugQueries();
 
   auto ray =
     pulcher::physics::IntersectorRay::Construct(
