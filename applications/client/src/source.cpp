@@ -281,13 +281,15 @@ void ProcessRendering(
     ImGui::PopStyleVar(3);
 
     ImGui::Begin("Diagnostics");
-    ImGui::Text("WARNING: RELOADING plugins will not save animation yet!!");
-    ImGui::Text("progress WILL be lost");
     if (ImGui::Button("Reload plugins")) {
       ::ShutdownPluginInfo(plugin, scene);
       pulcher::plugin::UpdatePlugins(plugin);
       ::LoadPluginInfo(plugin, scene);
     }
+    pul::imgui::ItemTooltip(
+      "WARNING: RELOADING plugins will not save anything!\n"
+      "progress (like editing animations) will be lost"
+    );
     ImGui::SliderFloat(
       "ms / frame", &pulcher::util::MsPerFrame(), 1000.0f/90.0f, 1000.0f/0.9f
     , "%.3f", 4.0f
