@@ -15,6 +15,8 @@
 namespace {
   int32_t maxAirDashes = 1u;
   float inputRunAccelTarget = 3.0f;
+  float slopeStepUpHeight   = 4.0f;
+  float slopeStepDownHeight = 4.0f;
   float inputRunAccelTime = 0.3f;
   float inputAirAccelPreThresholdTime = 1.6f;
   float inputAirAccelPostThreshold = 0.05f;
@@ -50,7 +52,8 @@ void ApplyGroundedMovement(
   // limit the capacity; which is why we use `<=` check instead of `<`
   if (
       glm::abs(playerVelocityX) <= accelTarget
-   && playerVelocityX == 0.0f ? true : glm::sign(playerVelocityX) == glm::sign(facingDirection)
+   && playerVelocityX == 0.0f
+        ? true : glm::sign(playerVelocityX) == glm::sign(facingDirection)
   ) {
     inoutFrictionApplies = false;
     if (facingDirection*(playerVelocityX + inoutInputAccel) > accelTarget) {
@@ -74,31 +77,65 @@ void UpdatePlayerPhysics(
     pulcher::physics::IntersectionResults results;
     !plugin.physics.IntersectionRaycast(scene, ray, results)
   ) {
-    player.origin += player.velocity;
-  } else {
+    // check if we can step down a slope
+    if (player.grounded && player.velocity.x != 0.0f) {
+      glm::vec2 offset = groundedFloorOrigin + player.velocity.x;
 
-    if (player.grounded)
-    { // check if we can step up
       auto stepRay =
         pulcher::physics::IntersectorRay::Construct(
-          groundedFloorOrigin
-        , groundedFloorOrigin + glm::vec2(glm::sign(player.velocity.x)*4.0f, -16.0f)
+          glm::round(offset + glm::vec2(0.0f, 0.0f))
+        , glm::round(offset + glm::vec2(0.0f, ::slopeStepDownHeight))
         );
       if (
         pulcher::physics::IntersectionResults stepResults;
-        !plugin.physics.IntersectionRaycast(scene, stepRay, stepResults)
+          plugin.physics.IntersectionRaycast(scene, stepRay, stepResults)
+       &&
+          static_cast<int32_t>(stepResults.origin.y)
+       != static_cast<int32_t>(glm::round(offset.y))
       ) {
-        // check if collision below
-        auto stepDownRay =
-          pulcher::physics::IntersectorRay::Construct(
-            groundedFloorOrigin + glm::vec2(glm::sign(player.velocity.x)*4.0f, -16.0f)
-          , groundedFloorOrigin + glm::vec2(glm::sign(player.velocity.x)*4.0f, 1.0f)
-          );
+        player.origin.x += player.velocity.x;
+        player.origin.y = stepResults.origin.y;
+        player.grounded = true;
+        return;
+      }
+    }
+
+    player.origin += player.velocity;
+
+  } else {
+
+    // in case we want to store our velocity to attempt slope climbing
+    bool attemptStoreSlopeVelocity = false;
+
+    // check if we can step up to the specified slope
+    if (player.grounded && player.velocity.x != 0.0f) {
+      glm::vec2 offset = ray.endOrigin;
+
+      spdlog::info("offset {} | origin {}", offset, groundedFloorOrigin);
+
+      auto stepRay =
+        pulcher::physics::IntersectorRay::Construct(
+          glm::round(offset + glm::vec2(0.0f, -slopeStepUpHeight))
+        , glm::round(offset)
+        );
+
+      if (
+        pulcher::physics::IntersectionResults stepResults;
+        plugin.physics.IntersectionRaycast(scene, stepRay, stepResults)
+      ) {
+        // it needs to intersect at a pixel that's not the 'ceil' of the step-up
+        // height, as otherwise it is not a floor
         if (
-          pulcher::physics::IntersectionResults stepDownResults;
-          !plugin.physics.IntersectionRaycast(scene, stepDownRay, stepDownResults)
+            static_cast<int32_t>(glm::round(stepResults.origin.y))
+         != static_cast<int32_t>(glm::round(offset.y - slopeStepUpHeight))
         ) {
-          player.origin = stepDownResults.origin;
+          player.origin.y = stepResults.origin.y + 1.0f;
+
+          // store velocity
+          player.origin.x += player.velocity.x;
+
+          player.grounded = true;
+          return;
         }
       }
     }
@@ -144,7 +181,8 @@ void UpdatePlayerPhysics(
       );
     if (
       pulcher::physics::IntersectionResults resultsX;
-      plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
+        !attemptStoreSlopeVelocity
+      && plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
     ) {
       // if there is an intersection check
       if (player.origin.x < resultsX.origin.x) {
@@ -191,6 +229,7 @@ void UpdatePlayerWeapon(
   if (!(controller.shoot && !controllerPrev.shoot)) { return; }
 
   auto & weapon = player.inventory.weapons[Idx(player.inventory.currentWeapon)];
+  (void)weapon;
   switch (player.inventory.currentWeapon) {
     default: break;
     case pulcher::core::WeaponType::Volnias: {
@@ -767,6 +806,19 @@ void plugin::entity::UiRenderPlayer(
   pul::imgui::ItemTooltip(
     "minimal amount of time needed to transpire between each dash; milliseconds"
   );
+
+  ImGui::DragFloat("slope step-up height", &slopeStepUpHeight, 0.005f);
+  pul::imgui::ItemTooltip(
+    "the amount of texels to check if player can climb up a slope just by\n"
+    "traversing it; texels"
+  );
+
+  ImGui::DragFloat("slope step-down height", &slopeStepDownHeight, 0.005f);
+  pul::imgui::ItemTooltip(
+    "the amount of texels to check if player can climb down a slope just by\n"
+    "traversing it; texels"
+  );
+
   ImGui::PopItemWidth();
 
   ImGui::Separator();
