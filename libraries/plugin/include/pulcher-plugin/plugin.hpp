@@ -36,7 +36,8 @@ namespace pulcher::plugin {
       pulcher::animation::Instance &
     ) = nullptr;
     void (*ConstructInstance)(
-      pulcher::animation::Instance &
+      pulcher::core::SceneBundle & scene
+    , pulcher::animation::Instance &
     , pulcher::animation::System &
     , char const * label
     ) = nullptr;

@@ -132,7 +132,8 @@ size_t ComputeVertexBufferSize(
 }
 
 void ComputeVertices(
-  pulcher::animation::Instance & instance
+  pulcher::core::SceneBundle & scene
+, pulcher::animation::Instance & instance
 , pulcher::animation::Animator::SkeletalPiece const & skeletal
 , size_t & indexOffset
 , bool & skeletalFlip
@@ -184,10 +185,9 @@ void ComputeVertices(
 
   // update delta time and if animation update is necessary, apply uv coord
   // updates
-  // TODO this should be done outside of rendering
   bool hasUpdate = forceUpdate;
   if (state.msDeltaTime > 0.0f && !stateInfo.animationFinished) {
-    stateInfo.deltaTime += pulcher::util::MsPerFrame();
+    stateInfo.deltaTime += pulcher::util::MsPerFrame;
     if (stateInfo.deltaTime > state.msDeltaTime) {
       if (state.loops) {
         stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
@@ -239,7 +239,8 @@ void ComputeVertices(
 }
 
 void ComputeVertices(
-  pulcher::animation::Instance & instance
+  pulcher::core::SceneBundle & scene
+, pulcher::animation::Instance & instance
 , std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
 , size_t & indexOffset
 , bool const skeletalFlip
@@ -252,25 +253,27 @@ void ComputeVertices(
     float newSkeletalRotation = skeletalRotation;
     bool newForceUpdate = forceUpdate;
     ComputeVertices(
-      instance, skeletal, indexOffset
+      scene, instance, skeletal, indexOffset
     , newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
 
     // continue to children
     ComputeVertices(
-      instance, skeletal.children, indexOffset
+      scene, instance, skeletal.children, indexOffset
     , newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
   }
 }
 
 void ComputeVertices(
-  pulcher::animation::Instance & instance
+  pulcher::core::SceneBundle & scene
+, pulcher::animation::Instance & instance
 , bool forceUpdate = false
 ) {
   size_t indexOffset = 0ul;
   ComputeVertices(
-    instance, instance.animator->skeleton, indexOffset, false, 0.0f, forceUpdate
+    scene, instance, instance.animator->skeleton
+  , indexOffset, false, 0.0f, forceUpdate
   );
 }
 
@@ -412,7 +415,8 @@ PUL_PLUGIN_DECL void Animation_DestroyInstance(
 }
 
 PUL_PLUGIN_DECL void Animation_ConstructInstance(
-  pulcher::animation::Instance & animationInstance
+  pulcher::core::SceneBundle & scene
+, pulcher::animation::Instance & animationInstance
 , pulcher::animation::System & animationSystem
 , char const * label
 ) {
@@ -449,7 +453,7 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
     animationInstance.uvCoordBufferData.resize(vertexBufferSize);
     animationInstance.originBufferData.resize(vertexBufferSize);
 
-    ::ComputeVertices(animationInstance, true);
+    ::ComputeVertices(scene, animationInstance, true);
 
     { // -- origin
       sg_buffer_desc desc = {};
@@ -494,7 +498,7 @@ void ReconstructInstances(pulcher::core::SceneBundle & scene) {
     auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
     auto label = self.instance.animator->label;
     Animation_DestroyInstance(self.instance);
-    Animation_ConstructInstance(self.instance, system, label.c_str());
+    Animation_ConstructInstance(scene, self.instance, system, label.c_str());
   }
 }
 
@@ -1191,7 +1195,7 @@ PUL_PLUGIN_DECL void Animation_UpdateFrame(
       );
     }
 
-    ::ComputeVertices(self.instance, true);
+    ::ComputeVertices(scene, self.instance, true);
   }
 }
 
@@ -1364,7 +1368,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
       );
 
       if (animPlaying) {
-        animMsTimer += pulcher::util::MsPerFrame() * scene.numCpuFrames;
+        animMsTimer += pulcher::util::MsPerFrame * scene.numCpuFrames;
 
         animMsTimer =
             animLoop

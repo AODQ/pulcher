@@ -303,7 +303,8 @@ void ProcessRendering(
       "progress (like editing animations) will be lost"
     );
     ImGui::SliderFloat(
-      "ms / frame", &pulcher::util::MsPerFrame(), 1000.0f/90.0f, 1000.0f/0.9f
+      "ms / frame", &scene.calculatedMsPerFrame
+    , 1000.0f/90.0f, 1000.0f/0.9f
     , "%.3f", 4.0f
     );
     ImGui::ColorEdit3("screen clear", &screenClearColor.x);
@@ -610,9 +611,9 @@ int main(int argc, char const ** argv) {
     // -- logic, 90 Hz
     msToCalculate += deltaMs;
     size_t calculatedFrames = 0ul;
-    while (msToCalculate >= pulcher::util::MsPerFrame()) {
+    while (msToCalculate >= sceneBundle.calculatedMsPerFrame) {
       ++ calculatedFrames;
-      msToCalculate -= pulcher::util::MsPerFrame();
+      msToCalculate -= sceneBundle.calculatedMsPerFrame;
       ::ProcessLogic(plugin, sceneBundle);
     }
 

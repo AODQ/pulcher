@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pulcher-core/config.hpp>
+#include <pulcher-util/consts.hpp>
 #include <pulcher-util/pimpl.hpp>
 
 #include <glm/glm.hpp>
@@ -16,6 +17,7 @@ namespace pulcher::core {
   struct SceneBundle {
     glm::i32vec2 cameraOrigin = {};
 
+    float calculatedMsPerFrame = pulcher::util::MsPerFrame;
     size_t numCpuFrames = 0ul;
 
     pulcher::core::Config config = {};
