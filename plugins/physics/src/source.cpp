@@ -602,7 +602,7 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pulcher::core::SceneBundle & scene) {
   }
 }
 
-PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle &) {
   ImGui::Begin("Physics");
 
   pul::imgui::Text("tilemap width {}", ::tilemapLayer.width);

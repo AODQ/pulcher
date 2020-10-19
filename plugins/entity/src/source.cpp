@@ -48,7 +48,7 @@ PUL_PLUGIN_DECL void Entity_StartScene(
 
   pulcher::animation::Instance instance;
   plugin.animation.ConstructInstance(
-    instance, scene.AnimationSystem(), "nygelstromn"
+    scene, instance, scene.AnimationSystem(), "nygelstromn"
   );
   registry.emplace<pulcher::animation::ComponentInstance>(
     playerEntity, instance
@@ -59,7 +59,7 @@ PUL_PLUGIN_DECL void Entity_StartScene(
 
     pulcher::animation::Instance weaponInstance;
     plugin.animation.ConstructInstance(
-      weaponInstance, scene.AnimationSystem(), "weapons"
+      scene, weaponInstance, scene.AnimationSystem(), "weapons"
     );
 
     player.weaponAnimation = registry.create();

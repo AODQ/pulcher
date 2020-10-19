@@ -415,7 +415,7 @@ void plugin::entity::UpdatePlayer(
 
     // -- process dashing
     if (player.dashCooldown > 0.0f)
-      { player.dashCooldown -= pulcher::util::MsPerFrame(); }
+      { player.dashCooldown -= pulcher::util::MsPerFrame; }
 
     // player has a limited amount of dashes in air, so reset that if grounded
     // at the start of frame
@@ -461,7 +461,7 @@ void plugin::entity::UpdatePlayer(
     }
   }
 
-  UpdatePlayerPhysics(plugin, scene, player);
+  ::UpdatePlayerPhysics(plugin, scene, player);
 
   const float velocityXAbs = glm::abs(player.velocity.x);
 
@@ -646,7 +646,7 @@ void plugin::entity::UpdatePlayer(
 }
 
 void plugin::entity::UiRenderPlayer(
-  pulcher::core::SceneBundle &
+  pulcher::core::SceneBundle & scene
 , pulcher::core::ComponentPlayer & player
 , pulcher::animation::ComponentInstance &
 ) {
