@@ -417,7 +417,14 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
         return;
       }
 
+      PUL_ASSERT_CMP(::tilemapLayer.tileInfo.size(), >, tileIdx, return;);
       auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
+
+      if (tileInfo.tilesetIdx == -1ul) { return; }
+
+      PUL_ASSERT_CMP(
+        ::tilemapLayer.tilesets.size(), >, tileInfo.tilesetIdx, return;
+      );
       auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
 
       if (!tileInfo.Valid()) { return; }
@@ -465,7 +472,14 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
     return false;
   }
 
+  PUL_ASSERT_CMP(::tilemapLayer.tileInfo.size(), >, tileIdx, return false;);
   auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
+
+  if (tileInfo.tilesetIdx == -1ul) { return false; }
+
+  PUL_ASSERT_CMP(
+    ::tilemapLayer.tilesets.size(), >, tileInfo.tilesetIdx, return false;
+  );
   auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
 
   if (!tileInfo.Valid()) {
