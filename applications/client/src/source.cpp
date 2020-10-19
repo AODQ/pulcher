@@ -30,6 +30,8 @@
 
 namespace {
 
+bool applyGitUpdate = true;
+
 auto StartupOptions() -> argparse::ArgumentParser {
   auto options = argparse::ArgumentParser("pulcher-client", "0.0.1");
   options
@@ -51,6 +53,13 @@ auto StartupOptions() -> argparse::ArgumentParser {
     .implicit_value(true)
   ;
 
+  options
+    .add_argument("-g")
+    .help("do not automatically check for git updates")
+    .default_value(false)
+    .implicit_value(true)
+  ;
+
   return options;
 }
 
@@ -67,6 +76,9 @@ auto CreateUserConfig(argparse::ArgumentParser const & userResults)
     framebufferResolution = userResults.get<std::string>("-r");
     if (userResults.get<bool>("-d")) {
       spdlog::set_level(spdlog::level::debug);
+    }
+    if (userResults.get<bool>("-g")) {
+      ::applyGitUpdate = false;
     }
   } catch (const std::runtime_error & err) {
     spdlog::critical("{}", err.what());
@@ -303,7 +315,7 @@ void ProcessRendering(
     static bool updateReady = false;
     static std::string updateDetails = {};
     static bool hasGitCheckThreadInit = false;
-    if (!hasGitCheckThreadInit) {
+    if (applyGitUpdate && !hasGitCheckThreadInit) {
       hasGitCheckThreadInit = true;
       std::thread gitCheckThread = std::thread([&]() {
         while (!updateReady) {
@@ -360,7 +372,7 @@ void ProcessRendering(
       gitCheckThread.detach();
     }
 
-    if (updateReady) {
+    if (applyGitUpdate && updateReady) {
       ImGui::Begin("UPDATE");
 
       ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0.5, 0.5, 1));
