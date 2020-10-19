@@ -588,9 +588,9 @@ int main(int argc, char const ** argv) {
     // -- get timing
     auto timeFrameBegin = std::chrono::high_resolution_clock::now();
     float const deltaMs =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::duration_cast<std::chrono::microseconds>(
         timeFrameBegin - timePreviousFrameBegin
-      ).count();
+      ).count() / 1000.0f;
 
     // -- update windowing events
     glfwPollEvents();
@@ -609,7 +609,7 @@ int main(int argc, char const ** argv) {
     // -- rendering, unlimited Hz
     ::ProcessRendering(plugin, sceneBundle, deltaMs, calculatedFrames);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(0));
 
     timePreviousFrameBegin = timeFrameBegin;
   }
