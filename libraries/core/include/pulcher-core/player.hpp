@@ -11,6 +11,7 @@ namespace pulcher::core {
     glm::vec2 storedVelocity = {};
 
     float dashCooldown = 0.0f;
+    float jumpFallTime = 0.0f;
     int32_t midairDashesLeft = 0;
 
     bool jumping = false;

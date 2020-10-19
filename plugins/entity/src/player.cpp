@@ -15,21 +15,22 @@
 namespace {
   int32_t maxAirDashes = 1u;
   float inputRunAccelTarget = 3.0f;
-  float slopeStepUpHeight   = 4.0f;
-  float slopeStepDownHeight = 4.0f;
-  float inputRunAccelTime = 0.3f;
+  float slopeStepUpHeight   = 12.0f;
+  float slopeStepDownHeight = 12.0f;
+  float inputRunAccelTime = 1.0f;
   float inputAirAccelPreThresholdTime = 1.6f;
-  float inputAirAccelPostThreshold = 0.05f;
   float inputAirAccelThreshold = 9.0f;
+  float inputAirAccelPostThreshold = 0.05f;
   float inputWalkAccelTarget = 1.0f;
   float inputWalkAccelTime = 0.5f;
   float inputCrouchAccelTarget = 1.0f;
   float inputCrouchAccelTime = 1.0f;
-  float gravity = 0.3f;
-  float jumpingHorizontalAccel = 6.0f;
-  float jumpingHorizontalAccelMax = 7.0f;
-  float jumpingVerticalAccel = 9.0f;
-  float jumpingHorizontalTheta = 65.0f;
+  float gravity = 0.15f;
+  float jumpAfterFallTime = 300.0f;
+  float jumpingHorizontalAccel = 5.5f;
+  float jumpingHorizontalAccelMax = 4.0f;
+  float jumpingVerticalAccel = 8.0f;
+  float jumpingHorizontalTheta = 85.0f;
   float frictionGrounded = 0.9f;
   float dashAccel = 1.0f;
   float dashMinimumVelocity = 6.0f;
@@ -341,6 +342,14 @@ void plugin::entity::UpdatePlayer(
     // -- process jumping
     player.jumping = controller.jump;
 
+    // set jump timer if falling this frame
+    if (prevGrounded && !player.grounded) {
+      player.jumpFallTime = ::jumpAfterFallTime;
+    }
+
+    if (player.jumpFallTime > 0.0f)
+      { player.jumpFallTime -= pulcher::util::MsPerFrame; }
+
     if (!player.jumping) {
       player.storedVelocity = player.velocity;
       player.hasReleasedJump = true;
@@ -351,7 +360,7 @@ void plugin::entity::UpdatePlayer(
       player.jumping = false;
     }
 
-    if (player.grounded && player.jumping) {
+    if ((player.jumpFallTime > 0.0f || player.grounded) && player.jumping) {
       if (controller.movementHorizontal == MovementControl::None) {
         player.velocity.y = -::jumpingVerticalAccel;
         frameVerticalJump = true;
@@ -373,6 +382,7 @@ void plugin::entity::UpdatePlayer(
       }
       player.grounded = false;
       player.hasReleasedJump = false;
+      player.jumpFallTime = 0.0f;
     }
 
     // -- process walljumping
@@ -772,6 +782,10 @@ void plugin::entity::UiRenderPlayer(
   pul::imgui::ItemTooltip(
     "acceleration upwards set the frame a vertical jump is made; texels"
   );
+  ImGui::DragFloat("jump hor theta", &::jumpingHorizontalTheta, 0.1f);
+  pul::imgui::ItemTooltip(
+    "the angle which horizontal jump is directed towards; degrees"
+  );
   ImGui::DragFloat("jump hor accel", &::jumpingHorizontalAccel, 0.005f);
   pul::imgui::ItemTooltip(
     "acceleration horizontally set the frame a horizontal jump is made; texels"
@@ -783,10 +797,13 @@ void plugin::entity::UiRenderPlayer(
     "maximum horizontal velocity before the 'jump hor accel' is removed\n"
     "thus further horizontal jumps do not add a horizontal acceleration; texels"
   );
-  ImGui::DragFloat("jump hor theta", &::jumpingHorizontalTheta, 0.1f);
-  pul::imgui::ItemTooltip(
-    "the angle which horizontal jump is directed towards; degrees"
+  ImGui::DragFloat(
+    "jump after fall time", &::jumpAfterFallTime, 0.005f
   );
+  pul::imgui::ItemTooltip(
+    "maximum time after falling off a ledge to allow a jump to occur; ms\n"
+  );
+
   ImGui::DragFloat("friction grounded", &::frictionGrounded, 0.001f);
   pul::imgui::ItemTooltip(
     "amount to multiply velocity by when player is grounded"

@@ -120,6 +120,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       ImGui::DragFloat2("velocity", &self.velocity.x, 0.25f);
       ImGui::DragFloat2("stored velocity", &self.storedVelocity.x, 0.025f);
       pul::imgui::Text("midair dashes left {}", self.midairDashesLeft);
+      pul::imgui::Text("jump fall time {}", self.jumpFallTime);
       pul::imgui::Text("dash cooldown {:.2f}", self.dashCooldown);
       ImGui::Checkbox("grounded", &self.grounded);
       ImGui::Checkbox("wall cling left", &self.wallClingLeft);
