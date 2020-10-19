@@ -373,8 +373,8 @@ void ProcessRendering(
       gitCheckThread.detach();
     }
 
+    ImGui::Begin("Update Check");
     if (applyGitUpdate && updateReady) {
-      ImGui::Begin("UPDATE");
 
       ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0.5, 0.5, 1));
       pul::imgui::Text("There is an update ready to load now !");
@@ -408,8 +408,8 @@ void ProcessRendering(
       #endif
 
       pul::imgui::Text("Details: {}", updateDetails);
-      ImGui::End();
     }
+    ImGui::End();
 
     sg_pass_action passAction = {};
     passAction.colors[0].action = SG_ACTION_CLEAR;
