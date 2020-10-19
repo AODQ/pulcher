@@ -15,6 +15,7 @@ namespace pulcher::core {
     int32_t midairDashesLeft = 0;
 
     bool jumping = false;
+    bool crouchSliding = false;
     bool crouching = false;
     bool hasReleasedJump = false;
     bool grounded = false;

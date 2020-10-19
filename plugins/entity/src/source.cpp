@@ -122,6 +122,12 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       pul::imgui::Text("midair dashes left {}", self.midairDashesLeft);
       pul::imgui::Text("jump fall time {}", self.jumpFallTime);
       pul::imgui::Text("dash cooldown {:.2f}", self.dashCooldown);
+      ImGui::Checkbox("crouchSliding", &self.crouchSliding);
+      ImGui::SameLine();
+      ImGui::Checkbox("crouching", &self.crouching);
+      ImGui::Checkbox("jumping", &self.jumping);
+      ImGui::SameLine();
+      ImGui::Checkbox("hasReleasedJump", &self.hasReleasedJump);
       ImGui::Checkbox("grounded", &self.grounded);
       ImGui::Checkbox("wall cling left", &self.wallClingLeft);
       ImGui::SameLine();

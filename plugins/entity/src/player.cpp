@@ -53,8 +53,10 @@ void ApplyGroundedMovement(
   // limit the capacity; which is why we use `<=` check instead of `<`
   if (
       glm::abs(playerVelocityX) <= accelTarget
-   && playerVelocityX == 0.0f
-        ? true : glm::sign(playerVelocityX) == glm::sign(facingDirection)
+   && (
+        playerVelocityX == 0.0f
+          ? true : glm::sign(playerVelocityX) == glm::sign(facingDirection)
+      )
   ) {
     inoutFrictionApplies = false;
     if (facingDirection*(playerVelocityX + inoutInputAccel) > accelTarget) {
@@ -338,6 +340,8 @@ void plugin::entity::UpdatePlayer(
 
     // -- process crouching
     player.crouching = controller.crouch;
+    player.crouchSliding = false;
+    playerAnim.instance.pieceToState["legs"].angle = 0.0f;
 
     // -- process jumping
     player.jumping = controller.jump;
@@ -423,11 +427,15 @@ void plugin::entity::UpdatePlayer(
           , frictionApplies, inputAccel
           );
         } else if (controller.crouch) {
-          ApplyGroundedMovement(
-            facingDirection, player.velocity.x
-          , ::inputCrouchAccelTime, ::inputCrouchAccelTarget
-          , frictionApplies, inputAccel
-          );
+          if (glm::abs(player.velocity.x) < inputRunAccelTarget) {
+            ApplyGroundedMovement(
+              facingDirection, player.velocity.x
+            , ::inputCrouchAccelTime, ::inputCrouchAccelTarget
+            , frictionApplies, inputAccel
+            );
+          } else {
+            player.crouchSliding = true;
+          }
         } else {
           ApplyGroundedMovement(
             facingDirection, player.velocity.x
@@ -518,8 +526,13 @@ void plugin::entity::UpdatePlayer(
 
     // -- set leg animation
     auto & legInfo = playerAnim.instance.pieceToState["legs"];
+    auto & bodyInfo = playerAnim.instance.pieceToState["body"];
 
     if (player.grounded) { // grounded animations
+      if (!player.crouching) {
+        playerAnim.instance.pieceToState["body"].Apply("center");
+      }
+
       if (!player.crouching && (!prevGrounded || player.landing)) {
         player.landing = true;
         auto & stateInfo = playerAnim.instance.pieceToState["legs"];
@@ -548,7 +561,22 @@ void plugin::entity::UpdatePlayer(
         } else if (running && velocityXAbs <= inputRunAccelTarget) {
           legInfo.Apply(applyTurning ? "run-turn" : "run");
         } else {
-          if (controller.crouch)
+          if (player.crouchSliding) {
+            legInfo.Apply("crouch-slide");
+            if (legInfo.componentIt > 0) {
+              legInfo.angle = pul::Pi;
+              bodyInfo.Apply("crouch-center");
+              bodyInfo.angle =
+                (player.velocity.x > 0.0f ? -1.0f : +1.0f) * pul::Pi/1.5f;
+            } else {
+              // first frame is transition crouch
+              legInfo.angle =
+                (player.velocity.x > 0.0f ? +1.0f : -1.0f) * pul::Pi/2.0f;
+              bodyInfo.Apply("crouch-transition");
+              bodyInfo.angle =
+                (player.velocity.x > 0.0f ? +1.0f : -1.0f) * pul::Pi/1.0f;
+            }
+          } else if (controller.crouch)
             { legInfo.Apply("crouch-idle"); }
           else
             { legInfo.Apply("stand"); }
