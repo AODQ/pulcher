@@ -792,10 +792,13 @@ void plugin::entity::UiRenderPlayer(
 
   if (showVel) {
     static std::vector<float> velocities;
-    if (velocities.size() == 0ul) velocities.resize(512);
-    std::rotate(velocities.begin(), velocities.begin()+1, velocities.end());
-    velocities.back() = glm::length(player.velocity)*90.0f;
 
+    if (velocities.size() == 0ul) { velocities.resize(512); }
+
+    if (scene.numCpuFrames != 0ul) {
+      std::rotate(velocities.begin(), velocities.begin()+1, velocities.end());
+      velocities.back() = glm::length(player.velocity)*90.0f;
+    }
 
     ImGui::PlotLines("velocity tracker", velocities.data(), velocities.size());
   }
