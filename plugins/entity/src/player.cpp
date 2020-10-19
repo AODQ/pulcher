@@ -320,7 +320,7 @@ void plugin::entity::UpdatePlayer(
 
         float thetaRad = glm::radians(::jumpingHorizontalTheta);
 
-        player.velocity.y += -::jumpingHorizontalAccel * glm::sin(thetaRad);
+        player.velocity.y = -::jumpingHorizontalAccel * glm::sin(thetaRad);
         player.velocity.x = player.storedVelocity.x;
 
         if (glm::abs(player.velocity.x) < jumpingHorizontalAccelMax) {
