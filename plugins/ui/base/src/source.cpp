@@ -10,6 +10,9 @@
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>
 
+#include <chrono>
+#include <thread>
+
 namespace pulcher::plugin { struct Info; }
 
 namespace {
@@ -43,6 +46,12 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
   #elif _WIN32
     ImGui::Text("Platform: Windows32");
   #endif
+
+  static int32_t intentionalLatency = 0;
+  ImGui::SliderInt("intentional lag", &intentionalLatency, 0, 22);
+  if (intentionalLatency > 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(intentionalLatency));
+  }
 
   ImGui::Text(
     "%.2f ms/frame (%.0f FPS)"
