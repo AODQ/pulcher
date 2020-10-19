@@ -48,7 +48,10 @@ void ApplyGroundedMovement(
   // check if we have not reached the target, in which case no
   // friction is applied. However if this frame would reach the target,
   // limit the capacity; which is why we use `<=` check instead of `<`
-  if (facingDirection*playerVelocityX <= accelTarget) {
+  if (
+      glm::abs(playerVelocityX) <= accelTarget
+   && playerVelocityX == 0.0f ? true : glm::sign(playerVelocityX) == glm::sign(facingDirection)
+  ) {
     inoutFrictionApplies = false;
     if (facingDirection*(playerVelocityX + inoutInputAccel) > accelTarget) {
       inoutInputAccel = facingDirection*accelTarget - playerVelocityX;
