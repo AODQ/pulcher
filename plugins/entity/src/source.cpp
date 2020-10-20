@@ -121,7 +121,23 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       ImGui::DragFloat2("stored velocity", &self.storedVelocity.x, 0.025f);
       pul::imgui::Text("midair dashes left {}", self.midairDashesLeft);
       pul::imgui::Text("jump fall time {}", self.jumpFallTime);
-      pul::imgui::Text("dash cooldown {:.2f}", self.dashCooldown);
+      pul::imgui::Text(
+        "dash cooldown\n"
+        "   {:.0f} {:.0f} {:.0f}\n"
+        "   {:.0f}        {:.0f}\n"
+        "   {:.0f} {:.0f} {:.0f}"
+      , self.dashCooldown[Idx(pul::Direction::UpperLeft)]
+      , self.dashCooldown[Idx(pul::Direction::Up)]
+      , self.dashCooldown[Idx(pul::Direction::UpperRight)]
+      , self.dashCooldown[Idx(pul::Direction::Left)]
+      , self.dashCooldown[Idx(pul::Direction::Right)]
+      , self.dashCooldown[Idx(pul::Direction::LowerLeft)]
+      , self.dashCooldown[Idx(pul::Direction::Down)]
+      , self.dashCooldown[Idx(pul::Direction::LowerRight)]
+      );
+
+      pul::imgui::Text("slide cooldown {:.2f}", self.crouchSlideCooldown);
+      pul::imgui::Text("slide friction time {:.2f}", self.slideFrictionTime);
       ImGui::Checkbox("crouchSliding", &self.crouchSliding);
       ImGui::SameLine();
       ImGui::Checkbox("crouching", &self.crouching);

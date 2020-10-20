@@ -13,28 +13,42 @@
 #include <imgui/imgui.hpp>
 
 namespace {
-  int32_t maxAirDashes = 1u;
-  float inputRunAccelTarget = 3.0f;
+  int32_t maxAirDashes = 3u;
+  float inputRunAccelTarget = 4.0f;
+  float slideAccel = 1.0f;
+  float slideMinimumVelocity = 6.0f;
+  float slideCooldown   = 300.0f;
+  float slideFriction = 0.95f;
+  float slideFrictionTransitionTime = 500.0f;
+  float slideFrictionTransitionPow = 1.0f;
   float slopeStepUpHeight   = 12.0f;
   float slopeStepDownHeight = 12.0f;
   float inputRunAccelTime = 1.0f;
-  float inputAirAccelPreThresholdTime = 1.6f;
-  float inputAirAccelThreshold = 9.0f;
-  float inputAirAccelPostThreshold = 0.05f;
+  float inputAirAccelPreThresholdTime = 0.8f;
+  float inputAirAccelPostThreshold = 0.02f;
+  float inputAirAccelThreshold = 6.0f;
   float inputWalkAccelTarget = 1.0f;
   float inputWalkAccelTime = 0.5f;
   float inputCrouchAccelTarget = 1.0f;
   float inputCrouchAccelTime = 1.0f;
   float gravity = 0.15f;
-  float jumpAfterFallTime = 300.0f;
-  float jumpingHorizontalAccel = 5.5f;
-  float jumpingHorizontalAccelMax = 4.0f;
-  float jumpingVerticalAccel = 8.0f;
-  float jumpingHorizontalTheta = 85.0f;
-  float frictionGrounded = 0.9f;
+  float jumpAfterFallTime = 150.0f;
+  float jumpingHorizontalAccel = 4.0f;
+  float jumpingHorizontalAccelMax = 6.0f;
+  float jumpingVerticalAccel = 6.5f;
+  float jumpingHorizontalTheta = 90.0f;
+  float frictionGrounded = 0.8f;
   float dashAccel = 1.0f;
+
+  struct TransferPercent {
+    float normal = 1.0f;
+    float reverse = 1.0f;
+    float degree90 = 1.0f;
+  };
+  TransferPercent dashVerticalTransfer;
+  TransferPercent dashHorizontalTransfer;
   float dashMinimumVelocity = 6.0f;
-  float dashCooldown = 300.0f;
+  float dashCooldown = 1000.0f;
   float horizontalGroundedVelocityStop = 0.5f;
 
 float CalculateAccelFromTarget(float timeMs, float targetTexels) {
@@ -82,7 +96,8 @@ void UpdatePlayerPhysics(
   ) {
     // check if we can step down a slope
     if (player.grounded && player.velocity.x != 0.0f) {
-      glm::vec2 offset = groundedFloorOrigin + player.velocity.x;
+      glm::vec2 offset =
+        groundedFloorOrigin + glm::vec2(player.velocity.x, 0.0f);
 
       auto stepRay =
         pulcher::physics::IntersectorRay::Construct(
@@ -340,8 +355,27 @@ void plugin::entity::UpdatePlayer(
 
     // -- process crouching
     player.crouching = controller.crouch;
-    player.crouchSliding = false;
     playerAnim.instance.pieceToState["legs"].angle = 0.0f;
+    playerAnim.instance.pieceToState["body"].angle = 0.0f;
+
+    bool const prevCrouchSliding = player.crouchSliding;
+
+    if (
+        player.crouchSliding
+     && (
+          !player.crouching
+       || glm::abs(player.velocity.x) < inputCrouchAccelTarget
+       || player.jumping
+        )
+    ) {
+      player.crouchSliding = false;
+    }
+
+    if (player.crouchSlideCooldown > 0.0f)
+      { player.crouchSlideCooldown -= pulcher::util::MsPerFrame; }
+
+    if (player.slideFrictionTime > 0.0f)
+      { player.slideFrictionTime -= pulcher::util::MsPerFrame; }
 
     // -- process jumping
     player.jumping = controller.jump;
@@ -414,8 +448,11 @@ void plugin::entity::UpdatePlayer(
     float const facingDirection = inputAccel;
 
     bool frictionApplies = true;
+    bool applyInputAccel = true;
 
-    if (player.grounded) {
+    if (player.crouchSliding) {
+      applyInputAccel = false;
+    } else if (player.grounded) {
       if (player.jumping) {
         // this frame the player will jump
         frictionApplies = false;
@@ -427,14 +464,29 @@ void plugin::entity::UpdatePlayer(
           , frictionApplies, inputAccel
           );
         } else if (controller.crouch) {
-          if (glm::abs(player.velocity.x) < inputRunAccelTarget) {
+          if (
+              (prevGrounded ? !controllerPrev.crouch : !prevCrouchSliding)
+            && player.crouchSlideCooldown <= 0.0f
+          ) {
+            player.crouchSliding = true;
+            applyInputAccel = false;
+
+            // apply crouch boost, similar to dash boost
+            player.velocity.x =
+              glm::max(
+                ::slideAccel + glm::length(player.velocity.x)
+              , ::slideMinimumVelocity
+              ) * facingDirection
+            ;
+
+            player.crouchSlideCooldown = ::slideCooldown;
+            player.slideFrictionTime = ::slideFrictionTransitionTime;
+          } else {
             ApplyGroundedMovement(
               facingDirection, player.velocity.x
             , ::inputCrouchAccelTime, ::inputCrouchAccelTarget
             , frictionApplies, inputAccel
             );
-          } else {
-            player.crouchSliding = true;
           }
         } else {
           ApplyGroundedMovement(
@@ -454,13 +506,42 @@ void plugin::entity::UpdatePlayer(
       } else {
         inputAccel *= ::inputAirAccelPostThreshold;
       }
+
       frictionApplies = false;
+
+      // friction applies if player is crouching and moving opposite direction
+      // while in air
+      if (
+          glm::sign(player.velocity.x) != 0.0f
+       && glm::sign(inputAccel) != 0.0f
+       && player.crouching
+       && glm::sign(inputAccel) != glm::sign(player.velocity.x)
+       ) {
+        frictionApplies = true;
+       }
     }
 
-    player.velocity.x += inputAccel;
+    if (applyInputAccel)
+      { player.velocity.x += inputAccel; }
 
     // -- process friction
-    if (frictionApplies) { player.velocity.x *= ::frictionGrounded; }
+    if (frictionApplies) {
+      if (player.crouchSliding) {
+        float const friction =
+          glm::mix(
+            ::slideFriction, 1.0f
+          , player.slideFrictionTime <= 0.0f
+              ? 0.0f
+              : glm::pow(
+                player.slideFrictionTime / ::slideFrictionTransitionTime
+              , ::slideFrictionTransitionPow
+              )
+          );
+        player.velocity.x *= friction;
+      } else {
+        player.velocity.x *= ::frictionGrounded;
+      }
+    }
 
     // -- process horizontal ground stop
     if (
@@ -471,8 +552,10 @@ void plugin::entity::UpdatePlayer(
     }
 
     // -- process dashing
-    if (player.dashCooldown > 0.0f)
-      { player.dashCooldown -= pulcher::util::MsPerFrame; }
+    for (auto & dashCooldown : player.dashCooldown) {
+      if (dashCooldown > 0.0f)
+        { dashCooldown -= pulcher::util::MsPerFrame; }
+    }
 
     // player has a limited amount of dashes in air, so reset that if grounded
     // at the start of frame
@@ -481,12 +564,19 @@ void plugin::entity::UpdatePlayer(
 
     if (
       !controllerPrev.dash && controller.dash
-    && player.dashCooldown <= 0.0f
+    && player.dashCooldown[Idx(controller.movementDirection)] <= 0.0f
     && player.midairDashesLeft > 0
     ) {
+      glm::vec2 const scaledVelocity =
+          player.velocity
+        * glm::vec2(1,1
+          /* ::dashVerticalHorizontalPercent */
+        /* , 1.0f - ::dashVerticalHorizontalPercent */
+        );
+
       float const velocityMultiplier =
         glm::max(
-          ::dashAccel + glm::length(player.velocity), ::dashMinimumVelocity
+          ::dashAccel + glm::length(scaledVelocity), ::dashMinimumVelocity
         );
 
       if (controller.movementVertical != MovementControl::None) {
@@ -513,7 +603,7 @@ void plugin::entity::UpdatePlayer(
       player.velocity = velocityMultiplier * glm::normalize(direction);
       player.grounded = false;
 
-      player.dashCooldown = ::dashCooldown;
+      player.dashCooldown[Idx(controller.movementDirection)] = ::dashCooldown;
       -- player.midairDashesLeft;
     }
   }
@@ -529,8 +619,9 @@ void plugin::entity::UpdatePlayer(
     auto & bodyInfo = playerAnim.instance.pieceToState["body"];
 
     if (player.grounded) { // grounded animations
-      if (!player.crouching) {
-        playerAnim.instance.pieceToState["body"].Apply("center");
+      if (!player.crouchSliding) {
+        bodyInfo.Apply("center");
+        bodyInfo.angle = 0.0f;
       }
 
       if (!player.crouching && (!prevGrounded || player.landing)) {
@@ -573,8 +664,6 @@ void plugin::entity::UpdatePlayer(
               legInfo.angle =
                 (player.velocity.x > 0.0f ? +1.0f : -1.0f) * pul::Pi/2.0f;
               bodyInfo.Apply("crouch-transition");
-              bodyInfo.angle =
-                (player.velocity.x > 0.0f ? +1.0f : -1.0f) * pul::Pi/1.0f;
             }
           } else if (controller.crouch)
             { legInfo.Apply("crouch-idle"); }
@@ -583,6 +672,8 @@ void plugin::entity::UpdatePlayer(
         }
       }
     } else { // air animations
+
+      playerAnim.instance.pieceToState["body"].Apply("center");
 
       if (frameVerticalJump) {
         playerAnim.instance.pieceToState["legs"].Apply("jump-high", true);
@@ -840,7 +931,48 @@ void plugin::entity::UiRenderPlayer(
   pul::imgui::ItemTooltip(
     "amount to add to velocity the frame a dash is made; texels"
   );
-  ImGui::DragFloat("dash min velocity", &dashMinimumVelocity, 0.01f);
+
+  ImGui::SliderFloat(
+    "dashVerticalTransfer.normal", &dashVerticalTransfer.normal, 0.0f, 1.0f
+  );
+  pul::imgui::ItemTooltip(
+    "percentage to apply vertical dash if dashing in same direction"
+  );
+  ImGui::SliderFloat(
+    "dashVerticalTransfer.reverse", &dashVerticalTransfer.reverse, 0.0f, 1.0f
+  );
+  pul::imgui::ItemTooltip(
+    "percentage to apply vertical dash if dashing in reverse direction"
+  );
+  ImGui::SliderFloat(
+    "dashVerticalTransfer.degree90", &dashVerticalTransfer.degree90, 0.0f, 1.0f
+  );
+  pul::imgui::ItemTooltip(
+    "percentage to apply vertical dash if dashing in 90-degree direction"
+  );
+
+  ImGui::SliderFloat(
+    "dashHorizontalTransfer.normal", &dashHorizontalTransfer.normal, 0.0f, 1.0f
+  );
+  pul::imgui::ItemTooltip(
+    "percentage to apply horizontal dash if dashing in normal direction"
+  );
+  ImGui::SliderFloat(
+    "dashHorizontalTransfer.reverse", &dashHorizontalTransfer.reverse
+  , 0.0f, 1.0f
+  );
+  pul::imgui::ItemTooltip(
+    "percentage to apply horizontal dash if dashing in reverse direction"
+  );
+  ImGui::SliderFloat(
+    "dashHorizontalTransfer.degree90", &dashHorizontalTransfer.degree90
+  , 0.0f, 1.0f
+  );
+  pul::imgui::ItemTooltip(
+    "percentage to apply horizontal dash if dashing in 90-degree direction"
+  );
+
+  ImGui::DragFloat("dash min velocity", &::dashMinimumVelocity, 0.01f);
   pul::imgui::ItemTooltip(
     "gives a minimal threshold for velocity on dash, thus ensuring that on\n"
     "dash, the player is moving by at least this velocity; texels"
@@ -852,17 +984,44 @@ void plugin::entity::UiRenderPlayer(
     "minimal amount of time needed to transpire between each dash; milliseconds"
   );
 
-  ImGui::DragFloat("slope step-up height", &slopeStepUpHeight, 0.005f);
+  ImGui::DragFloat("slope step-up height", &::slopeStepUpHeight, 0.005f);
   pul::imgui::ItemTooltip(
     "the amount of texels to check if player can climb up a slope just by\n"
     "traversing it; texels"
   );
 
-  ImGui::DragFloat("slope step-down height", &slopeStepDownHeight, 0.005f);
+  ImGui::DragFloat("slope step-down height", &::slopeStepDownHeight, 0.005f);
   pul::imgui::ItemTooltip(
     "the amount of texels to check if player can climb down a slope just by\n"
     "traversing it; texels"
   );
+
+  ImGui::DragFloat("slide accel", &::slideAccel, 0.005f);
+  pul::imgui::ItemTooltip(
+    "amount to add to velocity the frame a slide is made; texels"
+  );
+  ImGui::DragFloat("slide min velocity", &::slideMinimumVelocity, 0.01f);
+  pul::imgui::ItemTooltip(
+    "gives a minimal threshold for velocity on slide, thus ensuring that on\n"
+    "slide, the player is moving by at least this velocity; texels"
+  );
+  ImGui::DragFloat("slide cooldown", &::slideCooldown, 0.05f);
+  pul::imgui::ItemTooltip("minimal amount of time between sliding; ms");
+
+  ImGui::DragFloat("friction slide", &::slideFriction, 0.001f);
+  pul::imgui::ItemTooltip(
+    "amount to multiply velocity by when player is sliding"
+  );
+  ImGui::DragFloat(
+    "slideFrictionTransitionTime", &::slideFrictionTransitionTime, 0.05f
+  );
+  pul::imgui::ItemTooltip(
+    "time it takes to transition from 0-friction to to slide friction\n"
+    "while sliding; ms");
+  ImGui::DragFloat(
+    "slideFrictionTransitionPow", &::slideFrictionTransitionPow, 0.05f
+  );
+  pul::imgui::ItemTooltip("the pow exponent/curve in friction transition");
 
   ImGui::PopItemWidth();
 
