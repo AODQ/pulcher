@@ -16,6 +16,7 @@ namespace pulcher::core {
     float jumpFallTime = 0.0f;
     float crouchSlideCooldown = 0.0f;
     float slideFrictionTime = 0.0f;
+    float dashZeroGravityTime = 0.0f;
     int32_t midairDashesLeft = 0;
 
     pul::Direction facingDirection = pul::Direction::Left;

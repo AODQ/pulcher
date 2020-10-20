@@ -39,6 +39,7 @@ namespace {
   float jumpingHorizontalTheta = 90.0f;
   float frictionGrounded = 0.8f;
   float dashAccel = 1.0f;
+  float dashGravityTime = 200.0f;
 
   struct TransferPercent {
     float normal = 1.0f;
@@ -350,7 +351,9 @@ void plugin::entity::UpdatePlayer(
   { // -- process inputs / events
 
     // -- gravity
-    if (!player.grounded)
+
+    // apply only when in air & only if dash zero gravity isn't in effect
+    if (player.dashZeroGravityTime <= 0.0f && !player.grounded)
       { player.velocity.y += ::gravity; }
 
     // -- process crouching
@@ -556,6 +559,12 @@ void plugin::entity::UpdatePlayer(
       if (dashCooldown > 0.0f)
         { dashCooldown -= pulcher::util::MsPerFrame; }
     }
+    if (player.dashZeroGravityTime > 0.0f) {
+      player.dashZeroGravityTime -= pulcher::util::MsPerFrame;
+      // if grounded then gravity time has been nullified
+      if (player.grounded || !controller.dash)
+        { player.dashZeroGravityTime = 0.0f; }
+    }
 
     // player has a limited amount of dashes in air, so reset that if grounded
     // at the start of frame
@@ -598,12 +607,15 @@ void plugin::entity::UpdatePlayer(
         direction.x = player.velocity.x >= 0.0f ? +1.0f : -1.0f;
       }
 
-      if (player.grounded) { direction.y -= 0.5f; }
+      if (player.grounded) {
+        player.origin.y -= 8.0f;
+      }
 
       player.velocity = velocityMultiplier * glm::normalize(direction);
       player.grounded = false;
 
       player.dashCooldown[Idx(controller.movementDirection)] = ::dashCooldown;
+      player.dashZeroGravityTime = ::dashGravityTime;
       -- player.midairDashesLeft;
     }
   }
@@ -979,9 +991,15 @@ void plugin::entity::UiRenderPlayer(
   );
   ImGui::DragInt("max air dashes", &::maxAirDashes, 0.25f, 0, 10);
   pul::imgui::ItemTooltip("maximum amount of dashes that can occur in air");
+
   ImGui::DragFloat("dash cooldown", &::dashCooldown, 0.1f);
   pul::imgui::ItemTooltip(
     "minimal amount of time needed to transpire between each dash; milliseconds"
+  );
+
+  ImGui::DragFloat("dash zero gravity time", &::dashGravityTime, 0.1f);
+  pul::imgui::ItemTooltip(
+    "amount of time after a dash that no gravity will be applied; ms"
   );
 
   ImGui::DragFloat("slope step-up height", &::slopeStepUpHeight, 0.005f);
