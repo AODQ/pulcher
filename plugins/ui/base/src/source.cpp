@@ -47,7 +47,12 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
     ImGui::Text("Platform: Windows32");
   #endif
 
+  // TODO temporary hack just for me
+  #ifdef __unix__
+  static int32_t intentionalLatency = 1;
+  #else
   static int32_t intentionalLatency = 0;
+  #endif
   ImGui::SliderInt("intentional lag", &intentionalLatency, 0, 22);
   if (intentionalLatency > 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(intentionalLatency));
