@@ -19,7 +19,7 @@ set_target_properties(
 target_link_libraries(
   pulcher-controls
   PUBLIC
-    glm
+    glm pulcher-util
   PRIVATE
     glfw
 )

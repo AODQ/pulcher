@@ -35,6 +35,12 @@ void pulcher::controls::UpdateControls(
     + (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) * +1
     );
 
+  current.movementDirection =
+    pul::ToDirection(
+      static_cast<float>(current.movementHorizontal)
+    , static_cast<float>(current.movementVertical)
+    );
+
   current.weaponSwitchNext = (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS);
   current.weaponSwitchPrev = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
 

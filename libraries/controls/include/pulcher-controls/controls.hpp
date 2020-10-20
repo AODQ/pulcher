@@ -1,5 +1,7 @@
 #pragma once
 
+#include <pulcher-util/consts.hpp>
+
 #include <cstdint>
 
 #include <glm/fwd.hpp>
@@ -16,6 +18,7 @@ namespace pulcher::controls {
     };
 
     struct Frame {
+      pul::Direction movementDirection = pul::Direction::None;
       Movement
         movementHorizontal = Movement::None
       , movementVertical = Movement::None
