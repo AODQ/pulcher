@@ -30,6 +30,7 @@ namespace pulcher::core {
     bool landing = false; // landing until animation timer ends
 
     std::array<float, Idx(pul::Direction::Size)> dashCooldown { 0.0f };
+    std::array<bool, Idx(pul::Direction::Size)> dashLock { false };
 
     // consider having previous frame info too?
 

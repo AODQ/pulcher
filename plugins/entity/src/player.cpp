@@ -572,6 +572,10 @@ void plugin::entity::UpdatePlayer(
       if (dashCooldown > 0.0f)
         { dashCooldown -= pulcher::util::MsPerFrame; }
     }
+    if (!prevGrounded && player.grounded) {
+      for (auto & dashLock : player.dashLock)
+        { dashLock = false; }
+    }
     if (player.dashZeroGravityTime > 0.0f) {
       player.dashZeroGravityTime -= pulcher::util::MsPerFrame;
       // if grounded then gravity time has been nullified
@@ -587,6 +591,7 @@ void plugin::entity::UpdatePlayer(
     if (
       !controllerPrev.dash && controller.dash
     && player.dashCooldown[Idx(controller.movementDirection)] <= 0.0f
+    && player.dashLock[Idx(controller.movementDirection)] == false
     && player.midairDashesLeft > 0
     ) {
       glm::vec2 const scaledVelocity =
@@ -628,6 +633,7 @@ void plugin::entity::UpdatePlayer(
       player.grounded = false;
 
       player.dashCooldown[Idx(controller.movementDirection)] = ::dashCooldown;
+      player.dashLock[Idx(controller.movementDirection)] = true;
       player.dashZeroGravityTime = ::dashGravityTime;
       -- player.midairDashesLeft;
     }
