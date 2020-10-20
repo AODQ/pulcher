@@ -124,25 +124,25 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       pul::imgui::Text("dash gravity time {:.2f}\n", self.dashZeroGravityTime);
       pul::imgui::Text(
         "dash cooldown\n"
-        "   {:.0f}|{} {:.0f}|{} {:.0f}|{}\n"
-        "   {:.0f}|{}           {:.0f}|{}\n"
-        "   {:.0f}|{} {:.0f}|{} {:.0f}|{}"
-      , glm::max(0.0f, self.dashCooldown[Idx(pul::Direction::UpperLeft)])
-      , self.dashLock[Idx(pul::Direction::UpperLeft)]
-      , glm::max(0.0f, self.dashCooldown[Idx(pul::Direction::Up)])
-      , self.dashLock[Idx(pul::Direction::Up)]
-      , glm::max(0.0f, self.dashCooldown[Idx(pul::Direction::UpperRight)])
-      , self.dashLock[Idx(pul::Direction::UpperRight)]
-      , glm::max(0.0f, self.dashCooldown[Idx(pul::Direction::Left)])
-      , self.dashLock[Idx(pul::Direction::Left)]
-      , glm::max(0.0f, self.dashCooldown[Idx(pul::Direction::Right)])
-      , self.dashLock[Idx(pul::Direction::Right)]
-      , glm::max(0.0f, self.dashCooldown[Idx(pul::Direction::LowerLeft)])
-      , self.dashLock[Idx(pul::Direction::LowerLeft)]
-      , glm::max(0.0f, self.dashCooldown[Idx(pul::Direction::Down)])
-      , self.dashLock[Idx(pul::Direction::Down)]
-      , glm::max(0.0f, self.dashCooldown[Idx(pul::Direction::LowerRight)])
-      , self.dashLock[Idx(pul::Direction::LowerRight)]
+        "   {:.2f}|{} {:.2f}|{} {:.2f}|{}\n"
+        "   {:.2f}|{}        {:.2f}|{}\n"
+        "   {:.2f}|{} {:.2f}|{} {:.2f}|{}"
+      , glm::max(0.f, self.dashCooldown[Idx(pul::Direction::UpperLeft)]/1000.f)
+      , static_cast<int>(self.dashLock[Idx(pul::Direction::UpperLeft)])
+      , glm::max(0.f, self.dashCooldown[Idx(pul::Direction::Up)]/1000.f)
+      , static_cast<int>(self.dashLock[Idx(pul::Direction::Up)])
+      , glm::max(0.f, self.dashCooldown[Idx(pul::Direction::UpperRight)]/1000.f)
+      , static_cast<int>(self.dashLock[Idx(pul::Direction::UpperRight)])
+      , glm::max(0.f, self.dashCooldown[Idx(pul::Direction::Left)]/1000.f)
+      , static_cast<int>(self.dashLock[Idx(pul::Direction::Left)])
+      , glm::max(0.f, self.dashCooldown[Idx(pul::Direction::Right)]/1000.f)
+      , static_cast<int>(self.dashLock[Idx(pul::Direction::Right)])
+      , glm::max(0.f, self.dashCooldown[Idx(pul::Direction::LowerLeft)]/1000.f)
+      , static_cast<int>(self.dashLock[Idx(pul::Direction::LowerLeft)])
+      , glm::max(0.f, self.dashCooldown[Idx(pul::Direction::Down)]/1000.f)
+      , static_cast<int>(self.dashLock[Idx(pul::Direction::Down)])
+      , glm::max(0.f, self.dashCooldown[Idx(pul::Direction::LowerRight)]/1000.f)
+      , static_cast<int>(self.dashLock[Idx(pul::Direction::LowerRight)])
       );
 
       pul::imgui::Text("slide cooldown {:.2f}", self.crouchSlideCooldown);
