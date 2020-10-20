@@ -24,14 +24,19 @@ namespace {
   float slopeStepUpHeight   = 12.0f;
   float slopeStepDownHeight = 12.0f;
   float inputRunAccelTime = 1.0f;
+
   float inputAirAccelPreThresholdTime = 0.8f;
   float inputAirAccelPostThreshold = 0.02f;
   float inputAirAccelThreshold = 6.0f;
+
+  float inputGravityAccelPreThresholdTime = 0.8f;
+  float inputGravityAccelPostThreshold = 0.02f;
+  float inputGravityAccelThreshold = 6.0f;
+
   float inputWalkAccelTarget = 1.0f;
   float inputWalkAccelTime = 0.5f;
   float inputCrouchAccelTarget = 1.0f;
   float inputCrouchAccelTime = 1.0f;
-  float gravity = 0.15f;
   float jumpAfterFallTime = 150.0f;
   float jumpingHorizontalAccel = 4.0f;
   float jumpingHorizontalAccelMax = 6.0f;
@@ -353,8 +358,16 @@ void plugin::entity::UpdatePlayer(
     // -- gravity
 
     // apply only when in air & only if dash zero gravity isn't in effect
-    if (player.dashZeroGravityTime <= 0.0f && !player.grounded)
-      { player.velocity.y += ::gravity; }
+    if (player.dashZeroGravityTime <= 0.0f && !player.grounded) {
+      if (player.velocity.y <= ::inputGravityAccelThreshold) {
+        player.velocity.y +=
+          ::CalculateAccelFromTarget(
+            ::inputGravityAccelPreThresholdTime, ::inputGravityAccelThreshold
+          );
+      } else {
+        player.velocity.y += ::inputGravityAccelPostThreshold;
+      }
+    }
 
     // -- process crouching
     player.crouching = controller.crouch;
@@ -881,6 +894,31 @@ void plugin::entity::UiRenderPlayer(
   );
 
   ImGui::DragFloat(
+    "gravity accel pre-threshold time", &inputGravityAccelPreThresholdTime, 0.5f
+  );
+  pul::imgui::ItemTooltip(
+    "amount of time it takes to reach gravity threshold from a base velocity\n"
+    "of 0 while in mid-air; currently {:.3f} texels/frame will be added;\n"
+    "milliseconds"
+  , ::CalculateAccelFromTarget(
+      ::inputGravityAccelPreThresholdTime, ::inputGravityAccelThreshold
+    )
+  );
+  ImGui::DragFloat(
+    "gravity accel post-threshold", &inputGravityAccelPostThreshold, 0.005f
+  );
+  pul::imgui::ItemTooltip(
+    "acceleration added per frame of gravity when velocity Y is post-threshold"
+  );
+  ImGui::DragFloat(
+    "gravity accel threshold", &inputGravityAccelThreshold, 0.05f
+  );
+  pul::imgui::ItemTooltip(
+    "acceleration target while in mid-air, once this has been reached\n"
+    "the player will use the gravity accel post-threshold up to 'infinity'"
+  );
+
+  ImGui::DragFloat(
     "air accel pre-threshold time", &inputAirAccelPreThresholdTime, 0.005f
   );
   pul::imgui::ItemTooltip(
@@ -901,11 +939,10 @@ void plugin::entity::UiRenderPlayer(
     "air accel threshold", &inputAirAccelThreshold, 0.05f
   );
   pul::imgui::ItemTooltip(
-    "acceleration target while in mid-aur, once this has been reached\n"
+    "acceleration target while in mid-air, once this has been reached\n"
     "the player will use the air accel post-threshold up to 'infinity'"
   );
 
-  ImGui::DragFloat("gravity", &::gravity, 0.005f);
   pul::imgui::ItemTooltip(
     "acceleration added downwards per frame from gravity; texels"
   );
