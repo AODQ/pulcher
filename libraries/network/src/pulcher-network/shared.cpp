@@ -13,19 +13,19 @@ constexpr typename std::underlying_type<EnumType>::type & Idx(EnumType & v) {
   return reinterpret_cast<typename std::underlying_type<EnumType>::type &>(v);
 }
 
-pulcher::network::Network::Network() {}
+pul::network::Network::Network() {}
 
-pulcher::network::Network::~Network() {
+pul::network::Network::~Network() {
   if (valid) { enet_deinitialize(); }
 }
 
-pulcher::network::Network::Network(pulcher::network::Network && rval) {
+pul::network::Network::Network(pul::network::Network && rval) {
   this->valid = rval.valid;
   rval.valid = false;
 }
 
-pulcher::network::Network & pulcher::network::Network::operator=(
-  pulcher::network::Network && rval
+pul::network::Network & pul::network::Network::operator=(
+  pul::network::Network && rval
 ) {
   this->valid = rval.valid;
   rval.valid = false;
@@ -33,17 +33,17 @@ pulcher::network::Network & pulcher::network::Network::operator=(
 }
 
 
-pulcher::network::Network pulcher::network::Network::Construct() {
-  pulcher::network::Network network;
+pul::network::Network pul::network::Network::Construct() {
+  pul::network::Network network;
   network.valid = !enet_initialize();
   return network;
 }
 
-pulcher::network::Address pulcher::network::Address::Construct(
+pul::network::Address pul::network::Address::Construct(
   char const * addressHost
 , uint32_t port
 ) {
-  pulcher::network::Address address;
+  pul::network::Address address;
 
   if (addressHost) {
     enet_address_set_host(&address.enetAddress, addressHost);
@@ -55,39 +55,39 @@ pulcher::network::Address pulcher::network::Address::Construct(
   return address;
 }
 
-pulcher::network::IncomingPacket::IncomingPacket() {}
+pul::network::IncomingPacket::IncomingPacket() {}
 
-pulcher::network::IncomingPacket::~IncomingPacket() {
+pul::network::IncomingPacket::~IncomingPacket() {
   if (this->enetPacket)
     { enet_packet_destroy(this->enetPacket); }
   this->enetPacket = nullptr;
 }
 
-pulcher::network::IncomingPacket::IncomingPacket(
-  pulcher::network::IncomingPacket && rval
+pul::network::IncomingPacket::IncomingPacket(
+  pul::network::IncomingPacket && rval
 ) {
   this->enetPacket = rval.enetPacket;
   rval.enetPacket = nullptr;
 }
 
-pulcher::network::IncomingPacket & pulcher::network::IncomingPacket::operator=(
-  pulcher::network::IncomingPacket && rval
+pul::network::IncomingPacket & pul::network::IncomingPacket::operator=(
+  pul::network::IncomingPacket && rval
 ) {
   this->enetPacket = rval.enetPacket;
   rval.enetPacket = nullptr;
   return *this;
 }
 
-pulcher::network::Host::Host() {}
+pul::network::Host::Host() {}
 
-pulcher::network::Host::~Host() {
+pul::network::Host::~Host() {
   if (this->enetHost) {
     enet_host_destroy(this->enetHost);
   }
   this->enetHost = nullptr;
 }
 
-pulcher::network::Host::Host(pulcher::network::Host && rval) {
+pul::network::Host::Host(pul::network::Host && rval) {
   this->enetHost = rval.enetHost;
 
   this->fnConnect    = rval.fnConnect;
@@ -97,8 +97,8 @@ pulcher::network::Host::Host(pulcher::network::Host && rval) {
   rval.enetHost = nullptr;
 }
 
-pulcher::network::Host & pulcher::network::Host::operator=(
-  pulcher::network::Host && rval
+pul::network::Host & pul::network::Host::operator=(
+  pul::network::Host && rval
 ) {
   this->enetHost = rval.enetHost;
 
@@ -111,11 +111,11 @@ pulcher::network::Host & pulcher::network::Host::operator=(
   return *this;
 }
 
-pulcher::network::Host
-pulcher::network::Host::Construct(
-  pulcher::network::Host::ConstructInfo const & ci
+pul::network::Host
+pul::network::Host::Construct(
+  pul::network::Host::ConstructInfo const & ci
 ) {
-  pulcher::network::Host host;
+  pul::network::Host host;
 
   host.enetHost =
     enet_host_create(
@@ -136,7 +136,7 @@ pulcher::network::Host::Construct(
   return host;
 }
 
-void pulcher::network::Host::PollEvents(size_t timeout, size_t maxEventPoll) {
+void pul::network::Host::PollEvents(size_t timeout, size_t maxEventPoll) {
   for (size_t eventPoll = 0ul; eventPoll < maxEventPoll; ++ eventPoll) {
     auto event = this->ManualPollEvent(timeout);
     if (!event.Valid()) { break; }
@@ -150,9 +150,9 @@ void pulcher::network::Host::PollEvents(size_t timeout, size_t maxEventPoll) {
   }
 }
 
-pulcher::network::Event
-pulcher::network::Host::ManualPollEvent(size_t timeout) {
-  pulcher::network::Event event;
+pul::network::Event
+pul::network::Host::ManualPollEvent(size_t timeout) {
+  pul::network::Event event;
 
   ENetEvent enetEvent;
   event.pollResult =
@@ -165,7 +165,7 @@ pulcher::network::Host::ManualPollEvent(size_t timeout) {
   // get type/data if receive packet
   if (event.eventType == ENET_EVENT_TYPE_RECEIVE) {
     event.type =
-      *reinterpret_cast<pulcher::network::PacketType *>(
+      *reinterpret_cast<pul::network::PacketType *>(
         event.packet.enetPacket->data
       );
     event.data = event.packet.enetPacket->data;
@@ -174,40 +174,40 @@ pulcher::network::Host::ManualPollEvent(size_t timeout) {
   return event;
 }
 
-void pulcher::network::Host::Flush() {
+void pul::network::Host::Flush() {
   enet_host_flush(this->enetHost);
 }
 
-pulcher::network::ClientHostConnection::ClientHostConnection() {}
-pulcher::network::ClientHostConnection::~ClientHostConnection() {
+pul::network::ClientHostConnection::ClientHostConnection() {}
+pul::network::ClientHostConnection::~ClientHostConnection() {
   if (enetPeer != nullptr) {
     enet_peer_reset(enetPeer);
   }
   enetPeer = nullptr;
 }
 
-pulcher::network::ClientHostConnection::ClientHostConnection(
-  pulcher::network::ClientHostConnection && rval
+pul::network::ClientHostConnection::ClientHostConnection(
+  pul::network::ClientHostConnection && rval
 ) {
   this->enetPeer = rval.enetPeer;
   rval.enetPeer = nullptr;
 }
 
-pulcher::network::ClientHostConnection &
-pulcher::network::ClientHostConnection::operator=(
-  pulcher::network::ClientHostConnection && rval
+pul::network::ClientHostConnection &
+pul::network::ClientHostConnection::operator=(
+  pul::network::ClientHostConnection && rval
 ) {
   this->enetPeer = rval.enetPeer;
   rval.enetPeer = nullptr;
   return *this;
 }
 
-pulcher::network::ClientHostConnection
-pulcher::network::ClientHostConnection::Construct(
-  pulcher::network::Host & host
-, pulcher::network::Address const & address
+pul::network::ClientHostConnection
+pul::network::ClientHostConnection::Construct(
+  pul::network::Host & host
+, pul::network::Address const & address
 ) {
-  pulcher::network::ClientHostConnection connection;
+  pul::network::ClientHostConnection connection;
   connection.enetPeer =
     enet_host_connect(host.enetHost, &address.enetAddress, 2, 0);
 
@@ -217,28 +217,28 @@ pulcher::network::ClientHostConnection::Construct(
   return connection;
 }
 
-pulcher::network::ClientHost pulcher::network::ClientHost::Construct(
-  pulcher::network::ClientHost::ConstructInfo const & ci
+pul::network::ClientHost pul::network::ClientHost::Construct(
+  pul::network::ClientHost::ConstructInfo const & ci
 ) {
-  pulcher::network::ClientHost client;
+  pul::network::ClientHost client;
 
   { // -- construct host
-    pulcher::network::Host::ConstructInfo constructInfo;
+    pul::network::Host::ConstructInfo constructInfo;
     constructInfo.address = ci.address;
     constructInfo.isServer = false;
     constructInfo.maxConnections = 1ul;
-    constructInfo.maxChannels = Idx(pulcher::network::ChannelType::Size);
+    constructInfo.maxChannels = Idx(pul::network::ChannelType::Size);
     constructInfo.incomingBandwidth = constructInfo.outgoingBandwidth = 0ul;
     constructInfo.fnConnect    = ci.fnConnect;
     constructInfo.fnDisconnect = ci.fnDisconnect;
     constructInfo.fnReceive    = ci.fnReceive;
-    client.host = pulcher::network::Host::Construct(constructInfo);
+    client.host = pul::network::Host::Construct(constructInfo);
   }
 
   if (!client.host.Valid()) { return client; }
 
   client.connection =
-    pulcher::network::ClientHostConnection::Construct(client.host, ci.address);
+    pul::network::ClientHostConnection::Construct(client.host, ci.address);
 
   if (!client.connection.Valid()) { return client; }
 
@@ -256,24 +256,24 @@ pulcher::network::ClientHost pulcher::network::ClientHost::Construct(
   return client;
 }
 
-pulcher::network::ServerHost pulcher::network::ServerHost::Construct(
-  pulcher::network::ServerHost::ConstructInfo const & ci
+pul::network::ServerHost pul::network::ServerHost::Construct(
+  pul::network::ServerHost::ConstructInfo const & ci
 ) {
-  pulcher::network::ServerHost server;
+  pul::network::ServerHost server;
 
-  auto address = pulcher::network::Address::Construct(ENET_HOST_ANY, ci.port);
+  auto address = pul::network::Address::Construct(ENET_HOST_ANY, ci.port);
 
   { // -- construct host
-    pulcher::network::Host::ConstructInfo constructInfo;
+    pul::network::Host::ConstructInfo constructInfo;
     constructInfo.address = address;
     constructInfo.isServer = true;
     constructInfo.maxConnections = 1ul;
-    constructInfo.maxChannels = Idx(pulcher::network::ChannelType::Size);
+    constructInfo.maxChannels = Idx(pul::network::ChannelType::Size);
     constructInfo.incomingBandwidth = constructInfo.outgoingBandwidth = 0ul;
     constructInfo.fnConnect = ci.fnConnect;
     constructInfo.fnDisconnect = ci.fnDisconnect;
     constructInfo.fnReceive = ci.fnReceive;
-    server.host = pulcher::network::Host::Construct(constructInfo);
+    server.host = pul::network::Host::Construct(constructInfo);
   }
 
   if (!server.host.Valid()) { return server; }
@@ -282,22 +282,22 @@ pulcher::network::ServerHost pulcher::network::ServerHost::Construct(
 }
 
 template <typename T>
-pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
+pul::network::OutgoingPacket pul::network::OutgoingPacket::Construct(
   T const & data
-, pulcher::network::ChannelType channelType
+, pul::network::ChannelType channelType
 ) {
-  pulcher::network::OutgoingPacket packet;
+  pul::network::OutgoingPacket packet;
 
   ENetPacketFlag flag = ENET_PACKET_FLAG_UNSEQUENCED;
   switch (channelType) {
     default: break;
-    case pulcher::network::ChannelType::Streaming:
+    case pul::network::ChannelType::Streaming:
       flag = ENET_PACKET_FLAG_UNSEQUENCED;
     break;
-    case pulcher::network::ChannelType::Reliable:
+    case pul::network::ChannelType::Reliable:
       flag = ENET_PACKET_FLAG_RELIABLE;
     break;
-    case pulcher::network::ChannelType::Unreliable:
+    case pul::network::ChannelType::Unreliable:
       flag = ENET_PACKET_FLAG_UNSEQUENCED;
     break;
   }
@@ -311,31 +311,31 @@ pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
 
 // -- explicit instation of OutgoingPacket::Construct
 template
-pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
-  pulcher::network::PacketSystemInfo const & data
-, pulcher::network::ChannelType channelType
+pul::network::OutgoingPacket pul::network::OutgoingPacket::Construct(
+  pul::network::PacketSystemInfo const & data
+, pul::network::ChannelType channelType
 );
 
 template
-pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
-  pulcher::network::PacketNetworkClientUpdate const & data
-, pulcher::network::ChannelType channelType
+pul::network::OutgoingPacket pul::network::OutgoingPacket::Construct(
+  pul::network::PacketNetworkClientUpdate const & data
+, pul::network::ChannelType channelType
 );
 
 template
-pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
-  pulcher::network::PacketFileStreamStart const & data
-, pulcher::network::ChannelType channelType
+pul::network::OutgoingPacket pul::network::OutgoingPacket::Construct(
+  pul::network::PacketFileStreamStart const & data
+, pul::network::ChannelType channelType
 );
 
 template
-pulcher::network::OutgoingPacket pulcher::network::OutgoingPacket::Construct(
-  pulcher::network::PacketFileStreamBlock const & data
-, pulcher::network::ChannelType channelType
+pul::network::OutgoingPacket pul::network::OutgoingPacket::Construct(
+  pul::network::PacketFileStreamBlock const & data
+, pul::network::ChannelType channelType
 );
 
-void pulcher::network::OutgoingPacket::Send(
-  pulcher::network::ClientHost & client
+void pul::network::OutgoingPacket::Send(
+  pul::network::ClientHost & client
 ) {
   if (!this->enetPacket) {
     printf("network error - Trying to send nullptr / unconstructed packet\n");
@@ -347,8 +347,8 @@ void pulcher::network::OutgoingPacket::Send(
   );
 }
 
-void pulcher::network::OutgoingPacket::Broadcast(
-  pulcher::network::ServerHost & server
+void pul::network::OutgoingPacket::Broadcast(
+  pul::network::ServerHost & server
 ) {
   if (!this->enetPacket) {
     printf("network error - Trying to send nullptr / unconstructed packet\n");
@@ -360,20 +360,20 @@ void pulcher::network::OutgoingPacket::Broadcast(
   );
 }
 
-char const * ToString(pulcher::network::OperatingSystem os) {
+char const * ToString(pul::network::OperatingSystem os) {
   switch (os) {
     default: return "N/A";
-    case pulcher::network::OperatingSystem::Linux:
+    case pul::network::OperatingSystem::Linux:
       return "Linux";
-    case pulcher::network::OperatingSystem::Win64:
+    case pul::network::OperatingSystem::Win64:
       return "Win64";
-    case pulcher::network::OperatingSystem::Win32:
+    case pul::network::OperatingSystem::Win32:
       return "Win32";
   }
 }
 
-char const * ToString(pulcher::network::PacketType packetType) {
-  using PT = pulcher::network::PacketType;
+char const * ToString(pul::network::PacketType packetType) {
+  using PT = pul::network::PacketType;
   switch (packetType) {
     default: return "N/A";
     case PT::SystemInfo:          return "SystemInfo";
@@ -383,8 +383,8 @@ char const * ToString(pulcher::network::PacketType packetType) {
   }
 }
 
-char const * ToString(pulcher::network::PacketNetworkClientUpdate::Type type) {
-  using PT = pulcher::network::PacketNetworkClientUpdate::Type;
+char const * ToString(pul::network::PacketNetworkClientUpdate::Type type) {
+  using PT = pul::network::PacketNetworkClientUpdate::Type;
   switch (type) {
     default: return "N/A";
     case PT::ApplicationUpdate: return "ApplicationUpdate";

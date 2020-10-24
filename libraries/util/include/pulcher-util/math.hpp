@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-namespace pulcher::util {
+namespace pul::util {
   inline bool CalculateTileIndices(
     size_t & tileIdx, glm::u32vec2 & texelOrigin
   , glm::i32vec2 const & origin
@@ -16,7 +16,7 @@ namespace pulcher::util {
   }
 }
 
-namespace pulcher::physics {
+namespace pul::physics {
   template <typename Fn>
   void BresenhamLine(glm::ivec2 f0, glm::ivec2 f1, Fn && fn) {
     bool steep = false;

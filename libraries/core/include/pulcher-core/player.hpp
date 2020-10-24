@@ -7,7 +7,7 @@
 
 #include <array>
 
-namespace pulcher::core {
+namespace pul::core {
   struct ComponentPlayer {
     glm::vec2 origin = {902.0f, 1120.0f};
     glm::vec2 velocity = {};
@@ -33,7 +33,7 @@ namespace pulcher::core {
 
     // consider having previous frame info too?
 
-    pulcher::core::Inventory inventory;
+    pul::core::Inventory inventory;
 
     glm::vec2 CalculateProjectedOrigin() {
       return origin + velocity;

@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-namespace pulcher::animation {
+namespace pul::animation {
 
   /*
 
@@ -65,7 +65,7 @@ namespace pulcher::animation {
     };
 
     struct Piece {
-      std::map<std::string, pulcher::animation::Animator::State> states = {};
+      std::map<std::string, pul::animation::Animator::State> states = {};
       glm::u32vec2 dimensions = {};
       glm::i32vec2 origin = {};
       uint8_t renderOrder = 0; // valid from 0 .. 100
@@ -78,8 +78,8 @@ namespace pulcher::animation {
     };
 
     // -- members
-    pulcher::gfx::Spritesheet spritesheet;
-    std::map<std::string, pulcher::animation::Animator::Piece> pieces;
+    pul::gfx::Spritesheet spritesheet;
+    std::map<std::string, pul::animation::Animator::Piece> pieces;
     std::vector<SkeletalPiece> skeleton;
     std::string label;
     std::string filename;
@@ -136,7 +136,7 @@ namespace pulcher::animation {
   };
 
   struct ComponentInstance {
-    pulcher::animation::Instance instance;
+    pul::animation::Instance instance;
   };
 
 }

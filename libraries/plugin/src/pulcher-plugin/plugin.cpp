@@ -26,12 +26,12 @@ namespace {
 #endif
 
 struct Plugin {
-  Plugin(char const * filename, pulcher::plugin::Type type);
+  Plugin(char const * filename, pul::plugin::Type type);
   ~Plugin();
 
   std::string filename;
   PluginHandle data = nullptr;
-  pulcher::plugin::Type type;
+  pul::plugin::Type type;
 
   template <typename T> void LoadFunction(T & fn, char const * label);
   void Reload();
@@ -39,7 +39,7 @@ struct Plugin {
   void Open();
 };
 
-Plugin::Plugin(char const * filename_, pulcher::plugin::Type type_)
+Plugin::Plugin(char const * filename_, pul::plugin::Type type_)
   : filename(filename_), type(type_)
 {
   this->Open();
@@ -107,10 +107,10 @@ void Plugin::Open() {
 
 std::vector<std::unique_ptr<Plugin>> plugins;
 
-void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
+void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
   switch (ctx.type) {
     default: spdlog::critical("Unknown type in LoadPluginFunctions"); break;
-    case pulcher::plugin::Type::Animation: {
+    case pul::plugin::Type::Animation: {
       auto & unit = plugin.animation;
       ctx.LoadFunction(unit.DestroyInstance,   "Animation_DestroyInstance");
       ctx.LoadFunction(unit.ConstructInstance, "Animation_ConstructInstance");
@@ -125,25 +125,25 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
       );
       ctx.LoadFunction(unit.UiRender,          "Animation_UiRender");
     } break;
-    case pulcher::plugin::Type::Entity: {
+    case pul::plugin::Type::Entity: {
       auto & unit = plugin.entity;
       ctx.LoadFunction(unit.StartScene,   "Entity_StartScene");
       ctx.LoadFunction(unit.Shutdown,     "Entity_Shutdown");
       ctx.LoadFunction(unit.EntityUpdate, "Entity_EntityUpdate");
       ctx.LoadFunction(unit.UiRender,     "Entity_UiRender");
     } break;
-    case pulcher::plugin::Type::UserInterface: {
+    case pul::plugin::Type::UserInterface: {
       auto & unit = plugin.userInterface;
       ctx.LoadFunction(unit.UiDispatch, "Ui_UiDispatch");
     } break;
-    case pulcher::plugin::Type::Map: {
+    case pul::plugin::Type::Map: {
       auto & unit = plugin.map;
       ctx.LoadFunction(unit.Load,     "Map_Load");
       ctx.LoadFunction(unit.Render,   "Map_Render");
       ctx.LoadFunction(unit.UiRender, "Map_UiRender");
       ctx.LoadFunction(unit.Shutdown, "Map_Shutdown");
     } break;
-    case pulcher::plugin::Type::Physics: {
+    case pul::plugin::Type::Physics: {
       auto & unit = plugin.physics;
       ctx.LoadFunction(unit.ProcessTileset,      "Physics_ProcessTileset");
       ctx.LoadFunction(unit.ClearMapGeometry,    "Physics_ClearMapGeometry");
@@ -158,9 +158,9 @@ void LoadPluginFunctions(pulcher::plugin::Info & plugin, Plugin & ctx) {
 
 } // -- anon namespace
 
-bool pulcher::plugin::LoadPlugin(
-  pulcher::plugin::Info & plugin
-, pulcher::plugin::Type type
+bool pul::plugin::LoadPlugin(
+  pul::plugin::Info & plugin
+, pul::plugin::Type type
 , std::string const & file
 ) {
   // first find if the plugin has already been loaded, if that's the case then
@@ -189,11 +189,11 @@ bool pulcher::plugin::LoadPlugin(
   return true;
 }
 
-void pulcher::plugin::FreePlugins() {
+void pul::plugin::FreePlugins() {
   ::plugins.clear();
 }
 
-void pulcher::plugin::UpdatePlugins(pulcher::plugin::Info & plugin) {
+void pul::plugin::UpdatePlugins(pul::plugin::Info & plugin) {
   for (auto & pluginIt : ::plugins) {
     pluginIt->Reload();
 

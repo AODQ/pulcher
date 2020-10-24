@@ -4,11 +4,11 @@
 
 #include <sokol/gfx.hpp>
 
-pulcher::gfx::Spritesheet::~Spritesheet() {
+pul::gfx::Spritesheet::~Spritesheet() {
   this->Destroy();
 }
 
-pulcher::gfx::Spritesheet::Spritesheet(Spritesheet && other) {
+pul::gfx::Spritesheet::Spritesheet(Spritesheet && other) {
   this->handle = other.handle;
   this->filename = std::move(other.filename);
   this->width = other.width;
@@ -16,8 +16,8 @@ pulcher::gfx::Spritesheet::Spritesheet(Spritesheet && other) {
   other.handle = 0ul;
 }
 
-pulcher::gfx::Spritesheet &
-pulcher::gfx::Spritesheet::operator=(Spritesheet && other) {
+pul::gfx::Spritesheet &
+pul::gfx::Spritesheet::operator=(Spritesheet && other) {
   this->handle = other.handle;
   this->filename = std::move(other.filename);
   this->width = other.width;
@@ -26,8 +26,8 @@ pulcher::gfx::Spritesheet::operator=(Spritesheet && other) {
   return *this;
 }
 
-pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
-  pulcher::gfx::Image const & image
+pul::gfx::Spritesheet pul::gfx::Spritesheet::Construct(
+  pul::gfx::Image const & image
 ) {
   Spritesheet self;
 
@@ -62,17 +62,17 @@ pulcher::gfx::Spritesheet pulcher::gfx::Spritesheet::Construct(
   return self;
 }
 
-sg_image pulcher::gfx::Spritesheet::Image() const {
+sg_image pul::gfx::Spritesheet::Image() const {
   sg_image image;
   image.id = this->handle;
   return image;
 }
 
-glm::vec2 pulcher::gfx::Spritesheet::InvResolution() {
+glm::vec2 pul::gfx::Spritesheet::InvResolution() {
   return glm::vec2(1.0f) / glm::vec2(width, height);
 }
 
-void pulcher::gfx::Spritesheet::Destroy() {
+void pul::gfx::Spritesheet::Destroy() {
   if (handle)
     { sg_destroy_image(this->Image()); }
   handle = 0ul;

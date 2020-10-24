@@ -7,7 +7,7 @@
 // include this in the header where a pointer implementation is used, then
 //   include pimpl_impl.hpp in the corresponding source implementation
 
-namespace pulcher::util {
+namespace pul::util {
   template <typename T>
   class pimpl {
   public:

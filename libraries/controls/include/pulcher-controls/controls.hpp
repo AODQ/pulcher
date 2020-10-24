@@ -8,7 +8,7 @@
 
 struct GLFWwindow;
 
-namespace pulcher::controls {
+namespace pul::controls {
 
   struct Controller {
     enum struct Movement : int8_t {
@@ -39,7 +39,7 @@ namespace pulcher::controls {
   void UpdateControls(
     GLFWwindow * window
   , uint32_t playerCenterX, uint32_t playerCenterY
-  , pulcher::controls::Controller & controller
+  , pul::controls::Controller & controller
   );
 
 }

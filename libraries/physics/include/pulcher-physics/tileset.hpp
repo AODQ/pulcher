@@ -5,7 +5,7 @@
 
 // SDF tilesets
 
-namespace pulcher::physics {
+namespace pul::physics {
 
   enum struct TileIntersectAccelerationHint : uint8_t {
     Default = 0b0 // no info, must use SDF
@@ -20,6 +20,6 @@ namespace pulcher::physics {
   };
 
   struct Tileset {
-    std::vector<pulcher::physics::Tile> tiles;
+    std::vector<pul::physics::Tile> tiles;
   };
 }

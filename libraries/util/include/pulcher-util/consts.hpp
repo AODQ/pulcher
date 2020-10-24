@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <array>
 
-namespace pulcher::util {
+namespace pul::util {
   float constexpr MsPerFrame = 1000.0f/90.0f;
 
   std::array<glm::vec2, 6> TriangleVertexArray();

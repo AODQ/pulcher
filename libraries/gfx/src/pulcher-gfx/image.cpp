@@ -8,8 +8,8 @@
   #include <stb_image.hpp>
 #pragma GCC diagnostic pop
 
-pulcher::gfx::Image pulcher::gfx::Image::Construct(char const * filename) {
-  pulcher::gfx::Image self;
+pul::gfx::Image pul::gfx::Image::Construct(char const * filename) {
+  pul::gfx::Image self;
 
   stbi_set_flip_vertically_on_load(true);
   int width, height, channels;

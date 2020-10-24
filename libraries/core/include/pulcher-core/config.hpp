@@ -3,7 +3,7 @@
 #include <string>
 #include <array>
 
-namespace pulcher::core {
+namespace pul::core {
   struct Config {
     std::string networkIpAddress;
     uint16_t networkPortAddress = 6599u;

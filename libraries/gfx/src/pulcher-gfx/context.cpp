@@ -31,13 +31,13 @@ void InitializeSokol() {
   ;
   ImGui::StyleColorsDark();
 
-  ImGui_ImplGlfw_InitForOpenGL(pulcher::gfx::DisplayWindow(), true);
+  ImGui_ImplGlfw_InitForOpenGL(pul::gfx::DisplayWindow(), true);
 }
 
 int displayWidth, displayHeight;
 } // -- namespace
 
-bool pulcher::gfx::InitializeContext(pulcher::core::Config & config) {
+bool pul::gfx::InitializeContext(pul::core::Config & config) {
   spdlog::info("initializing graphics context");
   if (!glfwInit()) {
     spdlog::error("failed to initialize GLFW");
@@ -177,43 +177,43 @@ bool pulcher::gfx::InitializeContext(pulcher::core::Config & config) {
   return true;
 }
 
-int & pulcher::gfx::DisplayWidth() { return ::displayWidth; }
-int & pulcher::gfx::DisplayHeight() { return ::displayHeight; }
-GLFWwindow * pulcher::gfx::DisplayWindow() { return ::displayWindow; }
+int & pul::gfx::DisplayWidth() { return ::displayWidth; }
+int & pul::gfx::DisplayHeight() { return ::displayHeight; }
+GLFWwindow * pul::gfx::DisplayWindow() { return ::displayWindow; }
 
-void pulcher::gfx::StartFrame(float deltaMs) {
+void pul::gfx::StartFrame(float deltaMs) {
   // -- validate display size in case of resize
   glfwGetFramebufferSize(
-    pulcher::gfx::DisplayWindow()
-  , &pulcher::gfx::DisplayWidth()
-  , &pulcher::gfx::DisplayHeight()
+    pul::gfx::DisplayWindow()
+  , &pul::gfx::DisplayWidth()
+  , &pul::gfx::DisplayHeight()
   );
 
   simgui_new_frame(
-    pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
+    pul::gfx::DisplayWidth(), pul::gfx::DisplayHeight()
   , static_cast<double>(deltaMs/1000.0f)
   );
 
   ImGui_ImplGlfw_NewFrame();
 }
 
-void pulcher::gfx::EndFrame() {
-  glfwSwapBuffers(pulcher::gfx::DisplayWindow());
+void pul::gfx::EndFrame() {
+  glfwSwapBuffers(pul::gfx::DisplayWindow());
 }
 
-void pulcher::gfx::Shutdown() {
+void pul::gfx::Shutdown() {
 
   ImGui_ImplGlfw_Shutdown();
 
   simgui_shutdown();
   sg_shutdown();
 
-  glfwDestroyWindow(pulcher::gfx::DisplayWindow());
+  glfwDestroyWindow(pul::gfx::DisplayWindow());
   glfwTerminate();
 }
 
-sg_pass & pulcher::gfx::ScenePass() {
+sg_pass & pul::gfx::ScenePass() {
   return ::scenePass;
 }
 
-sg_image & pulcher::gfx::SceneImageColor() { return ::sceneImageColor; }
+sg_image & pul::gfx::SceneImageColor() { return ::sceneImageColor; }

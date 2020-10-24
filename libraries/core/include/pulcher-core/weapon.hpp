@@ -4,7 +4,7 @@
 
 #include <array>
 
-namespace pulcher::core {
+namespace pul::core {
 
   enum class WeaponType {
     BadFetus
@@ -66,7 +66,6 @@ namespace pulcher::core {
 
     void ChangeWeapon(WeaponType);
   };
-
 }
 
-char const * ToStr(pulcher::core::WeaponType weaponType);
+char const * ToStr(pul::core::WeaponType weaponType);

@@ -38,7 +38,7 @@ static size_t animMaxTime = 100'000ul;
 
 void JsonParseRecursiveSkeleton(
   cJSON * skeletalParentJson
-, std::vector<pulcher::animation::Animator::SkeletalPiece> & skeletals
+, std::vector<pul::animation::Animator::SkeletalPiece> & skeletals
 ) {
   if (!skeletalParentJson) { return; }
   cJSON * skeletalChildJson;
@@ -46,7 +46,7 @@ void JsonParseRecursiveSkeleton(
     skeletalChildJson
   , cJSON_GetObjectItemCaseSensitive(skeletalParentJson, "skeleton")
   ) {
-    pulcher::animation::Animator::SkeletalPiece skeletal;
+    pul::animation::Animator::SkeletalPiece skeletal;
     skeletal.label =
       cJSON_GetObjectItemCaseSensitive(skeletalChildJson, "label")->valuestring;
     skeletal.origin.x =
@@ -58,14 +58,14 @@ void JsonParseRecursiveSkeleton(
   }
 }
 
-std::vector<pulcher::animation::Animator::Component> JsonLoadComponents(
+std::vector<pul::animation::Animator::Component> JsonLoadComponents(
   cJSON * componentsJson
 ) {
-  std::vector<pulcher::animation::Animator::Component> components;
+  std::vector<pul::animation::Animator::Component> components;
 
   cJSON * componentJson;
   cJSON_ArrayForEach(componentJson, componentsJson) {
-    pulcher::animation::Animator::Component component;
+    pul::animation::Animator::Component component;
     component.tile.x =
       cJSON_GetObjectItemCaseSensitive(componentJson, "x")->valueint;
 
@@ -93,7 +93,7 @@ std::vector<pulcher::animation::Animator::Component> JsonLoadComponents(
 }
 
 cJSON * JsonWriteRecursiveSkeleton(
-  std::vector<pulcher::animation::Animator::SkeletalPiece> & skeletals
+  std::vector<pul::animation::Animator::SkeletalPiece> & skeletals
 ) {
   if (skeletals.size() == 0ul) { return nullptr; }
 
@@ -122,7 +122,7 @@ cJSON * JsonWriteRecursiveSkeleton(
 }
 
 size_t ComputeVertexBufferSize(
-  std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
+  std::vector<pul::animation::Animator::SkeletalPiece> const & skeletals
 ) {
   size_t vertices = 0ul;
   for (const auto & skeletal : skeletals) {
@@ -132,9 +132,9 @@ size_t ComputeVertexBufferSize(
 }
 
 void ComputeVertices(
-  pulcher::core::SceneBundle & scene
-, pulcher::animation::Instance & instance
-, pulcher::animation::Animator::SkeletalPiece const & skeletal
+  pul::core::SceneBundle &
+, pul::animation::Instance & instance
+, pul::animation::Animator::SkeletalPiece const & skeletal
 , size_t & indexOffset
 , bool & skeletalFlip
 , float & skeletalRotation
@@ -187,7 +187,7 @@ void ComputeVertices(
   // updates
   bool hasUpdate = forceUpdate;
   if (state.msDeltaTime > 0.0f && !stateInfo.animationFinished) {
-    stateInfo.deltaTime += pulcher::util::MsPerFrame;
+    stateInfo.deltaTime += pul::util::MsPerFrame;
     if (stateInfo.deltaTime > state.msDeltaTime) {
       if (state.loops) {
         stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
@@ -215,7 +215,7 @@ void ComputeVertices(
 
   // update origins & UV coords
   for (size_t it = 0ul; it < 6; ++ it, ++ indexOffset) {
-    auto v = pulcher::util::TriangleVertexArray()[it];
+    auto v = pul::util::TriangleVertexArray()[it];
 
     // flip uv coords if requested
     auto uv = v;
@@ -239,9 +239,9 @@ void ComputeVertices(
 }
 
 void ComputeVertices(
-  pulcher::core::SceneBundle & scene
-, pulcher::animation::Instance & instance
-, std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
+  pul::core::SceneBundle & scene
+, pul::animation::Instance & instance
+, std::vector<pul::animation::Animator::SkeletalPiece> const & skeletals
 , size_t & indexOffset
 , bool const skeletalFlip
 , float const skeletalRotation
@@ -266,8 +266,8 @@ void ComputeVertices(
 }
 
 void ComputeVertices(
-  pulcher::core::SceneBundle & scene
-, pulcher::animation::Instance & instance
+  pul::core::SceneBundle & scene
+, pul::animation::Instance & instance
 , bool forceUpdate = false
 ) {
   size_t indexOffset = 0ul;
@@ -278,8 +278,8 @@ void ComputeVertices(
 }
 
 void ComputeCache(
-  pulcher::animation::Instance & instance
-, pulcher::animation::Animator::SkeletalPiece const & skeletal
+  pul::animation::Instance & instance
+, pul::animation::Animator::SkeletalPiece const & skeletal
 , glm::mat3 & skeletalMatrix
 , bool & skeletalFlip
 , float & skeletalRotation
@@ -370,8 +370,8 @@ void ComputeCache(
 }
 
 void ComputeCache(
-  pulcher::animation::Instance & instance
-, std::vector<pulcher::animation::Animator::SkeletalPiece> const & skeletals
+  pul::animation::Instance & instance
+, std::vector<pul::animation::Animator::SkeletalPiece> const & skeletals
 , glm::mat3 const skeletalMatrix
 , bool const skeletalFlip
 , float const skeletalRotation
@@ -396,7 +396,7 @@ void ComputeCache(
 
 extern "C" {
 PUL_PLUGIN_DECL void Animation_DestroyInstance(
-  pulcher::animation::Instance & instance
+  pul::animation::Instance & instance
 ) {
   if (instance.sgBufferOrigin.id) {
     sg_destroy_buffer(instance.sgBufferOrigin);
@@ -415,9 +415,9 @@ PUL_PLUGIN_DECL void Animation_DestroyInstance(
 }
 
 PUL_PLUGIN_DECL void Animation_ConstructInstance(
-  pulcher::core::SceneBundle & scene
-, pulcher::animation::Instance & animationInstance
-, pulcher::animation::System & animationSystem
+  pul::core::SceneBundle & scene
+, pul::animation::Instance & animationInstance
+, pul::animation::System & animationSystem
 , char const * label
 ) {
   if (
@@ -490,12 +490,12 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
 
 namespace {
 
-void ReconstructInstances(pulcher::core::SceneBundle & scene) {
+void ReconstructInstances(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
   auto & system = scene.AnimationSystem();
-  auto view = registry.view<pulcher::animation::ComponentInstance>();
+  auto view = registry.view<pul::animation::ComponentInstance>();
   for (auto entity : view) {
-    auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+    auto & self = view.get<pul::animation::ComponentInstance>(entity);
     auto label = self.instance.animator->label;
     Animation_DestroyInstance(self.instance);
     Animation_ConstructInstance(scene, self.instance, system, label.c_str());
@@ -503,9 +503,9 @@ void ReconstructInstances(pulcher::core::SceneBundle & scene) {
 }
 
 void ImGuiRenderSpritesheetTile(
-  pulcher::gfx::Spritesheet & spritesheet
-, pulcher::animation::Animator::Piece & piece
-, pulcher::animation::Animator::Component & component
+  pul::gfx::Spritesheet & spritesheet
+, pul::animation::Animator::Piece & piece
+, pul::animation::Animator::Component & component
 , float alpha = 1.0f
 ) {
   auto pieceDimensions = glm::vec2(piece.dimensions);
@@ -548,9 +548,9 @@ void ImGuiRenderSpritesheetTile(
 }
 
 void DisplayImGuiComponent(
-  pulcher::animation::Animator & animator
-, pulcher::animation::Animator::Piece & piece
-, std::vector<pulcher::animation::Animator::Component> & components
+  pul::animation::Animator & animator
+, pul::animation::Animator::Piece & piece
+, std::vector<pul::animation::Animator::Component> & components
 , size_t componentIt
 ) {
   auto & component = components[componentIt];
@@ -616,10 +616,10 @@ void DisplayImGuiComponent(
 }
 
 void DisplayImGuiComponents(
-  pulcher::animation::Animator & animator
-, pulcher::animation::Animator::State & state
-, pulcher::animation::Animator::Piece & piece
-, std::vector<pulcher::animation::Animator::Component> & components
+  pul::animation::Animator & animator
+, pul::animation::Animator::State & state
+, pul::animation::Animator::Piece & piece
+, std::vector<pul::animation::Animator::Component> & components
 ) {
   if (components.size() > 0ul)
   { // display image
@@ -650,10 +650,10 @@ void DisplayImGuiComponents(
 }
 
 void DisplayImGuiSkeleton(
-  pulcher::core::SceneBundle & scene
-, pulcher::animation::Animator & animator
-, pulcher::animation::System & system
-, std::vector<pulcher::animation::Animator::SkeletalPiece> & skeletals
+  pul::core::SceneBundle & scene
+, pul::animation::Animator & animator
+, pul::animation::System & system
+, std::vector<pul::animation::Animator::SkeletalPiece> & skeletals
 ) {
 
   ImGui::SameLine();
@@ -665,7 +665,7 @@ void DisplayImGuiSkeleton(
       auto & label = std::get<0>(piecePair);
       if (ImGui::Selectable(label.c_str())) {
         skeletals.emplace_back(
-          pulcher::animation::Animator::SkeletalPiece{label}
+          pul::animation::Animator::SkeletalPiece{label}
         );
         ReconstructInstances(scene);
       }
@@ -706,7 +706,7 @@ void DisplayImGuiSkeleton(
 }
 
 cJSON * SaveAnimationComponent(
-  std::vector<pulcher::animation::Animator::Component> const & components
+  std::vector<pul::animation::Animator::Component> const & components
 ) {
   cJSON * componentsJson = cJSON_CreateArray();
 
@@ -733,7 +733,7 @@ cJSON * SaveAnimationComponent(
   return componentsJson;
 }
 
-cJSON * SaveAnimation(pulcher::animation::Animator& animator) {
+cJSON * SaveAnimation(pul::animation::Animator& animator) {
   cJSON * spritesheetJson = cJSON_CreateObject();
 
   cJSON_AddItemToObject(
@@ -840,7 +840,7 @@ cJSON * SaveAnimation(pulcher::animation::Animator& animator) {
   return spritesheetJson;
 }
 
-void SaveAnimations(pulcher::animation::System & system) {
+void SaveAnimations(pul::animation::System & system) {
   // save each animation into its own map to seperate them out by file
   std::map<std::string, std::vector<cJSON *>> filenameToCJson;
   for (auto & animatorPair : system.animators) {
@@ -910,7 +910,7 @@ void LoadAnimation(
   std::string const & filename
 , std::map<
     std::string
-  , std::shared_ptr<pulcher::animation::Animator>
+  , std::shared_ptr<pul::animation::Animator>
   > & animators
 ) {
 
@@ -923,7 +923,7 @@ void LoadAnimation(
     sheetJson
   , cJSON_GetObjectItemCaseSensitive(fileDataJson, "spritesheets")
   ) {
-    auto animator = std::make_shared<pulcher::animation::Animator>();
+    auto animator = std::make_shared<pul::animation::Animator>();
     animator->filename = filename;
     animator->label =
       std::string{
@@ -935,8 +935,8 @@ void LoadAnimation(
     animators[animator->label] = animator;
 
     animator->spritesheet =
-      pulcher::gfx::Spritesheet::Construct(
-        pulcher::gfx::Image::Construct(
+      pul::gfx::Spritesheet::Construct(
+        pul::gfx::Image::Construct(
           cJSON_GetObjectItemCaseSensitive(sheetJson, "filename")->valuestring
         )
       );
@@ -948,7 +948,7 @@ void LoadAnimation(
       std::string pieceLabel =
         cJSON_GetObjectItemCaseSensitive(pieceJson, "label")->valuestring;
 
-      pulcher::animation::Animator::Piece piece;
+      pul::animation::Animator::Piece piece;
 
       piece.dimensions.x =
         cJSON_GetObjectItemCaseSensitive(pieceJson, "dimension-x")->valueint;
@@ -981,7 +981,7 @@ void LoadAnimation(
         std::string stateLabel =
           cJSON_GetObjectItemCaseSensitive(stateJson, "label")->valuestring;
 
-        pulcher::animation::Animator::State state;
+        pul::animation::Animator::State state;
 
         state.msDeltaTime =
           cJSON_GetObjectItemCaseSensitive(
@@ -1010,7 +1010,7 @@ void LoadAnimation(
           componentPartJson
         , cJSON_GetObjectItemCaseSensitive(stateJson, "components")
         ) {
-          pulcher::animation::Animator::ComponentPart componentPart;
+          pul::animation::Animator::ComponentPart componentPart;
           componentPart.rangeMax =
             cJSON_GetObjectItemCaseSensitive(
               componentPartJson, "angle-range-max"
@@ -1047,7 +1047,7 @@ void LoadAnimation(
 
 extern "C" {
 PUL_PLUGIN_DECL void Animation_LoadAnimations(
-  pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
+  pul::plugin::Info const &, pul::core::SceneBundle & scene
 ) {
 
   auto & animationSystem = scene.AnimationSystem();
@@ -1160,14 +1160,14 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
   }
 }
 
-PUL_PLUGIN_DECL void Animation_Shutdown(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Animation_Shutdown(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   { // -- delete sokol animation information
-    auto view = registry.view<pulcher::animation::ComponentInstance>();
+    auto view = registry.view<pul::animation::ComponentInstance>();
 
     for (auto entity : view) {
-      auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+      auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
       Animation_DestroyInstance(self.instance);
     }
@@ -1180,13 +1180,13 @@ PUL_PLUGIN_DECL void Animation_Shutdown(pulcher::core::SceneBundle & scene) {
 }
 
 PUL_PLUGIN_DECL void Animation_UpdateFrame(
-  pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
+  pul::plugin::Info const &, pul::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
   // update each component
-  auto view = registry.view<pulcher::animation::ComponentInstance>();
+  auto view = registry.view<pul::animation::ComponentInstance>();
   for (auto entity : view) {
-    auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+    auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
     if (!self.instance.hasCalculatedCachedInfo) {
       ::ComputeCache(
@@ -1200,7 +1200,7 @@ PUL_PLUGIN_DECL void Animation_UpdateFrame(
 }
 
 PUL_PLUGIN_DECL void Animation_RenderAnimations(
-  pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
+  pul::plugin::Info const &, pul::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
   { // -- render sokol animations
@@ -1221,9 +1221,9 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     );
 
     // render each component
-    auto view = registry.view<pulcher::animation::ComponentInstance>();
+    auto view = registry.view<pul::animation::ComponentInstance>();
     for (auto entity : view) {
-      auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+      auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
       self.instance.hasCalculatedCachedInfo = false;
 
@@ -1259,7 +1259,7 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
 }
 
 PUL_PLUGIN_DECL void Animation_UpdateCache(
-  pulcher::animation::Instance & instance
+  pul::animation::Instance & instance
 ) {
   ::ComputeCache(
     instance, instance.animator->skeleton, glm::mat3(1.0f), false, 0.0f
@@ -1268,7 +1268,7 @@ PUL_PLUGIN_DECL void Animation_UpdateCache(
 }
 
 PUL_PLUGIN_DECL void Animation_UpdateCacheWithPrecalculatedMatrix(
-  pulcher::animation::Instance & instance
+  pul::animation::Instance & instance
 , glm::mat3 const & skeletalMatrix
 ) {
   ::ComputeCache(
@@ -1278,13 +1278,13 @@ PUL_PLUGIN_DECL void Animation_UpdateCacheWithPrecalculatedMatrix(
 }
 
 PUL_PLUGIN_DECL void Animation_UiRender(
-  pulcher::plugin::Info const &, pulcher::core::SceneBundle & scene
+  pul::plugin::Info const &, pul::core::SceneBundle & scene
 ) {
   ImGui::Begin("Animation");
 
   auto & registry = scene.EnttRegistry();
 
-  static pulcher::animation::Animator * editAnimator = nullptr;
+  static pul::animation::Animator * editAnimator = nullptr;
 
   { // -- display spritesheet info
     ImGui::Text("spritesheets");
@@ -1309,7 +1309,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
   ImGui::NewLine();
 
   { // -- display entity info
-    auto view = registry.view<pulcher::animation::ComponentInstance>();
+    auto view = registry.view<pul::animation::ComponentInstance>();
 
     ImGui::Text("instances");
 
@@ -1317,7 +1317,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
     ImGui::Separator();
 
     for (auto entity : view) {
-      auto & self = view.get<pulcher::animation::ComponentInstance>(entity);
+      auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
       ImGui::PushID(&self);
 
@@ -1368,7 +1368,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
       );
 
       if (animPlaying) {
-        animMsTimer += pulcher::util::MsPerFrame * scene.numCpuFrames;
+        animMsTimer += pul::util::MsPerFrame * scene.numCpuFrames;
 
         animMsTimer =
             animLoop
