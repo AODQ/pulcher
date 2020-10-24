@@ -459,7 +459,7 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
       sg_buffer_desc desc = {};
       desc.size = vertexBufferSize * sizeof(glm::vec3);
       desc.usage = SG_USAGE_STREAM;
-      desc.content = animationInstance.originBufferData.data();
+      desc.content = nullptr;
       desc.label = "origin buffer";
       animationInstance.sgBufferOrigin = sg_make_buffer(&desc);
     }
@@ -468,7 +468,7 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
       sg_buffer_desc desc = {};
       desc.size = vertexBufferSize * sizeof(glm::vec2);
       desc.usage = SG_USAGE_STREAM;
-      desc.content = animationInstance.uvCoordBufferData.data();
+      desc.content = nullptr;
       desc.label = "uv coord buffer";
       animationInstance.sgBufferUvCoord = sg_make_buffer(&desc);
     }
