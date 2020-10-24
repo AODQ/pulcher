@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <functional>
 
-namespace pulcher::network {
+namespace pul::network {
 
   enum struct ChannelType : uint8_t {
     Reliable, Unreliable, Streaming
@@ -33,7 +33,7 @@ namespace pulcher::network {
 
     bool valid = false;
 
-    static pulcher::network::Network Construct();
+    static pul::network::Network Construct();
   };
 
   struct Address {
@@ -75,7 +75,7 @@ namespace pulcher::network {
 
     ENetHost * enetHost = nullptr;
 
-    std::function<void(pulcher::network::Event & event)>
+    std::function<void(pul::network::Event & event)>
       fnConnect, fnReceive, fnDisconnect;
 
     struct ConstructInfo {
@@ -84,17 +84,17 @@ namespace pulcher::network {
       size_t maxConnections;
       size_t maxChannels;
       size_t incomingBandwidth, outgoingBandwidth;
-      std::function<void(pulcher::network::Event & event)>
+      std::function<void(pul::network::Event & event)>
         fnConnect, fnReceive, fnDisconnect;
     };
 
-    static pulcher::network::Host Construct(ConstructInfo const & ci);
+    static pul::network::Host Construct(ConstructInfo const & ci);
 
     bool Valid() const { return static_cast<bool>(this->enetHost); }
 
     void PollEvents(size_t timeout = 0ul, size_t maxEventPoll = 20ul);
 
-    pulcher::network::Event ManualPollEvent(size_t timeout = 0ul);
+    pul::network::Event ManualPollEvent(size_t timeout = 0ul);
 
     void Flush();
   };
@@ -120,11 +120,11 @@ namespace pulcher::network {
 
     struct ConstructInfo {
       Address address;
-      std::function<void(pulcher::network::Event & event)>
+      std::function<void(pul::network::Event & event)>
         fnConnect, fnReceive, fnDisconnect;
     };
 
-    static pulcher::network::ClientHost Construct(ConstructInfo const & ci);
+    static pul::network::ClientHost Construct(ConstructInfo const & ci);
 
     bool Valid() const {
       return this->host.Valid() && this->connection.Valid();
@@ -136,11 +136,11 @@ namespace pulcher::network {
 
     struct ConstructInfo {
       uint32_t port;
-      std::function<void(pulcher::network::Event & event)>
+      std::function<void(pul::network::Event & event)>
         fnConnect, fnReceive, fnDisconnect;
     };
 
-    static pulcher::network::ServerHost Construct(ConstructInfo const & ci);
+    static pul::network::ServerHost Construct(ConstructInfo const & ci);
 
     bool Valid() const { return this->host.Valid(); }
   };
@@ -148,10 +148,10 @@ namespace pulcher::network {
   struct OutgoingPacket {
     // memory dealloc managed by enet
     ENetPacket * enetPacket = nullptr;
-    pulcher::network::ChannelType channel;
+    pul::network::ChannelType channel;
 
     template <typename T> static OutgoingPacket Construct(
-      T const & data, pulcher::network::ChannelType channel
+      T const & data, pul::network::ChannelType channel
     );
 
     void Send(ClientHost & client);
@@ -160,11 +160,11 @@ namespace pulcher::network {
 
   constexpr OperatingSystem currentOperatingSystem =
     #if defined(__unix__)
-      pulcher::network::OperatingSystem::Linux
+      pul::network::OperatingSystem::Linux
     #elif defined(_WIN64)
-      pulcher::network::OperatingSystem::Win64
+      pul::network::OperatingSystem::Win64
     #elif defined(_WIN32)
-      pulcher::network::OperatingSystem::Win32
+      pul::network::OperatingSystem::Win32
     #endif
   ;
 
@@ -173,7 +173,7 @@ namespace pulcher::network {
 
   struct PacketSystemInfo {
     PacketType const packetType = PacketType::SystemInfo;
-    pulcher::network::OperatingSystem operatingSystem;
+    pul::network::OperatingSystem operatingSystem;
   };
 
   struct PacketNetworkClientUpdate {
@@ -207,6 +207,6 @@ namespace pulcher::network {
   };
 }
 
-char const * ToString(pulcher::network::OperatingSystem os);
-char const * ToString(pulcher::network::PacketType packetType);
-char const * ToString(pulcher::network::PacketNetworkClientUpdate::Type type);
+char const * ToString(pul::network::OperatingSystem os);
+char const * ToString(pul::network::PacketType packetType);
+char const * ToString(pul::network::PacketNetworkClientUpdate::Type type);

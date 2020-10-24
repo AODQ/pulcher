@@ -1,6 +1,6 @@
 // a better RAII version of std::any
 
-namespace pulcher::util {
+namespace pul::util {
   struct Any {
     Any() = default;
     ~Any();

@@ -36,66 +36,66 @@ struct ComponentCamera {
 extern "C" {
 
 PUL_PLUGIN_DECL void Entity_StartScene(
-  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
 
   auto playerEntity = registry.create();
-  registry.emplace<pulcher::core::ComponentPlayer>(playerEntity);
+  registry.emplace<pul::core::ComponentPlayer>(playerEntity);
   registry.emplace<ComponentControllable>(playerEntity);
   registry.emplace<ComponentCamera>(playerEntity);
   registry.emplace<ComponentLabel>(playerEntity, "Player");
 
-  pulcher::animation::Instance instance;
+  pul::animation::Instance instance;
   plugin.animation.ConstructInstance(
     scene, instance, scene.AnimationSystem(), "nygelstromn"
   );
-  registry.emplace<pulcher::animation::ComponentInstance>(
+  registry.emplace<pul::animation::ComponentInstance>(
     playerEntity, instance
   );
 
   {
-    auto & player = registry.get<pulcher::core::ComponentPlayer>(playerEntity);
+    auto & player = registry.get<pul::core::ComponentPlayer>(playerEntity);
 
-    pulcher::animation::Instance weaponInstance;
+    pul::animation::Instance weaponInstance;
     plugin.animation.ConstructInstance(
       scene, weaponInstance, scene.AnimationSystem(), "weapons"
     );
 
     player.weaponAnimation = registry.create();
-    registry.emplace<pulcher::animation::ComponentInstance>(
+    registry.emplace<pul::animation::ComponentInstance>(
       player.weaponAnimation, weaponInstance
     );
   }
 }
 
-PUL_PLUGIN_DECL void Entity_Shutdown(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
 
   // delete registry
   scene.EnttRegistry() = {};
 }
 
 PUL_PLUGIN_DECL void Entity_EntityUpdate(
-  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
 
   auto view =
     registry.view<
-      ComponentControllable, pulcher::core::ComponentPlayer, ComponentCamera
-    , pulcher::animation::ComponentInstance
+      ComponentControllable, pul::core::ComponentPlayer, ComponentCamera
+    , pul::animation::ComponentInstance
     >();
 
   for (auto entity : view) {
     plugin::entity::UpdatePlayer(
       plugin, scene
-    , view.get<pulcher::core::ComponentPlayer>(entity)
-    , view.get<pulcher::animation::ComponentInstance>(entity)
+    , view.get<pul::core::ComponentPlayer>(entity)
+    , view.get<pul::animation::ComponentInstance>(entity)
     );
   }
 }
 
-PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   ImGui::Begin("Entity");
@@ -109,9 +109,9 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       ImGui::Text("'%s'", label.label.c_str());
     }
 
-    if (registry.has<pulcher::core::ComponentPlayer>(entity)) {
+    if (registry.has<pul::core::ComponentPlayer>(entity)) {
       ImGui::Text("--- player ---"); ImGui::SameLine(); ImGui::Separator();
-      auto & self = registry.get<pulcher::core::ComponentPlayer>(entity);
+      auto & self = registry.get<pul::core::ComponentPlayer>(entity);
       ImGui::PushID(&self);
       pul::imgui::Text(
         "weapon anim ID {}", static_cast<size_t>(self.weaponAnimation)
@@ -203,9 +203,9 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
       ImGui::Text("--- camera ---"); ImGui::SameLine(); ImGui::Separator();
     }
 
-    if (registry.has<pulcher::animation::ComponentInstance>(entity)) {
+    if (registry.has<pul::animation::ComponentInstance>(entity)) {
       ImGui::Text("--- animation ---"); ImGui::SameLine(); ImGui::Separator();
-      auto & self = registry.get<pulcher::animation::ComponentInstance>(entity);
+      auto & self = registry.get<pul::animation::ComponentInstance>(entity);
       pul::imgui::Text("label: {}", self.instance.animator->label);
       pul::imgui::Text("origin: {}", self.instance.origin);
     }
@@ -217,15 +217,15 @@ PUL_PLUGIN_DECL void Entity_UiRender(pulcher::core::SceneBundle & scene) {
 
   auto view =
     registry.view<
-      ComponentControllable, pulcher::core::ComponentPlayer, ComponentCamera
-    , pulcher::animation::ComponentInstance
+      ComponentControllable, pul::core::ComponentPlayer, ComponentCamera
+    , pul::animation::ComponentInstance
     >();
 
   for (auto entity : view) {
     plugin::entity::UiRenderPlayer(
       scene
-    , view.get<pulcher::core::ComponentPlayer>(entity)
-    , view.get<pulcher::animation::ComponentInstance>(entity)
+    , view.get<pul::core::ComponentPlayer>(entity)
+    , view.get<pul::animation::ComponentInstance>(entity)
     );
   }
 }

@@ -5,7 +5,7 @@
 #include <array>
 #include <vector>
 
-namespace pulcher::physics {
+namespace pul::physics {
 
   enum class IntersectorType : size_t {
     Point = 0x10000000
@@ -42,25 +42,25 @@ namespace pulcher::physics {
   struct DebugQueries {
     void Add(
       IntersectorPoint const & intersector
-    , pulcher::physics::IntersectionResults results
+    , pul::physics::IntersectionResults results
     );
 
     void Add(
       IntersectorRay const & intersector
-    , pulcher::physics::IntersectionResults results
+    , pul::physics::IntersectionResults results
     );
 
     std::vector<
       std::pair<
-        pulcher::physics::IntersectorPoint
-      , pulcher::physics::IntersectionResults
+        pul::physics::IntersectorPoint
+      , pul::physics::IntersectionResults
       >
      > intersectorPoints;
 
     std::vector<
       std::pair<
-        pulcher::physics::IntersectorRay
-      , pulcher::physics::IntersectionResults
+        pul::physics::IntersectorRay
+      , pul::physics::IntersectionResults
       >
     > intersectorRays;
   };

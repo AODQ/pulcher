@@ -9,29 +9,29 @@
 namespace entt { enum class entity : std::uint32_t; }
 namespace entt { template <typename> class basic_registry; }
 namespace entt { using registry = basic_registry<entity>; }
-namespace pulcher::animation { struct System; }
-namespace pulcher::controls { struct Controller; }
-namespace pulcher::physics { struct DebugQueries; }
+namespace pul::animation { struct System; }
+namespace pul::controls { struct Controller; }
+namespace pul::physics { struct DebugQueries; }
 
-namespace pulcher::core {
+namespace pul::core {
   struct SceneBundle {
     glm::i32vec2 cameraOrigin = {};
 
-    float calculatedMsPerFrame = pulcher::util::MsPerFrame;
+    float calculatedMsPerFrame = pul::util::MsPerFrame;
     size_t numCpuFrames = 0ul;
 
-    pulcher::core::Config config = {};
+    pul::core::Config config = {};
 
     glm::u32vec2 playerCenter = {};
 
-    pulcher::animation::System & AnimationSystem();
-    pulcher::controls::Controller & PlayerController();
-    pulcher::physics::DebugQueries & PhysicsDebugQueries();
+    pul::animation::System & AnimationSystem();
+    pul::controls::Controller & PlayerController();
+    pul::physics::DebugQueries & PhysicsDebugQueries();
 
     entt::registry & EnttRegistry();
 
     struct Impl;
-    pulcher::util::pimpl<Impl> impl;
+    pul::util::pimpl<Impl> impl;
 
     static SceneBundle Construct();
   };

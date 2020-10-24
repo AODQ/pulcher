@@ -13,7 +13,7 @@
 #include <chrono>
 #include <thread>
 
-namespace pulcher::plugin { struct Info; }
+namespace pul::plugin { struct Info; }
 
 namespace {
 
@@ -33,8 +33,8 @@ void RenderKey(
 extern "C" {
 
 PUL_PLUGIN_DECL void Ui_UiDispatch(
-  pulcher::plugin::Info const & plugin
-, pulcher::core::SceneBundle & sceneBundle
+  pul::plugin::Info const & plugin
+, pul::core::SceneBundle & sceneBundle
 ) {
   ImGui::Begin("Diagnostics");
 
@@ -71,7 +71,7 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
   ImGui::Begin("Controls");
 
     auto & current = sceneBundle.PlayerController().current;
-    using Movement = pulcher::controls::Controller::Movement;
+    using Movement = pul::controls::Controller::Movement;
 
     // render keys in this format:
     /*

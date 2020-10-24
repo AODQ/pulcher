@@ -1,20 +1,20 @@
 #pragma once
 
-namespace pulcher::animation { struct ComponentInstance; }
-namespace pulcher::core { struct ComponentPlayer; }
-namespace pulcher::core { struct SceneBundle; }
-namespace pulcher::plugin { struct Info; }
+namespace pul::animation { struct ComponentInstance; }
+namespace pul::core { struct ComponentPlayer; }
+namespace pul::core { struct SceneBundle; }
+namespace pul::plugin { struct Info; }
 
 namespace plugin::entity {
   void UpdatePlayer(
-    pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
-  , pulcher::core::ComponentPlayer & player
-  , pulcher::animation::ComponentInstance & playerAnimation
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::ComponentPlayer & player
+  , pul::animation::ComponentInstance & playerAnimation
   );
 
   void UiRenderPlayer(
-    pulcher::core::SceneBundle & scene
-  , pulcher::core::ComponentPlayer & player
-  , pulcher::animation::ComponentInstance & playerAnimation
+    pul::core::SceneBundle & scene
+  , pul::core::ComponentPlayer & player
+  , pul::animation::ComponentInstance & playerAnimation
   );
 }

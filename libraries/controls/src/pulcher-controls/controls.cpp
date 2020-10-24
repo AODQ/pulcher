@@ -2,10 +2,10 @@
 
 #include <GLFW/glfw3.h>
 
-void pulcher::controls::UpdateControls(
+void pul::controls::UpdateControls(
   GLFWwindow * window
 , uint32_t playerCenterX, uint32_t playerCenterY
-, pulcher::controls::Controller & controller
+, pul::controls::Controller & controller
 ) {
 
   // move current to previous
@@ -24,13 +24,13 @@ void pulcher::controls::UpdateControls(
   }
 
   current.movementHorizontal =
-    static_cast<pulcher::controls::Controller::Movement>(
+    static_cast<pul::controls::Controller::Movement>(
       (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) * -1
     + (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) * +1
     );
 
   current.movementVertical =
-    static_cast<pulcher::controls::Controller::Movement>(
+    static_cast<pul::controls::Controller::Movement>(
       (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) * -1
     + (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) * +1
     );

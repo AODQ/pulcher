@@ -86,18 +86,18 @@ void ApplyGroundedMovement(
 }
 
 void UpdatePlayerPhysics(
-  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
-, pulcher::core::ComponentPlayer & player
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::ComponentPlayer & player
 ) {
   glm::vec2 groundedFloorOrigin = player.origin - glm::vec2(0, 2);
 
   auto ray =
-    pulcher::physics::IntersectorRay::Construct(
+    pul::physics::IntersectorRay::Construct(
       groundedFloorOrigin
     , groundedFloorOrigin + glm::vec2(player.velocity)
     );
   if (
-    pulcher::physics::IntersectionResults results;
+    pul::physics::IntersectionResults results;
     !plugin.physics.IntersectionRaycast(scene, ray, results)
   ) {
     // check if we can step down a slope
@@ -106,12 +106,12 @@ void UpdatePlayerPhysics(
         groundedFloorOrigin + glm::vec2(player.velocity.x, 0.0f);
 
       auto stepRay =
-        pulcher::physics::IntersectorRay::Construct(
+        pul::physics::IntersectorRay::Construct(
           glm::round(offset + glm::vec2(0.0f, 0.0f))
         , glm::round(offset + glm::vec2(0.0f, ::slopeStepDownHeight))
         );
       if (
-        pulcher::physics::IntersectionResults stepResults;
+        pul::physics::IntersectionResults stepResults;
           plugin.physics.IntersectionRaycast(scene, stepRay, stepResults)
        &&
           static_cast<int32_t>(stepResults.origin.y)
@@ -138,13 +138,13 @@ void UpdatePlayerPhysics(
       spdlog::info("offset {} | origin {}", offset, groundedFloorOrigin);
 
       auto stepRay =
-        pulcher::physics::IntersectorRay::Construct(
+        pul::physics::IntersectorRay::Construct(
           glm::round(offset + glm::vec2(0.0f, -slopeStepUpHeight))
         , glm::round(offset)
         );
 
       if (
-        pulcher::physics::IntersectionResults stepResults;
+        pul::physics::IntersectionResults stepResults;
         plugin.physics.IntersectionRaycast(scene, stepRay, stepResults)
       ) {
         // it needs to intersect at a pixel that's not the 'ceil' of the step-up
@@ -180,12 +180,12 @@ void UpdatePlayerPhysics(
 
     // then check how the velocity should be redirected
     auto rayY =
-      pulcher::physics::IntersectorRay::Construct(
+      pul::physics::IntersectorRay::Construct(
         player.origin + glm::vec2(0.0f, +1.0)
       , player.origin + glm::vec2(0.0f, -3.0f)
       );
     if (
-      pulcher::physics::IntersectionResults resultsY;
+      pul::physics::IntersectionResults resultsY;
       plugin.physics.IntersectionRaycast(scene, rayY, resultsY)
     ) {
       // if there is an intersection check
@@ -199,12 +199,12 @@ void UpdatePlayerPhysics(
     }
 
     auto rayX =
-      pulcher::physics::IntersectorRay::Construct(
+      pul::physics::IntersectorRay::Construct(
         player.origin + glm::vec2(+2.0f, 0.0)
       , player.origin + glm::vec2(-2.0f, 0.0f)
       );
     if (
-      pulcher::physics::IntersectionResults resultsX;
+      pul::physics::IntersectionResults resultsX;
         !attemptStoreSlopeVelocity
       && plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
     ) {
@@ -221,9 +221,9 @@ void UpdatePlayerPhysics(
 }
 
 void UpdatePlayerWeapon(
-  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
-, pulcher::core::ComponentPlayer & player
-, pulcher::animation::ComponentInstance &
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::ComponentPlayer & player
+, pul::animation::ComponentInstance &
 ) {
   /* auto & registry = scene.EnttRegistry(); */
   auto & controller = scene.PlayerController().current;
@@ -231,21 +231,21 @@ void UpdatePlayerWeapon(
 
   if (!controllerPrev.weaponSwitchNext && controller.weaponSwitchNext) {
     player.inventory.ChangeWeapon(
-      static_cast<pulcher::core::WeaponType>(
+      static_cast<pul::core::WeaponType>(
         (Idx(player.inventory.currentWeapon)+1)
-      % Idx(pulcher::core::WeaponType::Size)
+      % Idx(pul::core::WeaponType::Size)
       )
     );
   }
 
   if (!controllerPrev.weaponSwitchPrev && controller.weaponSwitchPrev) {
     player.inventory.ChangeWeapon(
-      static_cast<pulcher::core::WeaponType>(
+      static_cast<pul::core::WeaponType>(
         (
-          Idx(pulcher::core::WeaponType::Size)
+          Idx(pul::core::WeaponType::Size)
         + Idx(player.inventory.currentWeapon)-1
         )
-      % Idx(pulcher::core::WeaponType::Size)
+      % Idx(pul::core::WeaponType::Size)
       )
     );
   }
@@ -256,15 +256,15 @@ void UpdatePlayerWeapon(
   (void)weapon;
   switch (player.inventory.currentWeapon) {
     default: break;
-    case pulcher::core::WeaponType::Volnias: {
+    case pul::core::WeaponType::Volnias: {
       auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
       auto ray =
-        pulcher::physics::IntersectorRay::Construct(
+        pul::physics::IntersectorRay::Construct(
           playerOrigin
         , playerOrigin + glm::normalize(controller.lookDirection) * 512.0f
         );
       if (
-        pulcher::physics::IntersectionResults results;
+        pul::physics::IntersectionResults results;
         plugin.physics.IntersectionRaycast(scene, ray, results)
       ) {
         if (glm::length(playerOrigin - glm::vec2(results.origin)) < 64.0f) {
@@ -280,9 +280,9 @@ void UpdatePlayerWeapon(
 }
 
 void plugin::entity::UpdatePlayer(
-  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
-, pulcher::core::ComponentPlayer & player
-, pulcher::animation::ComponentInstance & playerAnim
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::ComponentPlayer & player
+, pul::animation::ComponentInstance & playerAnim
 ) {
 
   auto & registry = scene.EnttRegistry();
@@ -324,9 +324,9 @@ void plugin::entity::UpdatePlayer(
   // gravity/ground check
   if (player.velocity.y >= 0.0f)
   {
-    pulcher::physics::IntersectorPoint point;
+    pul::physics::IntersectorPoint point;
     point.origin = player.origin + glm::vec2(0.0f, 1.0f);
-    pulcher::physics::IntersectionResults results;
+    pul::physics::IntersectionResults results;
     player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
   }
 
@@ -334,24 +334,24 @@ void plugin::entity::UpdatePlayer(
   player.wallClingRight = false;
 
   if (!player.grounded) {
-    pulcher::physics::IntersectorPoint point;
+    pul::physics::IntersectorPoint point;
     point.origin = player.origin + glm::vec2(-3.0f, -4.0f);
-    pulcher::physics::IntersectionResults results;
+    pul::physics::IntersectionResults results;
     player.wallClingLeft =
       plugin.physics.IntersectionPoint(scene, point, results);
   }
 
   if (!player.grounded) {
-    pulcher::physics::IntersectorPoint point;
+    pul::physics::IntersectorPoint point;
     point.origin = player.origin + glm::vec2(+3.0f, -4.0f);
-    pulcher::physics::IntersectionResults results;
+    pul::physics::IntersectionResults results;
     player.wallClingRight =
       plugin.physics.IntersectionPoint(scene, point, results);
   }
 
   bool const frameStartGrounded = player.grounded;
 
-  using MovementControl = pulcher::controls::Controller::Movement;
+  using MovementControl = pul::controls::Controller::Movement;
 
   { // -- process inputs / events
 
@@ -388,10 +388,10 @@ void plugin::entity::UpdatePlayer(
     }
 
     if (player.crouchSlideCooldown > 0.0f)
-      { player.crouchSlideCooldown -= pulcher::util::MsPerFrame; }
+      { player.crouchSlideCooldown -= pul::util::MsPerFrame; }
 
     if (player.slideFrictionTime > 0.0f)
-      { player.slideFrictionTime -= pulcher::util::MsPerFrame; }
+      { player.slideFrictionTime -= pul::util::MsPerFrame; }
 
     // -- process jumping
     player.jumping = controller.jump;
@@ -402,7 +402,7 @@ void plugin::entity::UpdatePlayer(
     }
 
     if (player.jumpFallTime > 0.0f)
-      { player.jumpFallTime -= pulcher::util::MsPerFrame; }
+      { player.jumpFallTime -= pul::util::MsPerFrame; }
 
     if (!player.jumping) {
       player.storedVelocity = player.velocity;
@@ -570,14 +570,14 @@ void plugin::entity::UpdatePlayer(
     // -- process dashing
     for (auto & dashCooldown : player.dashCooldown) {
       if (dashCooldown > 0.0f)
-        { dashCooldown -= pulcher::util::MsPerFrame; }
+        { dashCooldown -= pul::util::MsPerFrame; }
     }
     if (!prevGrounded && player.grounded) {
       for (auto & dashLock : player.dashLock)
         { dashLock = false; }
     }
     if (player.dashZeroGravityTime > 0.0f) {
-      player.dashZeroGravityTime -= pulcher::util::MsPerFrame;
+      player.dashZeroGravityTime -= pul::util::MsPerFrame;
       // if grounded then gravity time has been nullified
       if (player.grounded || !controller.dash)
         { player.dashZeroGravityTime = 0.0f; }
@@ -766,13 +766,13 @@ void plugin::entity::UpdatePlayer(
 
     if (
         controller.movementHorizontal
-     == pulcher::controls::Controller::Movement::Right
+     == pul::controls::Controller::Movement::Right
     ) {
       playerDirFlip = true;
     }
     else if (
         controller.movementHorizontal
-     == pulcher::controls::Controller::Movement::Left
+     == pul::controls::Controller::Movement::Left
     ) {
       playerDirFlip = false;
     }
@@ -780,7 +780,7 @@ void plugin::entity::UpdatePlayer(
     playerAnim.instance.pieceToState["legs"].flip = playerDirFlip;
 
     auto const & currentWeaponInfo =
-      pulcher::core::weaponInfo[Idx(player.inventory.currentWeapon)];
+      pul::core::weaponInfo[Idx(player.inventory.currentWeapon)];
 
     switch (currentWeaponInfo.requiredHands) {
       case 0: break;
@@ -817,13 +817,13 @@ void plugin::entity::UpdatePlayer(
       char const * weaponStr = ToStr(player.inventory.currentWeapon);
 
       auto & weaponAnimation =
-        registry.get<pulcher::animation::ComponentInstance>(
+        registry.get<pul::animation::ComponentInstance>(
           player.weaponAnimation
         ).instance;
 
       // nothing should render if unarmed
       weaponAnimation.visible =
-        player.inventory.currentWeapon != pulcher::core::WeaponType::Unarmed;
+        player.inventory.currentWeapon != pul::core::WeaponType::Unarmed;
 
       auto & weaponState = weaponAnimation.pieceToState["weapons"];
 
@@ -845,9 +845,9 @@ void plugin::entity::UpdatePlayer(
 }
 
 void plugin::entity::UiRenderPlayer(
-  pulcher::core::SceneBundle & scene
-, pulcher::core::ComponentPlayer & player
-, pulcher::animation::ComponentInstance &
+  pul::core::SceneBundle & scene
+, pul::core::ComponentPlayer & player
+, pul::animation::ComponentInstance &
 ) {
   ImGui::Begin("Physics");
 

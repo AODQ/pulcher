@@ -2,10 +2,10 @@
 
 #include <string>
 
-namespace pulcher::gfx { struct Image; }
+namespace pul::gfx { struct Image; }
 struct sg_image;
 
-namespace pulcher::gfx {
+namespace pul::gfx {
   struct Spritesheet {
     uint32_t handle;
     size_t width, height;
@@ -18,7 +18,7 @@ namespace pulcher::gfx {
     Spritesheet & operator=(Spritesheet const &) = delete;
     Spritesheet & operator=(Spritesheet &&);
 
-    static Spritesheet Construct(pulcher::gfx::Image const &);
+    static Spritesheet Construct(pul::gfx::Image const &);
 
     sg_image Image() const;
     glm::vec2 InvResolution();

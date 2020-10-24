@@ -8,15 +8,15 @@
 #include <string>
 #include <vector>
 
-namespace pulcher::animation { struct Instance; }
-namespace pulcher::animation { struct System; }
-namespace pulcher::core { struct SceneBundle; }
-namespace pulcher::gfx { struct Image; }
-namespace pulcher::physics { struct IntersectionResults; }
-namespace pulcher::physics { struct IntersectorPoint; }
-namespace pulcher::physics { struct IntersectorRay; }
-namespace pulcher::physics { struct Tileset; }
-namespace pulcher::plugin { struct Info; }
+namespace pul::animation { struct Instance; }
+namespace pul::animation { struct System; }
+namespace pul::core { struct SceneBundle; }
+namespace pul::gfx { struct Image; }
+namespace pul::physics { struct IntersectionResults; }
+namespace pul::physics { struct IntersectorPoint; }
+namespace pul::physics { struct IntersectorRay; }
+namespace pul::physics { struct Tileset; }
+namespace pul::plugin { struct Info; }
 
 #if defined(__unix__)
 #define PUL_PLUGIN_DECL
@@ -24,100 +24,100 @@ namespace pulcher::plugin { struct Info; }
 #define PUL_PLUGIN_DECL __declspec(dllexport)
 #endif
 
-namespace pulcher::plugin {
+namespace pul::plugin {
   struct UserInterfaceInfo {
     void (*UiDispatch)(
-      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+      pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
   };
 
   struct Animation {
     void (*DestroyInstance)(
-      pulcher::animation::Instance &
+      pul::animation::Instance &
     ) = nullptr;
     void (*ConstructInstance)(
-      pulcher::core::SceneBundle & scene
-    , pulcher::animation::Instance &
-    , pulcher::animation::System &
+      pul::core::SceneBundle & scene
+    , pul::animation::Instance &
+    , pul::animation::System &
     , char const * label
     ) = nullptr;
     void (*LoadAnimations)(
-      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+      pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
-    void (*Shutdown)(pulcher::core::SceneBundle &) = nullptr;
+    void (*Shutdown)(pul::core::SceneBundle &) = nullptr;
     void (*UpdateFrame)(
-      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+      pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
     void (*RenderAnimations)(
-      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+      pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
-    void (*UpdateCache)(pulcher::animation::Instance & instance) = nullptr;
+    void (*UpdateCache)(pul::animation::Instance & instance) = nullptr;
     void (*UpdateCacheWithPrecalculatedMatrix)(
-      pulcher::animation::Instance & instance
+      pul::animation::Instance & instance
     , glm::mat3 const & matrix
     ) = nullptr;
     void (*UiRender)(
-      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+      pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
   };
 
   struct Entity {
     void (*StartScene)(
-      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+      pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
-    void (*Shutdown)(pulcher::core::SceneBundle &);
+    void (*Shutdown)(pul::core::SceneBundle &);
     void (*EntityUpdate)(
-      pulcher::plugin::Info const &, pulcher::core::SceneBundle &
+      pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
-    void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
+    void (*UiRender)(pul::core::SceneBundle &) = nullptr;
   };
 
   struct Map {
     void (*Load)(
-      pulcher::plugin::Info const & info
+      pul::plugin::Info const & info
     , char const * filename
     ) = nullptr;
-    void (*Render)(pulcher::core::SceneBundle &) = nullptr;
-    void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
+    void (*Render)(pul::core::SceneBundle &) = nullptr;
+    void (*UiRender)(pul::core::SceneBundle &) = nullptr;
     void (*Shutdown)() = nullptr;
   };
 
   struct Physics {
     void (*ProcessTileset)(
-      pulcher::physics::Tileset &
-    , pulcher::gfx::Image const &
+      pul::physics::Tileset &
+    , pul::gfx::Image const &
     ) = nullptr;
     void (*ClearMapGeometry)() = nullptr;
     void (*LoadMapGeometry)(
-      std::vector<pulcher::physics::Tileset const *> const & tilesets
+      std::vector<pul::physics::Tileset const *> const & tilesets
     , std::vector<std::span<size_t>>                 const & mapTileIndices
     , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
     ) = nullptr;
     bool (*IntersectionRaycast)(
-      pulcher::core::SceneBundle & scene
-    , pulcher::physics::IntersectorRay const & ray
-    , pulcher::physics::IntersectionResults & intersectionResults
+      pul::core::SceneBundle & scene
+    , pul::physics::IntersectorRay const & ray
+    , pul::physics::IntersectionResults & intersectionResults
     ) = nullptr;
     bool (*IntersectionPoint)(
-      pulcher::core::SceneBundle & scene
-    , pulcher::physics::IntersectorPoint const & ray
-    , pulcher::physics::IntersectionResults & intersectionResults
+      pul::core::SceneBundle & scene
+    , pul::physics::IntersectorPoint const & ray
+    , pul::physics::IntersectionResults & intersectionResults
     ) = nullptr;
-    void (*RenderDebug)(pulcher::core::SceneBundle &) = nullptr;
-    void (*UiRender)(pulcher::core::SceneBundle &) = nullptr;
+    void (*RenderDebug)(pul::core::SceneBundle &) = nullptr;
+    void (*UiRender)(pul::core::SceneBundle &) = nullptr;
   };
 
   struct Info {
-    pulcher::plugin::Animation animation;
-    pulcher::plugin::Entity entity;
-    pulcher::plugin::Map map;
-    pulcher::plugin::Physics physics;
-    pulcher::plugin::UserInterfaceInfo userInterface;
+    pul::plugin::Animation animation;
+    pul::plugin::Entity entity;
+    pul::plugin::Map map;
+    pul::plugin::Physics physics;
+    pul::plugin::UserInterfaceInfo userInterface;
   };
 
   bool LoadPlugin(
-    pulcher::plugin::Info & plugin
-  , pulcher::plugin::Type type
+    pul::plugin::Info & plugin
+  , pul::plugin::Type type
   , std::string const & filename
   );
 

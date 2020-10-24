@@ -1,6 +1,6 @@
 #include <pulcher-core/weapon.hpp>
 
-void pulcher::core::Inventory::ChangeWeapon(pulcher::core::WeaponType type) {
+void pul::core::Inventory::ChangeWeapon(pul::core::WeaponType type) {
   auto & current = weapons[Idx(currentWeapon)];
   auto & requested = weapons[Idx(type)];
 
@@ -28,20 +28,18 @@ void pulcher::core::Inventory::ChangeWeapon(pulcher::core::WeaponType type) {
   }
 }
 
-char const * ToStr(pulcher::core::WeaponType weaponType) {
+char const * ToStr(pul::core::WeaponType weaponType) {
   switch (weaponType) {
     default: return "N/A";
-    case pulcher::core::WeaponType::BadFetus:    return "bad-fetus";
-    case pulcher::core::WeaponType::DopplerBeam: return "doppler-beam";
-    case pulcher::core::WeaponType::Grannibal:   return "grannibal";
-    case pulcher::core::WeaponType::Manshredder: return "manshredder";
-    case pulcher::core::WeaponType::Pericaliya:  return "pericaliya";
-    case pulcher::core::WeaponType::PMF:         return "pmf";
-    case pulcher::core::WeaponType::Unarmed:     return "unarmed";
-    case pulcher::core::WeaponType::Volnias:     return "volnias";
-    case pulcher::core::WeaponType::Wallbanger:  return "wallbanger";
-    case pulcher::core::WeaponType::ZeusStinger: return "zeus-stinger";
+    case pul::core::WeaponType::BadFetus:    return "bad-fetus";
+    case pul::core::WeaponType::DopplerBeam: return "doppler-beam";
+    case pul::core::WeaponType::Grannibal:   return "grannibal";
+    case pul::core::WeaponType::Manshredder: return "manshredder";
+    case pul::core::WeaponType::Pericaliya:  return "pericaliya";
+    case pul::core::WeaponType::PMF:         return "pmf";
+    case pul::core::WeaponType::Unarmed:     return "unarmed";
+    case pul::core::WeaponType::Volnias:     return "volnias";
+    case pul::core::WeaponType::Wallbanger:  return "wallbanger";
+    case pul::core::WeaponType::ZeusStinger: return "zeus-stinger";
   }
 }
-
-

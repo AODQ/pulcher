@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace pulcher::plugin {
+namespace pul::plugin {
   enum struct Type : size_t {
     Animation
   , Entity
@@ -14,4 +14,4 @@ namespace pulcher::plugin {
   };
 }
 
-char const * ToString(pulcher::plugin::Type pluginType);
+char const * ToString(pul::plugin::Type pluginType);

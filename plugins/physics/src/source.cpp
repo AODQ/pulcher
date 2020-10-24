@@ -247,7 +247,7 @@ void LoadSokolInfo() {
 // collision layer, there is still only one collision layer
 
 struct TilemapLayer {
-  std::vector<pulcher::physics::Tileset const *> tilesets;
+  std::vector<pul::physics::Tileset const *> tilesets;
 
   struct TileInfo {
     size_t imageTileIdx = -1ul;
@@ -269,8 +269,8 @@ TilemapLayer tilemapLayer;
 extern "C" {
 
 PUL_PLUGIN_DECL void Physics_ProcessTileset(
-  pulcher::physics::Tileset & tileset
-, pulcher::gfx::Image const & image
+  pul::physics::Tileset & tileset
+, pul::gfx::Image const & image
 ) {
   tileset = {};
   tileset.tiles.reserve((image.width / 32ul) * (image.height / 32ul));
@@ -278,9 +278,9 @@ PUL_PLUGIN_DECL void Physics_ProcessTileset(
   // iterate thru every tile
   for (size_t tileY = 0ul; tileY < image.height / 32ul; ++ tileY)
   for (size_t tileX = 0ul; tileX < image.width  / 32ul; ++ tileX) {
-    pulcher::physics::Tile tile;
+    pul::physics::Tile tile;
 
-    auto constexpr gridSize = pulcher::physics::Tile::gridSize;
+    auto constexpr gridSize = pul::physics::Tile::gridSize;
 
     // iterate thru every texel of the tile, stratified by physics tile GridSize
     for (size_t texelY = 0ul; texelY < 32ul; texelY += 32ul/gridSize)
@@ -323,7 +323,7 @@ PUL_PLUGIN_DECL void Physics_ClearMapGeometry() {
 }
 
 PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
-  std::vector<pulcher::physics::Tileset const *> const & tilesets
+  std::vector<pul::physics::Tileset const *> const & tilesets
 , std::vector<std::span<size_t>>                 const & mapTileIndices
 , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
 ) {
@@ -391,13 +391,13 @@ PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
 }
 
 PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
-  pulcher::core::SceneBundle & scene
-, pulcher::physics::IntersectorRay const & ray
-, pulcher::physics::IntersectionResults & intersectionResults
+  pul::core::SceneBundle & scene
+, pul::physics::IntersectorRay const & ray
+, pul::physics::IntersectionResults & intersectionResults
 ) {
   intersectionResults = {};
   // TODO this is slow and can be optimized by using SDFs
-  pulcher::physics::BresenhamLine(
+  pul::physics::BresenhamLine(
     ray.beginOrigin, ray.endOrigin
   , [&](int32_t x, int32_t y) {
       if (intersectionResults.collision) { return; }
@@ -409,7 +409,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
       size_t tileIdx;
       glm::u32vec2 texelOrigin;
       if (
-        !pulcher::util::CalculateTileIndices(
+        !pul::util::CalculateTileIndices(
           tileIdx, texelOrigin, origin
         , ::tilemapLayer.width, ::tilemapLayer.tileInfo.size()
         )
@@ -429,7 +429,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
 
       if (!tileInfo.Valid()) { return; }
 
-      pulcher::physics::Tile const & physicsTile =
+      pul::physics::Tile const & physicsTile =
         tileset->tiles[tileInfo.imageTileIdx];
 
       // -- compute intersection SDF and accel hints
@@ -437,7 +437,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
         physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f
       ) {
         intersectionResults =
-          pulcher::physics::IntersectionResults {
+          pul::physics::IntersectionResults {
             true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
           };
       }
@@ -451,9 +451,9 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
 }
 
 PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
-  pulcher::core::SceneBundle & scene
-, pulcher::physics::IntersectorPoint const & point
-, pulcher::physics::IntersectionResults & intersectionResults
+  pul::core::SceneBundle & scene
+, pul::physics::IntersectorPoint const & point
+, pul::physics::IntersectionResults & intersectionResults
 ) {
   intersectionResults = {};
 
@@ -463,7 +463,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
   size_t tileIdx;
   glm::u32vec2 texelOrigin;
   if (
-    !pulcher::util::CalculateTileIndices(
+    !pul::util::CalculateTileIndices(
       tileIdx, texelOrigin, point.origin
     , ::tilemapLayer.width, ::tilemapLayer.tileInfo.size()
     )
@@ -487,13 +487,13 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
     return false;
   }
 
-  pulcher::physics::Tile const & physicsTile =
+  pul::physics::Tile const & physicsTile =
     tileset->tiles[tileInfo.imageTileIdx];
 
   // -- compute intersection SDF and accel hints
   if (physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f) {
     intersectionResults =
-      pulcher::physics::IntersectionResults {
+      pul::physics::IntersectionResults {
         true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
       };
 
@@ -505,7 +505,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
   return false;
 }
 
-PUL_PLUGIN_DECL void Physics_RenderDebug(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
   auto & queries = scene.PhysicsDebugQueries();
 
   if (::showPhysicsQueries && queries.intersectorPoints.size() > 0ul) {
@@ -616,7 +616,7 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pulcher::core::SceneBundle & scene) {
   }
 }
 
-PUL_PLUGIN_DECL void Physics_UiRender(pulcher::core::SceneBundle &) {
+PUL_PLUGIN_DECL void Physics_UiRender(pul::core::SceneBundle &) {
   ImGui::Begin("Physics");
 
   pul::imgui::Text("tilemap width {}", ::tilemapLayer.width);

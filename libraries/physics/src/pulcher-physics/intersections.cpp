@@ -3,10 +3,10 @@
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 
-pulcher::physics::IntersectorRay pulcher::physics::IntersectorRay::Construct(
+pul::physics::IntersectorRay pul::physics::IntersectorRay::Construct(
   glm::vec2 const beginOrigin, glm::vec2 const endOrigin
 ) {
-  pulcher::physics::IntersectorRay ray;
+  pul::physics::IntersectorRay ray;
   if (beginOrigin.x < endOrigin.x) {
     ray.beginOrigin.x = glm::floor(beginOrigin.x);
     ray.endOrigin.x = glm::ceil(endOrigin.x);
@@ -26,16 +26,16 @@ pulcher::physics::IntersectorRay pulcher::physics::IntersectorRay::Construct(
   return ray;
 }
 
-void pulcher::physics::DebugQueries::Add(
-  pulcher::physics::IntersectorPoint const & intersector
-, pulcher::physics::IntersectionResults results
+void pul::physics::DebugQueries::Add(
+  pul::physics::IntersectorPoint const & intersector
+, pul::physics::IntersectionResults results
 ) {
   intersectorPoints.emplace_back(intersector, results);
 }
 
-void pulcher::physics::DebugQueries::Add(
-  pulcher::physics::IntersectorRay const & intersector
-, pulcher::physics::IntersectionResults results
+void pul::physics::DebugQueries::Add(
+  pul::physics::IntersectorRay const & intersector
+, pul::physics::IntersectionResults results
 ) {
   intersectorRays.emplace_back(intersector, results);
 }

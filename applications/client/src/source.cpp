@@ -64,9 +64,9 @@ auto StartupOptions() -> argparse::ArgumentParser {
 }
 
 auto CreateUserConfig(argparse::ArgumentParser const & userResults)
-  -> pulcher::core::Config
+  -> pul::core::Config
 {
-  pulcher::core::Config config;
+  pul::core::Config config;
 
   std::string windowResolution;
   std::string framebufferResolution;
@@ -118,7 +118,7 @@ auto CreateUserConfig(argparse::ArgumentParser const & userResults)
   return config;
 }
 
-void PrintUserConfig(pulcher::core::Config const & config) {
+void PrintUserConfig(pul::core::Config const & config) {
   spdlog::info(
     "window dimensions {}x{}", config.windowWidth, config.windowHeight
   );
@@ -191,7 +191,7 @@ static void ImGuiApplyStyling()
 }
 
 void LoadPluginInfo(
-  pulcher::plugin::Info & plugin, pulcher::core::SceneBundle & scene
+  pul::plugin::Info & plugin, pul::core::SceneBundle & scene
 ) {
   plugin.map.Load(plugin, "assets/base/map/test.json");
   plugin.animation.LoadAnimations(plugin, scene);
@@ -202,7 +202,7 @@ void LoadPluginInfo(
 }
 
 void ShutdownPluginInfo(
-  pulcher::plugin::Info & plugin, pulcher::core::SceneBundle & scene
+  pul::plugin::Info & plugin, pul::core::SceneBundle & scene
 ) {
   plugin.animation.Shutdown(scene);
   plugin.map.Shutdown();
@@ -215,7 +215,7 @@ void ShutdownPluginInfo(
 
 // this gets capped at 90Hz
 void ProcessLogic(
-  pulcher::plugin::Info const & plugin, pulcher::core::SceneBundle & scene
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 ) {
 
   // clear debug physics queries
@@ -223,8 +223,8 @@ void ProcessLogic(
   queries.intersectorRays.clear();
   queries.intersectorPoints.clear();
 
-  pulcher::controls::UpdateControls(
-    pulcher::gfx::DisplayWindow()
+  pul::controls::UpdateControls(
+    pul::gfx::DisplayWindow()
   , scene.playerCenter.x
   , scene.playerCenter.y
   , scene.PlayerController()
@@ -235,11 +235,11 @@ void ProcessLogic(
 
 // this has no framerate cap, but it most provide a minimal of 90 framerate
 void ProcessRendering(
-  pulcher::plugin::Info & plugin, pulcher::core::SceneBundle & scene
+  pul::plugin::Info & plugin, pul::core::SceneBundle & scene
 , float deltaMs
 , size_t numCpuFrames
 ) {
-  pulcher::gfx::StartFrame(deltaMs);
+  pul::gfx::StartFrame(deltaMs);
 
   static glm::vec3 screenClearColor = glm::vec3(0.7f, 0.4f, .4f);
 
@@ -252,7 +252,7 @@ void ProcessRendering(
     passAction.depth.action = SG_ACTION_CLEAR;
     passAction.depth.val = 1.0f;
 
-    sg_begin_pass(pulcher::gfx::ScenePass(), &passAction);
+    sg_begin_pass(pul::gfx::ScenePass(), &passAction);
 
     plugin.map.Render(scene);
     plugin.animation.RenderAnimations(plugin, scene);
@@ -264,7 +264,7 @@ void ProcessRendering(
   { // -- render UI
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(
-      ImVec2(pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight())
+      ImVec2(pul::gfx::DisplayWidth(), pul::gfx::DisplayHeight())
     );
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -295,7 +295,7 @@ void ProcessRendering(
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
       ::ShutdownPluginInfo(plugin, scene);
-      pulcher::plugin::UpdatePlugins(plugin);
+      pul::plugin::UpdatePlugins(plugin);
       ::LoadPluginInfo(plugin, scene);
     }
     pul::imgui::ItemTooltip(
@@ -422,7 +422,7 @@ void ProcessRendering(
 
     sg_begin_default_pass(
       &passAction
-    , pulcher::gfx::DisplayWidth(), pulcher::gfx::DisplayHeight()
+    , pul::gfx::DisplayWidth(), pul::gfx::DisplayHeight()
     );
 
 
@@ -445,7 +445,7 @@ void ProcessRendering(
       }
 
       ImGui::Image(
-        reinterpret_cast<void *>(pulcher::gfx::SceneImageColor().id)
+        reinterpret_cast<void *>(pul::gfx::SceneImageColor().id)
       , ImVec2(scene.config.framebufferWidth, scene.config.framebufferHeight)
       , ImVec2(0, 1)
       , ImVec2(1, 0)
@@ -483,7 +483,7 @@ void ProcessRendering(
         regionY = glm::clamp(regionY, 0.0f, texH - regionSize);
 
         ImGui::Image(
-          reinterpret_cast<void *>(pulcher::gfx::SceneImageColor().id)
+          reinterpret_cast<void *>(pul::gfx::SceneImageColor().id)
         , ImVec2(regionSize * zoom, regionSize * zoom)
         , ImVec2(regionX / texW, (regionY + regionSize) / texH)
         , ImVec2((regionX + regionSize) / texW, regionY / texH)
@@ -522,34 +522,34 @@ void ProcessRendering(
 
   sg_commit();
 
-  pulcher::gfx::EndFrame();
+  pul::gfx::EndFrame();
 }
 
-pulcher::plugin::Info InitializePlugins() {
-  pulcher::plugin::Info plugins;
+pul::plugin::Info InitializePlugins() {
+  pul::plugin::Info plugins;
 
-  pulcher::plugin::LoadPlugin(
-    plugins, pulcher::plugin::Type::UserInterface
+  pul::plugin::LoadPlugin(
+    plugins, pul::plugin::Type::UserInterface
   , "plugins/ui-base.pulcher-plugin"
   );
 
-  pulcher::plugin::LoadPlugin(
-    plugins, pulcher::plugin::Type::Map
+  pul::plugin::LoadPlugin(
+    plugins, pul::plugin::Type::Map
   , "plugins/plugin-map.pulcher-plugin"
   );
 
-  pulcher::plugin::LoadPlugin(
-    plugins, pulcher::plugin::Type::Physics
+  pul::plugin::LoadPlugin(
+    plugins, pul::plugin::Type::Physics
   , "plugins/plugin-physics.pulcher-plugin"
   );
 
-  pulcher::plugin::LoadPlugin(
-    plugins, pulcher::plugin::Type::Entity
+  pul::plugin::LoadPlugin(
+    plugins, pul::plugin::Type::Entity
   , "plugins/plugin-entity.pulcher-plugin"
   );
 
-  pulcher::plugin::LoadPlugin(
-    plugins, pulcher::plugin::Type::Animation
+  pul::plugin::LoadPlugin(
+    plugins, pul::plugin::Type::Animation
   , "plugins/plugin-animation.pulcher-plugin"
   );
 
@@ -562,7 +562,7 @@ int main(int argc, char const ** argv) {
 
   spdlog::set_pattern("%^%M:%S |%$ %v");
 
-  pulcher::core::Config userConfig;
+  pul::core::Config userConfig;
 
   { // -- collect user options
     auto options = ::StartupOptions();
@@ -582,12 +582,12 @@ int main(int argc, char const ** argv) {
 
   spdlog::info("initializing pulcher");
   // -- initialize relevant components
-  pulcher::gfx::InitializeContext(userConfig);
+  pul::gfx::InitializeContext(userConfig);
   ::PrintUserConfig(userConfig);
 
-  pulcher::plugin::Info plugin = InitializePlugins();
+  pul::plugin::Info plugin = InitializePlugins();
 
-  pulcher::core::SceneBundle sceneBundle;
+  pul::core::SceneBundle sceneBundle;
   sceneBundle.config = userConfig;
   ::LoadPluginInfo(plugin, sceneBundle);
 
@@ -597,7 +597,7 @@ int main(int argc, char const ** argv) {
 
   float msToCalculate = 0.0f;
 
-  while (!glfwWindowShouldClose(pulcher::gfx::DisplayWindow())) {
+  while (!glfwWindowShouldClose(pul::gfx::DisplayWindow())) {
     // -- get timing
     auto timeFrameBegin = std::chrono::high_resolution_clock::now();
     float const deltaMs =
@@ -630,7 +630,7 @@ int main(int argc, char const ** argv) {
   ::ShutdownPluginInfo(plugin, sceneBundle);
 
   // has to be last thing to shut down to allow gl deallocation calls
-  pulcher::gfx::Shutdown();
+  pul::gfx::Shutdown();
 
   return 0;
 }

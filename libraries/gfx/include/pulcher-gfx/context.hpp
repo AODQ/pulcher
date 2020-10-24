@@ -5,11 +5,11 @@
 
 struct GLFWwindow;
 
-namespace pulcher::core { struct Config; }
+namespace pul::core { struct Config; }
 struct sg_pass;
 
-namespace pulcher::gfx {
-  bool InitializeContext(pulcher::core::Config & config);
+namespace pul::gfx {
+  bool InitializeContext(pul::core::Config & config);
   int & DisplayWidth();
   int & DisplayHeight();
   GLFWwindow * DisplayWindow();

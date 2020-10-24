@@ -1,6 +1,6 @@
 #include <pulcher-util/consts.hpp>
 
-std::array<glm::vec2, 6> pulcher::util::TriangleVertexArray() {
+std::array<glm::vec2, 6> pul::util::TriangleVertexArray() {
   return
     std::array<glm::vec2, 6> {{
       {0.0f,  0.0f}

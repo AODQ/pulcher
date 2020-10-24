@@ -6,30 +6,30 @@
 
 #include <entt/entt.hpp>
 
-struct pulcher::core::SceneBundle::Impl {
-  pulcher::animation::System animationSystem;
-  pulcher::controls::Controller playerController;
-  pulcher::physics::DebugQueries physicsQueries;
+struct pul::core::SceneBundle::Impl {
+  pul::animation::System animationSystem;
+  pul::controls::Controller playerController;
+  pul::physics::DebugQueries physicsQueries;
 
   entt::registry enttRegistry;
 };
 
-#define PIMPL_SPECIALIZE pulcher::core::SceneBundle::Impl
+#define PIMPL_SPECIALIZE pul::core::SceneBundle::Impl
 #include <pulcher-util/pimpl.inl>
 
-pulcher::animation::System & pulcher::core::SceneBundle::AnimationSystem() {
+pul::animation::System & pul::core::SceneBundle::AnimationSystem() {
   return impl->animationSystem;
 }
 
-pulcher::controls::Controller & pulcher::core::SceneBundle::PlayerController() {
+pul::controls::Controller & pul::core::SceneBundle::PlayerController() {
   return impl->playerController;
 }
 
-pulcher::physics::DebugQueries &
-pulcher::core::SceneBundle::PhysicsDebugQueries() {
+pul::physics::DebugQueries &
+pul::core::SceneBundle::PhysicsDebugQueries() {
   return impl->physicsQueries;
 }
 
-entt::registry & pulcher::core::SceneBundle::EnttRegistry() {
+entt::registry & pul::core::SceneBundle::EnttRegistry() {
   return impl->enttRegistry;
 }

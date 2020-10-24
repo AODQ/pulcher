@@ -56,8 +56,8 @@ struct LayerRenderable {
 std::vector<LayerRenderable> renderables;
 
 struct MapTileset {
-  pulcher::gfx::Spritesheet spritesheet;
-  pulcher::physics::Tileset physicsTileset;
+  pul::gfx::Spritesheet spritesheet;
+  pul::physics::Tileset physicsTileset;
   size_t spritesheetStartingGid;
 };
 
@@ -299,7 +299,7 @@ void MapSokolEnd() {
 extern "C" {
 
 PUL_PLUGIN_DECL void Map_Load(
-  pulcher::plugin::Info const & plugins
+  pul::plugin::Info const & plugins
 , char const * filename
 ) {
   spdlog::info("Loading '{}'", filename);
@@ -379,16 +379,16 @@ PUL_PLUGIN_DECL void Map_Load(
     }
 
     { // construct map tileset
-      auto image = pulcher::gfx::Image::Construct(tilesetPath.string().c_str());
+      auto image = pul::gfx::Image::Construct(tilesetPath.string().c_str());
 
       // get plugin to load tileset
-      pulcher::physics::Tileset physxTileset;
+      pul::physics::Tileset physxTileset;
       plugins.physics.ProcessTileset(physxTileset, image);
 
       // emplace tileset w/ spritesheet and related tilemap info
       ::mapTilesets
         .emplace_back(MapTileset {
-            pulcher::gfx::Spritesheet::Construct(image)
+            pul::gfx::Spritesheet::Construct(image)
           , std::move(physxTileset)
           , static_cast<size_t>(
               cJSON_GetObjectItemCaseSensitive(tileset, "firstgid")->valueint
@@ -459,7 +459,7 @@ PUL_PLUGIN_DECL void Map_Load(
 
   { // create physics geometry for map
 
-    std::vector<pulcher::physics::Tileset const *> tilesets;
+    std::vector<pul::physics::Tileset const *> tilesets;
     std::vector<std::span<size_t>> mapTileIndices;
     std::vector<std::span<glm::u32vec2>> mapTileOrigins;
 
@@ -484,7 +484,7 @@ PUL_PLUGIN_DECL void Map_Load(
   cJSON_Delete(map);
 }
 
-PUL_PLUGIN_DECL void Map_Render(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Map_Render(pul::core::SceneBundle & scene) {
   sg_apply_pipeline(pipeline);
 
   glm::vec2 cameraOrigin = scene.cameraOrigin;
@@ -527,7 +527,7 @@ PUL_PLUGIN_DECL void Map_Render(pulcher::core::SceneBundle & scene) {
   }
 }
 
-PUL_PLUGIN_DECL void Map_UiRender(pulcher::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Map_UiRender(pul::core::SceneBundle & scene) {
   ImGui::Begin("Map Info");
 
   ImGui::DragInt2("map origin", &scene.cameraOrigin.x);
@@ -577,7 +577,7 @@ PUL_PLUGIN_DECL void Map_UiRender(pulcher::core::SceneBundle & scene) {
       // calculate tile indices for spritesheet
       size_t tileIdx;
       glm::u32vec2 origin;
-      pulcher::util::CalculateTileIndices(
+      pul::util::CalculateTileIndices(
         tileIdx, origin, glm::u32vec2(tileInfoPixelClicked)
       , ::mapTilesets[tileInfoTilesetIdx].spritesheet.width / 32ul
       , ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles.size()
@@ -585,7 +585,7 @@ PUL_PLUGIN_DECL void Map_UiRender(pulcher::core::SceneBundle & scene) {
 
       pul::imgui::Text("tile idx {} origin {}", tileIdx, origin);
 
-      pulcher::physics::Tile const & physicsTile =
+      pul::physics::Tile const & physicsTile =
         ::mapTilesets[tileInfoTilesetIdx].physicsTileset.tiles[tileIdx];
 
       std::string physxStr = "";

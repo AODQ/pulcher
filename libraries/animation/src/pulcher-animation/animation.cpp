@@ -1,6 +1,6 @@
 #include <pulcher-animation/animation.hpp>
 
-size_t pulcher::animation::Animator::State::ComponentPartIdxLookup(
+size_t pul::animation::Animator::State::ComponentPartIdxLookup(
   float const angle
 ) {
   for (size_t compIdx = 0ul; compIdx < components.size(); ++ compIdx) {
@@ -14,8 +14,8 @@ size_t pulcher::animation::Animator::State::ComponentPartIdxLookup(
   return 0ul;
 }
 
-std::vector<pulcher::animation::Animator::Component> *
-pulcher::animation::Animator::State::ComponentLookup(
+std::vector<pul::animation::Animator::Component> *
+pul::animation::Animator::State::ComponentLookup(
   bool const flip, float const angle
 ) {
   if (components.size() == 0ul) { return nullptr; }
