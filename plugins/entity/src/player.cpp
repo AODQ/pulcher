@@ -208,6 +208,15 @@ float CalculateDashTransferVelocity(
   return 0.0f;
 }
 
+// returns a normalized vector of the velocity, however it is only relative to
+// the axis. That is, a value can only be -1, 0, or 1. To normalize velocity,
+// we basically want to deprecate any velocity that is not significant; ei for
+// vector <2000, 100> we only want to return <1, 0>
+glm::i32vec2 NormalizeVelocityAxis(glm::vec2 const & velocity) {
+  auto v = glm::normalize(velocity);
+  return glm::i32vec2(glm::round(v.x), glm::round(v.y));
+}
+
 float CalculateAccelFromTarget(float timeMs, float targetTexels) {
   return targetTexels / timeMs / 90.0f * 2.0f;
 }
@@ -698,11 +707,6 @@ void plugin::entity::UpdatePlayer(
           , player.prevFrameGroundAcceleration*::frictionGrounded
           , player.jumpFallTime / ::jumpAfterFallTime
           );
-        spdlog::debug("{} , {} , {}",
-          inputAccel,
-          player.prevFrameGroundAcceleration*::frictionGrounded,
-player.jumpFallTime / ::jumpAfterFallTime
-          );
       }
 
       frictionApplies = false;
@@ -789,9 +793,19 @@ player.jumpFallTime / ::jumpAfterFallTime
         /* , 1.0f - ::dashVerticalHorizontalPercent */
         );
 
+      float const transfers =
+        CalculateDashTransferVelocity(
+          glm::i32vec2(
+            static_cast<int32_t>(controller.movementHorizontal)
+          , static_cast<int32_t>(controller.movementVertical)
+          )
+        , NormalizeVelocityAxis(player.velocity)
+        );
+
       float const velocityMultiplier =
         glm::max(
-          ::dashAccel + glm::length(scaledVelocity), ::dashMinimumVelocity
+          transfers*(::dashAccel + glm::length(scaledVelocity))
+        , ::dashMinimumVelocity
         );
 
       if (controller.movementVertical != MovementControl::None) {
@@ -803,18 +817,6 @@ player.jumpFallTime / ::jumpAfterFallTime
       auto direction =
         glm::vec2(
           controller.movementHorizontal, controller.movementVertical
-        );
-
-      float const transfers =
-        CalculateDashTransferVelocity(
-          glm::i32vec2(
-            static_cast<int32_t>(controller.movementHorizontal)
-          , static_cast<int32_t>(controller.movementVertical)
-          )
-        , glm::i32vec2(
-            static_cast<int32_t>(glm::sign(player.velocity.x))
-          , static_cast<int32_t>(glm::sign(player.velocity.y))
-          )
         );
 
       // if no keys are pressed just guess where player wants to go
@@ -829,8 +831,7 @@ player.jumpFallTime / ::jumpAfterFallTime
         player.origin.y -= 8.0f;
       }
 
-      player.velocity =
-        velocityMultiplier * transfers * glm::normalize(direction);
+      player.velocity = velocityMultiplier * glm::normalize(direction);
       player.grounded = false;
 
       player.dashCooldown[Idx(controller.movementDirection)] = ::dashCooldown;
