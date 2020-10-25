@@ -47,15 +47,166 @@ namespace {
   float dashGravityTime = 200.0f;
 
   struct TransferPercent {
-    float normal = 1.0f;
+    float same = 1.0f;
     float reverse = 1.0f;
     float degree90 = 1.0f;
   };
   TransferPercent dashVerticalTransfer;
   TransferPercent dashHorizontalTransfer;
   float dashMinimumVelocity = 6.0f;
-  float dashCooldown = 1000.0f;
+  float dashCooldown = 1500.0f;
   float horizontalGroundedVelocityStop = 0.5f;
+
+
+  std::string debugTransferDetails = {};
+
+
+/*
+  calculate requested dash transfer velocity given a direction and a velocity.
+  These must in the range (-1 .. +1). This basically applies some amount of
+  velocity to be reduced dependent on the player direction, which is in
+  relation to the total magnitude of the velocity. As there are two seperate
+  dashes (horizontal and vertical), with some mixture allowed between them, if
+  a dash is occuring upwards then vertical would be used. For example, if the
+  player is moving right quickly and dashes upwards, it would use
+  dashVertical.90degree. However if the player is moving up-right at
+  approximately the same velocity, the 90 degree would only apply if they dash
+  up-left and down-right; left and right would be considered mixtures of
+  90degree and same.
+
+  uses horizontal
+                      90 degree    same+90
+                         |        /
+                         |    /
+                         | /
+  <<< reverse  ----------*----------- > same       | >>>>>>>>
+                         |
+                         |
+                         |
+                      90 degree
+
+  uses (horizontal+vertical)*0.5
+            reverse                 same
+               \      90d+same  ^^^^
+                  \      |       /
+                    \    |    /
+                      \  | /
+  <<< rev+90d  ----------*----------- > 90 degree + same
+                         |
+                         |
+                         |
+                      90 degree
+*/
+float CalculateDashTransferVelocity(
+  glm::i32vec2 const direction, glm::i32vec2 const velocity
+) {
+  PUL_ASSERT_CMP(direction, !=, glm::i32vec2(0), return 0.0f;)
+
+  auto & transferV = dashVerticalTransfer;
+  auto & transferH = dashHorizontalTransfer;
+
+  float const angleDirection = std::atan2(direction.y, direction.x);
+  float const angleVelocity = std::atan2(velocity.y, velocity.x);
+
+  spdlog::debug("angle dir {:.2f} vel {:.2f}", angleDirection, angleVelocity);
+
+  bool directionAxisX = false, directionAxisY = false;
+
+  directionAxisY = direction.y != 0.0f;
+  directionAxisX = direction.x != 0.0f;
+
+  float const angleDiff =
+    glm::abs(glm::abs(angleDirection) - glm::abs(angleVelocity));
+  float angleSum =
+    glm::abs(glm::abs(angleDirection) + glm::abs(angleVelocity));
+
+  if (angleSum >= pul::Pi) { angleSum -= pul::Pi; }
+
+  // if same angle, then just use the axis
+  if (angleDirection == angleVelocity) {
+    if (directionAxisX && directionAxisY) {
+      ::debugTransferDetails = fmt::format("same angle | X+Y");
+      return transferV.same*0.5f + transferH.same*0.5f;
+    } else if (directionAxisX) {
+      ::debugTransferDetails = fmt::format("same angle | X");
+      return transferH.same;
+    } else if (directionAxisY) {
+      ::debugTransferDetails = fmt::format("same angle | Y");
+      return transferV.same;
+    }
+  }
+
+  // if in 90 degree range (not mix)
+  if (
+      glm::abs(angleSum - pul::Pi_2) < 0.1f
+   || glm::abs(angleDiff - pul::Pi_2) < 0.1f
+  ) {
+    if (directionAxisX && directionAxisY) {
+      ::debugTransferDetails = fmt::format("90 degree angle | X+Y");
+      return transferV.degree90*0.5f + transferH.degree90*0.5f;
+    } else if (directionAxisX) {
+      ::debugTransferDetails = fmt::format("90 degree angle | X");
+      return transferH.degree90;
+    } else if (directionAxisY) {
+      ::debugTransferDetails = fmt::format("90 degree angle | Y");
+      return transferV.degree90;
+    }
+  }
+
+  // if in between 90 degree range & same angle (45 degrees)
+  if (glm::abs(angleDiff - pul::Pi_4) < 0.1f) {
+    float const transferVMix = transferV.degree90*0.5f + transferV.same*0.5f;
+    float const transferHMix = transferH.degree90*0.5f + transferH.same*0.5f;
+    if (directionAxisX && directionAxisY) {
+      ::debugTransferDetails = fmt::format("45 degree angle | X+Y");
+      return transferVMix*0.5f + transferHMix*0.5f;
+    } else if (directionAxisX) {
+      ::debugTransferDetails = fmt::format("45 degree angle | X");
+      return transferHMix;
+    } else if (directionAxisY) {
+      ::debugTransferDetails = fmt::format("45 degree angle | Y");
+      return transferVMix;
+    }
+  }
+
+  // if reverse angle
+  if (
+    glm::abs(glm::abs(angleDirection)+glm::abs(angleVelocity) - pul::Pi) < 0.1f
+  ) {
+    if (directionAxisX && directionAxisY) {
+      ::debugTransferDetails = fmt::format("reverse angle | X+Y");
+      return transferV.reverse*0.5f + transferH.reverse*0.5f;
+    } else if (directionAxisX) {
+      ::debugTransferDetails = fmt::format("reverse angle | X");
+      return transferH.reverse;
+    } else if (directionAxisY) {
+      ::debugTransferDetails = fmt::format("reverse angle | Y");
+      return transferV.reverse;
+    }
+  }
+
+  // if in between 90 degree range & reverse angle (45 degrees)
+  if (glm::abs(angleDiff - (pul::Pi_2+pul::Pi_4)) < 0.1f) {
+    float const transferVMix = transferV.degree90*0.5f + transferV.reverse*0.5f;
+    float const transferHMix = transferV.degree90*0.5f + transferV.reverse*0.5f;
+    if (directionAxisX && directionAxisY) {
+      ::debugTransferDetails = fmt::format("reverse 45 degree angle | X+Y");
+      return transferVMix*0.5f + transferHMix*0.5f;
+    } else if (directionAxisX) {
+      ::debugTransferDetails = fmt::format("reverse 45 degree angle | X");
+      return transferHMix;
+    } else if (directionAxisY) {
+      ::debugTransferDetails = fmt::format("reverse 45 degree angle | Y");
+      return transferVMix;
+    }
+  }
+
+  spdlog::critical(
+    "could not find an appropiate angle; dir {} vel {} | diff {} sum {}"
+  , angleDirection, angleVelocity, angleDiff, angleSum
+  );
+  return 0.0f;
+}
 
 float CalculateAccelFromTarget(float timeMs, float targetTexels) {
   return targetTexels / timeMs / 90.0f * 2.0f;
@@ -134,8 +285,6 @@ void UpdatePlayerPhysics(
     // check if we can step up to the specified slope
     if (player.grounded && player.velocity.x != 0.0f) {
       glm::vec2 offset = ray.endOrigin;
-
-      spdlog::info("offset {} | origin {}", offset, groundedFloorOrigin);
 
       auto stepRay =
         pul::physics::IntersectorRay::Construct(
@@ -617,6 +766,18 @@ void plugin::entity::UpdatePlayer(
           controller.movementHorizontal, controller.movementVertical
         );
 
+      float const transfers =
+        CalculateDashTransferVelocity(
+          glm::i32vec2(
+            static_cast<int32_t>(controller.movementHorizontal)
+          , static_cast<int32_t>(controller.movementVertical)
+          )
+        , glm::i32vec2(
+            static_cast<int32_t>(glm::sign(player.velocity.x))
+          , static_cast<int32_t>(glm::sign(player.velocity.y))
+          )
+        );
+
       // if no keys are pressed just guess where player wants to go
       if (
           controller.movementHorizontal == MovementControl::None
@@ -629,7 +790,8 @@ void plugin::entity::UpdatePlayer(
         player.origin.y -= 8.0f;
       }
 
-      player.velocity = velocityMultiplier * glm::normalize(direction);
+      player.velocity =
+        velocityMultiplier * transfers * glm::normalize(direction);
       player.grounded = false;
 
       player.dashCooldown[Idx(controller.movementDirection)] = ::dashCooldown;
@@ -711,7 +873,6 @@ void plugin::entity::UpdatePlayer(
       } else if (frameHorizontalJump) {
         static bool swap = false;
         swap ^= 1;
-        spdlog::debug("swap {}", swap);
         playerAnim
           .instance.pieceToState["legs"]
           .Apply(swap ? "jump-strafe-0" : "jump-strafe-1");
@@ -988,7 +1149,7 @@ void plugin::entity::UiRenderPlayer(
   );
 
   ImGui::SliderFloat(
-    "dashVerticalTransfer.normal", &dashVerticalTransfer.normal, 0.0f, 1.0f
+    "dashVerticalTransfer.same", &dashVerticalTransfer.same, 0.0f, 1.0f
   );
   pul::imgui::ItemTooltip(
     "percentage to apply vertical dash if dashing in same direction"
@@ -1007,10 +1168,10 @@ void plugin::entity::UiRenderPlayer(
   );
 
   ImGui::SliderFloat(
-    "dashHorizontalTransfer.normal", &dashHorizontalTransfer.normal, 0.0f, 1.0f
+    "dashHorizontalTransfer.same", &dashHorizontalTransfer.same, 0.0f, 1.0f
   );
   pul::imgui::ItemTooltip(
-    "percentage to apply horizontal dash if dashing in normal direction"
+    "percentage to apply horizontal dash if dashing in same direction"
   );
   ImGui::SliderFloat(
     "dashHorizontalTransfer.reverse", &dashHorizontalTransfer.reverse
@@ -1102,6 +1263,8 @@ void plugin::entity::UiRenderPlayer(
   pul::imgui::Text(
     "Speed (total) {}", static_cast<int32_t>(glm::length(player.velocity)*90.0f)
   );
+
+  pul::imgui::Text("debug transfer details: {}", ::debugTransferDetails);
 
   static bool showVel = true;
 
