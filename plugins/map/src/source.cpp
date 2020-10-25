@@ -78,13 +78,21 @@ void MapSokolPushTile(
 
   int32_t depth = 0ul;
 
-  if (layer == "background") {
-    depth = 1;
-  } else if (layer == "middleground") {
+  // TODO this should not parse numbers but just assume depth based on layer
+
+  if (layer.compare(0, 13, "nonsolid-back") == 0) {
+    size_t numberIdx = layer.find_last_not_of("0123456789");
+    depth = +std::stoi(layer.substr(numberIdx+1));
+  } else if (layer.compare(0, 14, "nonsolid-front") == 0) {
+    size_t numberIdx = layer.find_last_not_of("0123456789");
+    depth = -std::stoi(layer.substr(numberIdx+1));
+  } else if (layer.compare(0, 9, "solid-all") == 0) {
     depth = 0;
-  } else if (layer == "foreground") {
-    depth = -1;
+  } else if (layer.compare(0, 9, "solid-player") == 0) {
+    depth = 0;
   }
+
+  spdlog::debug("layer {}", depth);
 
   // locate spritesheet used and the local tile ID
   size_t spritesheetIdx = -1ul;
@@ -339,18 +347,21 @@ PUL_PLUGIN_DECL void Map_Load(
   cJSON * tileset;
   cJSON_ArrayForEach(tileset, cJSON_GetObjectItemCaseSensitive(map, "tilesets"))
   {
-    auto tilesetFilename =
-      cJSON_GetObjectItemCaseSensitive(tileset, "source")->valuestring;
-
-    spdlog::debug("loading tileset '{}'", tilesetFilename);
 
     cJSON * tilesetJson;
-    { // load file
+
+    // either the file is embedded or it is externally loaded
+    if (cJSON_GetObjectItemCaseSensitive(tileset, "source")) {
+      auto tilesetFilename =
+        cJSON_GetObjectItemCaseSensitive(tileset, "source")->valuestring;
+
+      spdlog::debug("loading tileset '{}'", tilesetFilename);
+
+      // load file
       std::filesystem::path tilesetJsonPath =
           std::filesystem::path(filename).remove_filename() / tilesetFilename
       ;
 
-      // load file
       auto file = std::ifstream{tilesetJsonPath.string()};
       if (file.eof() || !file.good()) {
         spdlog::error("could not load tilest '{}'", tilesetJsonPath.string());
@@ -364,6 +375,8 @@ PUL_PLUGIN_DECL void Map_Load(
         };
 
       tilesetJson = cJSON_Parse(str.c_str());
+    } else {
+      tilesetJson = tileset;
     }
 
     std::filesystem::path tilesetPath =
