@@ -672,6 +672,11 @@ void plugin::entity::UpdatePlayer(
           , frictionApplies, inputAccel
           );
         }
+
+        // if the target goal is reached then the accel is 0, but we still want
+        // to keep it around
+        if (inputAccel != 0.0f)
+          { player.prevFrameGroundAcceleration = inputAccel; }
       }
     } else {
       if (facingDirection*player.velocity.x <= ::inputAirAccelThreshold) {
@@ -682,6 +687,22 @@ void plugin::entity::UpdatePlayer(
           );
       } else {
         inputAccel *= ::inputAirAccelPostThreshold;
+      }
+
+      // mix inputAccel with grounded movement to give proper ground-air
+      // transition
+      if (player.jumpFallTime > 0.0f) {
+        inputAccel =
+          glm::mix(
+            inputAccel
+          , player.prevFrameGroundAcceleration*::frictionGrounded
+          , player.jumpFallTime / ::jumpAfterFallTime
+          );
+        spdlog::debug("{} , {} , {}",
+          inputAccel,
+          player.prevFrameGroundAcceleration*::frictionGrounded,
+player.jumpFallTime / ::jumpAfterFallTime
+          );
       }
 
       frictionApplies = false;

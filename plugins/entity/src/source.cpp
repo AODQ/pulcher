@@ -121,6 +121,9 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
       ImGui::DragFloat2("stored velocity", &self.storedVelocity.x, 0.025f);
       pul::imgui::Text("midair dashes left {}", self.midairDashesLeft);
       pul::imgui::Text("jump fall time {}", self.jumpFallTime);
+      pul::imgui::Text(
+        "prev frame ground accel {}", self.prevFrameGroundAcceleration
+      );
       pul::imgui::Text("dash gravity time {:.2f}\n", self.dashZeroGravityTime);
       pul::imgui::Text(
         "dash cooldown\n"

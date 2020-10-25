@@ -13,6 +13,9 @@ namespace pul::core {
     glm::vec2 velocity = {};
     glm::vec2 storedVelocity = {};
 
+    // used to mix w/ air acceleration when falling off a ledge
+    float prevFrameGroundAcceleration = 0.0f;
+
     float jumpFallTime = 0.0f;
     float crouchSlideCooldown = 0.0f;
     float slideFrictionTime = 0.0f;
