@@ -108,8 +108,6 @@ float CalculateDashTransferVelocity(
   float const angleDirection = std::atan2(direction.y, direction.x);
   float const angleVelocity = std::atan2(velocity.y, velocity.x);
 
-  spdlog::debug("angle dir {:.2f} vel {:.2f}", angleDirection, angleVelocity);
-
   bool directionAxisX = false, directionAxisY = false;
 
   directionAxisY = direction.y != 0.0f;
@@ -321,6 +319,8 @@ void UpdatePlayerPhysics(
         }
       }
     }
+
+    spdlog::debug("{} : {}", ray.beginOrigin.x, ray.endOrigin.x);
 
     // first 'clamp' the player to some bounds
     if (ray.beginOrigin.x < ray.endOrigin.x) {
