@@ -721,7 +721,13 @@ void plugin::entity::UpdatePlayer(
       if (dashCooldown > 0.0f)
         { dashCooldown -= pul::util::MsPerFrame; }
     }
-    if (!prevGrounded && player.grounded) {
+
+    // clear dash lock if either we land, or we are jumping on this frame (thus
+    // player will not be grounded)
+    if (
+        !prevGrounded
+     && (frameHorizontalJump || frameVerticalJump || player.grounded)
+    ) {
       for (auto & dashLock : player.dashLock)
         { dashLock = false; }
     }
