@@ -16,7 +16,7 @@ namespace {
   int32_t maxAirDashes = 3u;
   float inputRunAccelTarget = 4.0f;
   float slideAccel = 1.0f;
-  float slideMinimumVelocity = 6.0f;
+  float slideMinVelocity = 6.0f;
   float slideCooldown   = 300.0f;
   float slideFriction = 0.95f;
   float slideFrictionTransitionTime = 500.0f;
@@ -53,7 +53,8 @@ namespace {
   };
   TransferPercent dashVerticalTransfer;
   TransferPercent dashHorizontalTransfer;
-  float dashMinimumVelocity = 6.0f;
+  float dashMinVelocity = 6.0f;
+  float dashMinVelocityMultiplier = 2.0f;
   float dashCooldown = 1500.0f;
   float horizontalGroundedVelocityStop = 0.5f;
 
@@ -319,8 +320,6 @@ void UpdatePlayerPhysics(
         }
       }
     }
-
-    spdlog::debug("{} : {}", ray.beginOrigin.x, ray.endOrigin.x);
 
     // first 'clamp' the player to some bounds
     if (ray.beginOrigin.x < ray.endOrigin.x) {
@@ -661,7 +660,7 @@ void plugin::entity::UpdatePlayer(
             player.velocity.x =
               glm::max(
                 ::slideAccel + glm::length(player.velocity.x)
-              , ::slideMinimumVelocity
+              , ::slideMinVelocity
               ) * facingDirection
             ;
 
@@ -802,11 +801,16 @@ void plugin::entity::UpdatePlayer(
         , NormalizeVelocityAxis(player.velocity)
         );
 
-      float const velocityMultiplier =
-        glm::max(
-          transfers*(::dashAccel + glm::length(scaledVelocity))
-        , ::dashMinimumVelocity
-        );
+      float velocityMultiplier =
+          transfers*(::dashAccel + glm::length(scaledVelocity));
+
+      // add dashMin
+      if (velocityMultiplier < ::dashMinVelocity) {
+        velocityMultiplier =
+          velocityMultiplier / ::dashMinVelocity * ::dashMinVelocityMultiplier
+        + ::dashMinVelocity
+        ;
+      }
 
       if (controller.movementVertical != MovementControl::None) {
         frameVerticalDash = true;
@@ -1228,10 +1232,25 @@ void plugin::entity::UiRenderPlayer(
     "percentage to apply horizontal dash if dashing in 90-degree direction"
   );
 
-  ImGui::DragFloat("dash min velocity", &::dashMinimumVelocity, 0.01f);
+  ImGui::DragFloat("dash min velocity", &::dashMinVelocity, 0.01f);
   pul::imgui::ItemTooltip(
     "gives a minimal threshold for velocity on dash, thus ensuring that on\n"
     "dash, the player is moving by at least this velocity; texels"
+  );
+  ImGui::DragFloat(
+    "dash min velocity multiplier", &::dashMinVelocityMultiplier, 0.01f
+  );
+  pul::imgui::ItemTooltip(
+    "multiplies velocity by this amount divided by dashMinVelocity; which\n"
+    "allows to conserve some velocity when below the minimum velocity, rather\n"
+    "then it just being set to a specific value.\n"
+    "\n"
+    "For example, if the dashMinVelocity is 4, the\n"
+    "dashMinVelocityMultiplier is 2, and the player is moving at a speed\n"
+    "of 3, he will get:\n"
+    "dashMinVelocity + (speed/dashMinVelocity) * dashMinVelocityMultiplier\n"
+    "4               + (3/4) * 2\n"
+    "velocity, instead of just 4"
   );
   ImGui::DragInt("max air dashes", &::maxAirDashes, 0.25f, 0, 10);
   pul::imgui::ItemTooltip("maximum amount of dashes that can occur in air");
@@ -1262,7 +1281,7 @@ void plugin::entity::UiRenderPlayer(
   pul::imgui::ItemTooltip(
     "amount to add to velocity the frame a slide is made; texels"
   );
-  ImGui::DragFloat("slide min velocity", &::slideMinimumVelocity, 0.01f);
+  ImGui::DragFloat("slide min velocity", &::slideMinVelocity, 0.01f);
   pul::imgui::ItemTooltip(
     "gives a minimal threshold for velocity on slide, thus ensuring that on\n"
     "slide, the player is moving by at least this velocity; texels"
