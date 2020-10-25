@@ -525,6 +525,18 @@ void plugin::entity::UpdatePlayer(
 
     bool const prevCrouchSliding = player.crouchSliding;
 
+    // if the player is crouch sliding, player remains crouched until the
+    // animation is finished, the velocity is below crouch target, or the
+    // player is jumping
+    if (
+        player.crouchSliding
+     && !player.jumping
+     && glm::abs(player.velocity.x) >= inputCrouchAccelTarget
+     && !playerAnim.instance.pieceToState["legs"].animationFinished
+    ) {
+      player.crouching = true;
+    }
+
     if (
         player.crouchSliding
      && (
@@ -836,9 +848,9 @@ void plugin::entity::UpdatePlayer(
           controller.movementHorizontal != MovementControl::None
         ;
 
-        bool const running = !controller.walk && !controller.crouch && moving;
-        bool const crouching = controller.crouch && moving;
-        bool const walking = controller.walk && !controller.crouch && moving;
+        bool const running = !controller.walk && !player.crouching && moving;
+        bool const crouching = player.crouching && moving;
+        bool const walking = controller.walk && !player.crouching && moving;
 
         if (legInfo.label == "run-turn") {
           if (legInfo.animationFinished) { legInfo.Apply("run"); }
@@ -864,7 +876,7 @@ void plugin::entity::UpdatePlayer(
                 (player.velocity.x > 0.0f ? +1.0f : -1.0f) * pul::Pi/2.0f;
               bodyInfo.Apply("crouch-transition");
             }
-          } else if (controller.crouch)
+          } else if (player.crouching)
             { legInfo.Apply("crouch-idle"); }
           else
             { legInfo.Apply("stand"); }
