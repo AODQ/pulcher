@@ -29,15 +29,15 @@ namespace {
   float inputAirAccelPostThreshold = 0.02f;
   float inputAirAccelThreshold = 6.0f;
 
-  float inputGravityAccelPreThresholdTime = 0.8f;
-  float inputGravityAccelPostThreshold = 0.02f;
-  float inputGravityAccelThreshold = 6.0f;
+  float inputGravityAccelPreThresholdTime = 1.0f;
+  float inputGravityAccelPostThreshold = 0.04f;
+  float inputGravityAccelThreshold = 7.0f;
 
   float inputWalkAccelTarget = 1.0f;
   float inputWalkAccelTime = 0.5f;
   float inputCrouchAccelTarget = 1.0f;
   float inputCrouchAccelTime = 1.0f;
-  float jumpAfterFallTime = 150.0f;
+  float jumpAfterFallTime = 200.0f;
   float jumpingHorizontalAccel = 4.0f;
   float jumpingHorizontalAccelMax = 6.0f;
   float jumpingVerticalAccel = 6.5f;
