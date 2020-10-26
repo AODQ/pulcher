@@ -6,6 +6,7 @@ target_sources(
   PRIVATE
     src/pulcher-core/scene-bundle.cpp
     src/pulcher-core/weapon.cpp
+    src/pulcher-core/map.cpp
 )
 
 set_target_properties(

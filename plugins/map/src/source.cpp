@@ -1,3 +1,4 @@
+#include <pulcher-core/map.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
@@ -5,6 +6,7 @@
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-physics/tileset.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
 
@@ -39,6 +41,7 @@ struct LayerRenderable {
   // kept in order to do CPU tilemap processing
   std::vector<size_t> tileIds;
   std::vector<glm::u32vec2> tileOrigins;
+  std::vector<pul::core::TileOrientation> tileOrientations;
 
   sg_buffer bufferVertex;
   sg_buffer bufferUvCoords;
@@ -137,6 +140,13 @@ void MapSokolPushTile(
 
   renderable->tileOrigins.emplace_back(glm::u32vec2(x, y));
   renderable->tileIds.emplace_back(localTileId);
+  renderable->tileOrientations.emplace_back(
+    static_cast<pul::core::TileOrientation>(
+      flipDiagonal   ? Idx(pul::core::TileOrientation::FlipDiagonal)   : 0ul
+    | flipVertical   ? Idx(pul::core::TileOrientation::FlipVertical)   : 0ul
+    | flipHorizontal ? Idx(pul::core::TileOrientation::FlipHorizontal) : 0ul
+    )
+  );
 
   for (auto const & v
     : std::vector<std::array<float, 2>> {
@@ -475,6 +485,7 @@ PUL_PLUGIN_DECL void Map_Load(
     std::vector<pul::physics::Tileset const *> tilesets;
     std::vector<std::span<size_t>> mapTileIndices;
     std::vector<std::span<glm::u32vec2>> mapTileOrigins;
+    std::vector<std::span<pul::core::TileOrientation>> mapTileOrientations;
 
     spdlog::debug("renderable count {}", ::renderables.size());
 
@@ -489,9 +500,14 @@ PUL_PLUGIN_DECL void Map_Load(
 
       mapTileIndices.emplace_back(std::span(renderable.tileIds));
       mapTileOrigins.emplace_back(std::span(renderable.tileOrigins));
+      mapTileOrientations.emplace_back(std::span(renderable.tileOrientations));
     }
 
-    plugins.physics.LoadMapGeometry(tilesets, mapTileIndices, mapTileOrigins);
+    plugins
+      .physics
+      .LoadMapGeometry(
+        tilesets, mapTileIndices, mapTileOrigins, mapTileOrientations
+      );
   }
 
   cJSON_Delete(map);

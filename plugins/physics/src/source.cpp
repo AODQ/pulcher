@@ -1,3 +1,4 @@
+#include <pulcher-core/map.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
@@ -5,6 +6,7 @@
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-physics/tileset.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
 
@@ -252,6 +254,7 @@ struct TilemapLayer {
   struct TileInfo {
     size_t imageTileIdx = -1ul;
     size_t tilesetIdx = -1ul;
+    pul::core::TileOrientation orientation = pul::core::TileOrientation::None;
     glm::vec2 origin;
 
     bool Valid() const { return tilesetIdx != -1ul; }
@@ -262,6 +265,38 @@ struct TilemapLayer {
 };
 
 TilemapLayer tilemapLayer;
+
+float CalculateSdfDistance(
+  TilemapLayer::TileInfo const & tileInfo
+, glm::u32vec2 texel
+) {
+  if (tileInfo.tilesetIdx == -1ul) { return 0.0f; }
+
+  auto const * tileset = tilemapLayer.tilesets[tileInfo.tilesetIdx];
+
+  if (!tileInfo.Valid()) { return 0.0f; }
+
+  pul::physics::Tile const & physicsTile =
+    tileset->tiles[tileInfo.imageTileIdx];
+
+  // apply tile orientation
+  auto const tileOrientation = Idx(tileInfo.orientation);
+
+  spdlog::info("ori: {}", ToStr(tileInfo.orientation));
+  if (tileOrientation & Idx(pul::core::TileOrientation::FlipHorizontal))
+    { texel.x = 31 - texel.x; }
+
+  if (tileOrientation & Idx(pul::core::TileOrientation::FlipVertical))
+    { texel.y = 31 - texel.y; }
+
+  if (tileOrientation & Idx(pul::core::TileOrientation::FlipDiagonal)) {
+    texel.x = 31 - texel.x;
+    texel.y = 31 - texel.y;
+  }
+
+  // -- compute intersection SDF and accel hints
+  return physicsTile.signedDistanceField[texel.x][texel.y];
+}
 
 } // -- namespace
 
@@ -324,8 +359,9 @@ PUL_PLUGIN_DECL void Physics_ClearMapGeometry() {
 
 PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
   std::vector<pul::physics::Tileset const *> const & tilesets
-, std::vector<std::span<size_t>>                 const & mapTileIndices
-, std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
+, std::vector<std::span<size_t>>             const & mapTileIndices
+, std::vector<std::span<glm::u32vec2>>       const & mapTileOrigins
+, std::vector<std::span<pul::core::TileOrientation>> const & mapTileOrientations
 ) {
   Physics_ClearMapGeometry();
 
@@ -360,12 +396,14 @@ PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
   for (size_t tilesetIdx = 0ul; tilesetIdx < tilesets.size(); ++ tilesetIdx) {
     auto const & tileIndices = mapTileIndices[tilesetIdx];
     auto const & tileOrigins = mapTileOrigins[tilesetIdx];
+    auto const & tileOrientations = mapTileOrientations[tilesetIdx];
 
     PUL_ASSERT(tilesets[tilesetIdx], continue;);
 
     for (size_t i = 0ul; i < tileIndices.size(); ++ i) {
-      auto const & imageTileIdx = tileIndices[i];
-      auto const & tileOrigin   = tileOrigins[i];
+      auto const & imageTileIdx    = tileIndices[i];
+      auto const & tileOrigin      = tileOrigins[i];
+      auto const & tileOrientation = tileOrientations[i];
 
       PUL_ASSERT_CMP(
         imageTileIdx, <, tilesets[tilesetIdx]->tiles.size(), continue;
@@ -384,6 +422,7 @@ PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
       tile.tilesetIdx   = tilesetIdx;
       tile.imageTileIdx = imageTileIdx;
       tile.origin       = tileOrigin;
+      tile.orientation  = tileOrientation;
     }
   }
 
@@ -420,22 +459,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
       PUL_ASSERT_CMP(::tilemapLayer.tileInfo.size(), >, tileIdx, return;);
       auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
 
-      if (tileInfo.tilesetIdx == -1ul) { return; }
-
-      PUL_ASSERT_CMP(
-        ::tilemapLayer.tilesets.size(), >, tileInfo.tilesetIdx, return;
-      );
-      auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
-
-      if (!tileInfo.Valid()) { return; }
-
-      pul::physics::Tile const & physicsTile =
-        tileset->tiles[tileInfo.imageTileIdx];
-
-      // -- compute intersection SDF and accel hints
-      if (
-        physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f
-      ) {
+      if (::CalculateSdfDistance(tileInfo, texelOrigin) > 0.0f) {
         intersectionResults =
           pul::physics::IntersectionResults {
             true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
@@ -475,23 +499,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
   PUL_ASSERT_CMP(::tilemapLayer.tileInfo.size(), >, tileIdx, return false;);
   auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
 
-  if (tileInfo.tilesetIdx == -1ul) { return false; }
-
-  PUL_ASSERT_CMP(
-    ::tilemapLayer.tilesets.size(), >, tileInfo.tilesetIdx, return false;
-  );
-  auto const * tileset = ::tilemapLayer.tilesets[tileInfo.tilesetIdx];
-
-  if (!tileInfo.Valid()) {
-    queries.Add(point, {});
-    return false;
-  }
-
-  pul::physics::Tile const & physicsTile =
-    tileset->tiles[tileInfo.imageTileIdx];
-
-  // -- compute intersection SDF and accel hints
-  if (physicsTile.signedDistanceField[texelOrigin.x][texelOrigin.y] > 0.0f) {
+  if (::CalculateSdfDistance(tileInfo, texelOrigin) > 0.0f) {
     intersectionResults =
       pul::physics::IntersectionResults {
         true, point.origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx

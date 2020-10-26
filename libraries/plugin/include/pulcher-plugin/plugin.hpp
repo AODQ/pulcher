@@ -10,6 +10,7 @@
 
 namespace pul::animation { struct Instance; }
 namespace pul::animation { struct System; }
+namespace pul::core { enum class TileOrientation : size_t; }
 namespace pul::core { struct SceneBundle; }
 namespace pul::gfx { struct Image; }
 namespace pul::physics { struct IntersectionResults; }
@@ -92,6 +93,9 @@ namespace pul::plugin {
       std::vector<pul::physics::Tileset const *> const & tilesets
     , std::vector<std::span<size_t>>                 const & mapTileIndices
     , std::vector<std::span<glm::u32vec2>>           const & mapTileOrigins
+    , std::vector<
+        std::span<pul::core::TileOrientation>
+      > const & mapTileOrientations
     ) = nullptr;
     bool (*IntersectionRaycast)(
       pul::core::SceneBundle & scene
