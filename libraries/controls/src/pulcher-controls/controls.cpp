@@ -45,6 +45,7 @@ void pul::controls::UpdateControls(
   current.weaponSwitchPrev = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
 
   current.jump = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+  current.taunt = glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
   current.dash = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
   current.walk = glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS;
   current.crouch =

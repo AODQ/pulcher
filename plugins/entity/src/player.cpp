@@ -1,6 +1,7 @@
 #include <plugin-entity/player.hpp>
 
 #include <pulcher-animation/animation.hpp>
+#include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
@@ -48,12 +49,12 @@ namespace {
 
   struct TransferPercent {
     float same = 1.0f;
-    float reverse = 1.0f;
-    float degree90 = 1.0f;
+    float reverse = 0.9f;
+    float degree90 = 0.6f;
   };
   TransferPercent dashVerticalTransfer;
   TransferPercent dashHorizontalTransfer;
-  float dashMinVelocity = 6.0f;
+  float dashMinVelocity = 4.0f;
   float dashMinVelocityMultiplier = 2.0f;
   float dashCooldown = 1500.0f;
   float horizontalGroundedVelocityStop = 0.5f;
@@ -345,6 +346,7 @@ void UpdatePlayerPhysics(
       pul::physics::IntersectionResults resultsY;
       plugin.physics.IntersectionRaycast(scene, rayY, resultsY)
     ) {
+      player.prevAirVelocity = player.velocity.y;
       // if there is an intersection check
       if (player.origin.y < resultsY.origin.y) {
         player.velocity.y = glm::min(0.0f, player.velocity.y);
@@ -522,6 +524,7 @@ void plugin::entity::UpdatePlayer(
   }
 
   bool const frameStartGrounded = player.grounded;
+  bool const prevCrouchSliding = player.crouchSliding;
 
   using MovementControl = pul::controls::Controller::Movement;
 
@@ -545,8 +548,6 @@ void plugin::entity::UpdatePlayer(
     player.crouching = controller.crouch;
     playerAnim.instance.pieceToState["legs"].angle = 0.0f;
     playerAnim.instance.pieceToState["body"].angle = 0.0f;
-
-    bool const prevCrouchSliding = player.crouchSliding;
 
     // if the player is crouch sliding, player remains crouched until the
     // animation is finished, the velocity is below crouch target, or the
@@ -864,6 +865,8 @@ void plugin::entity::UpdatePlayer(
     }
   }
 
+  glm::vec2 const velocityPrePhysics = player.velocity;
+
   ::UpdatePlayerPhysics(plugin, scene, player);
 
   const float velocityXAbs = glm::abs(player.velocity.x);
@@ -1066,6 +1069,48 @@ void plugin::entity::UpdatePlayer(
   }
 
   ::UpdatePlayerWeapon(plugin, scene, player, playerAnim);
+
+
+  auto & audioSystem = scene.AudioSystem();
+  audioSystem.playerJumped |=
+    frameVerticalJump || frameHorizontalJump || frameWalljump;
+  audioSystem.playerLanded |= !prevGrounded && frameStartGrounded;
+  audioSystem.playerSlided |= player.crouchSliding && !prevCrouchSliding;
+  audioSystem.playerDashed |= frameHorizontalDash || frameVerticalDash;
+  audioSystem.playerTaunted |= controller.taunt && !controllerPrev.taunt;
+
+  auto & legInfo = playerAnim.instance.pieceToState["legs"];
+
+  if (player.grounded && legInfo.label == "crouch-walk") {
+    static size_t prevComp = 0;
+    audioSystem.playerStepped |=
+        (prevComp % 5 != 0) && legInfo.componentIt % 5 == 0
+     && legInfo.componentIt != 0
+    ;
+    prevComp = legInfo.componentIt;
+  }
+
+  if (player.grounded && legInfo.label == "walk") {
+    static size_t prevComp = 0;
+    audioSystem.playerStepped |=
+        (prevComp % 3 != 0) && legInfo.componentIt % 3 == 0
+     && legInfo.componentIt != 0
+    ;
+    prevComp = legInfo.componentIt;
+  }
+
+  if (player.grounded && legInfo.label == "run") {
+    static size_t prevComp = 0;
+    audioSystem.playerStepped |=
+        (prevComp % 3 != 0) && legInfo.componentIt % 3 == 0
+     && legInfo.componentIt != 0
+    ;
+    prevComp = legInfo.componentIt;
+  }
+  if (audioSystem.envLanded == -1ul && audioSystem.playerLanded) {
+    audioSystem.envLanded =
+      static_cast<size_t>(glm::clamp(player.prevAirVelocity/5.0f, 0.0f, 2.0f));
+  }
 }
 
 void plugin::entity::UiRenderPlayer(

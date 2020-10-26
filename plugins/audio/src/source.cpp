@@ -11,7 +11,14 @@
 namespace {
 
 FMOD_SYSTEM * fmodSystem = nullptr;
-FMOD_SOUND * fmodSound = nullptr;
+std::array<FMOD_SOUND *, 2> fmodSoundSpawn = { nullptr };
+std::array<FMOD_SOUND *, 5> fmodSoundTaunt = { nullptr };
+std::array<FMOD_SOUND *, 3> fmodSoundJump = { nullptr };
+std::array<FMOD_SOUND *, 3> fmodSoundSlide = { nullptr };
+std::array<FMOD_SOUND *, 3> fmodSoundStep = { nullptr };
+std::array<FMOD_SOUND *, 3> fmodSoundDash = { nullptr };
+std::array<FMOD_SOUND *, 3> fmodSoundLand = { nullptr };
+std::array<FMOD_SOUND *, 3> fmodSoundLandEnv = { nullptr };
 
 #define FMOD_ASSERT(X, ...) \
   if (auto result = X; result != FMOD_OK) { \
@@ -40,10 +47,249 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/misc/kill-enemy.wav"
-    , FMOD_DEFAULT
+    , "assets/base/audio/sfx/misc/player-spawn.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
-    , &::fmodSound
+    , &::fmodSoundSpawn[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/announcer/red-joined.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundSpawn[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/land-normal1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundLandEnv[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/land-normal1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundLandEnv[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/land-normal1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundLandEnv[2]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/land1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundLand[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/land2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundLand[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/land3.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundLand[2]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/dash1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundDash[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/dash2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundDash[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/dash3.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundDash[2]
+    ), ;
+  );
+
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundTaunt[0]
+    ), ;
+  );
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundTaunt[1]
+    ), ;
+  );
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt3.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundTaunt[2]
+    ), ;
+  );
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt4.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundTaunt[3]
+    ), ;
+  );
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt5.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundTaunt[4]
+    ), ;
+  );
+
+
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/step-normal1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundStep[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/step-normal2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundStep[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/step-normal3.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundStep[2]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/slide1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundSlide[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/slide2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundSlide[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/player/slide3.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundSlide[2]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/jump1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundJump[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/jump2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundJump[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/characters/nygelstromn/jump3.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundJump[2]
     ), ;
   );
 }
@@ -56,18 +302,19 @@ PUL_PLUGIN_DECL void Audio_Shutdown(
 }
 
 PUL_PLUGIN_DECL void Audio_Update(
-  pul::plugin::Info const &, pul::core::SceneBundle &
+  pul::plugin::Info const &, pul::core::SceneBundle & scene
 ) {
   FMOD_System_Update(::fmodSystem);
 
-  static size_t F = 0;
-  if (F == 0) {
-    F = 1;
+  auto & audioSystem = scene.AudioSystem();
 
+  if (audioSystem.playerJumped) {
+    static size_t it = 0;
+    ++ it;
     FMOD_ASSERT(
       FMOD_System_PlaySound(
         ::fmodSystem
-      , ::fmodSound
+      , ::fmodSoundJump[it % 3]
       , nullptr
       , false
       , nullptr
@@ -75,6 +322,135 @@ PUL_PLUGIN_DECL void Audio_Update(
       ;
     );
   }
+
+  if (audioSystem.playerTaunted) {
+    static size_t it = 0;
+    ++ it;
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundTaunt[it % 5]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+  if (audioSystem.playerStepped) {
+    static size_t it = 0;
+    ++ it;
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundStep[it % 3]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+  if (audioSystem.playerSlided) {
+    static size_t it = 0;
+    ++ it;
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundSlide[it % 3]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+  if (audioSystem.playerDashed) {
+    static size_t it = 0;
+    ++ it;
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundDash[it % 3]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+  if (audioSystem.playerLanded) {
+    static size_t it = 0;
+    ++ it;
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundLand[it % 3]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+  if (audioSystem.envLanded < 3) {
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundLandEnv[audioSystem.envLanded]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+  // lazy way for spawn
+  static size_t plugLoad = 0ul;
+  if (plugLoad == 0ul) {
+    plugLoad = 1ul;
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundSpawn[0]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+  static size_t redJoin = 0ul;
+  if (redJoin <= 50) {
+    redJoin += scene.numCpuFrames;
+    if (redJoin > 50) {
+      FMOD_ASSERT(
+        FMOD_System_PlaySound(
+          ::fmodSystem
+        , ::fmodSoundSpawn[1]
+        , nullptr
+        , false
+        , nullptr
+        ),
+        ;
+      );
+    }
+  }
+
+  audioSystem.playerJumped = false;
+  audioSystem.playerTaunted = false;
+  audioSystem.playerSlided = false;
+  audioSystem.playerStepped = false;
+  audioSystem.playerDashed = false;
+  audioSystem.playerLanded = false;
+  audioSystem.envLanded = -1ul;
 }
 
 PUL_PLUGIN_DECL void Audio_UiRender(
