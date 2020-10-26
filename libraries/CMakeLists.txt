@@ -1,4 +1,5 @@
 add_subdirectory(animation)
+add_subdirectory(audio)
 add_subdirectory(controls)
 add_subdirectory(core)
 add_subdirectory(gfx)

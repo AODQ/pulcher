@@ -10,6 +10,7 @@ namespace entt { enum class entity : std::uint32_t; }
 namespace entt { template <typename> class basic_registry; }
 namespace entt { using registry = basic_registry<entity>; }
 namespace pul::animation { struct System; }
+namespace pul::audio { struct System; }
 namespace pul::controls { struct Controller; }
 namespace pul::physics { struct DebugQueries; }
 
@@ -27,6 +28,7 @@ namespace pul::core {
     pul::animation::System & AnimationSystem();
     pul::controls::Controller & PlayerController();
     pul::physics::DebugQueries & PhysicsDebugQueries();
+    pul::audio::System & AudioSystem();
 
     entt::registry & EnttRegistry();
 

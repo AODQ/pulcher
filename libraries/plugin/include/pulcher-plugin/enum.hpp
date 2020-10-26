@@ -6,6 +6,7 @@
 namespace pul::plugin {
   enum struct Type : size_t {
     Animation
+  , Audio
   , Entity
   , Map
   , Physics

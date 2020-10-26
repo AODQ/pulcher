@@ -104,6 +104,7 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
   ImGui::End();
 
   plugin.animation.UiRender(plugin, sceneBundle);
+  plugin.audio.UiRender(plugin, sceneBundle);
   plugin.entity.UiRender(sceneBundle);
   plugin.map.UiRender(sceneBundle);
   plugin.physics.UiRender(sceneBundle);

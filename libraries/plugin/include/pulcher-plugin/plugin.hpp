@@ -62,6 +62,19 @@ namespace pul::plugin {
     ) = nullptr;
   };
 
+  struct Audio {
+    void (*LoadAudio)(
+      pul::plugin::Info const &, pul::core::SceneBundle &
+    ) = nullptr;
+    void (*Update)(
+      pul::plugin::Info const &, pul::core::SceneBundle &
+    ) = nullptr;
+    void (*Shutdown)(pul::core::SceneBundle &) = nullptr;
+    void (*UiRender)(
+      pul::plugin::Info const &, pul::core::SceneBundle &
+    ) = nullptr;
+  };
+
   struct Entity {
     void (*StartScene)(
       pul::plugin::Info const &, pul::core::SceneBundle &
@@ -113,6 +126,7 @@ namespace pul::plugin {
 
   struct Info {
     pul::plugin::Animation animation;
+    pul::plugin::Audio audio;
     pul::plugin::Entity entity;
     pul::plugin::Map map;
     pul::plugin::Physics physics;

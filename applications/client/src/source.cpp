@@ -195,6 +195,7 @@ void LoadPluginInfo(
 ) {
   plugin.map.Load(plugin, "assets/base/map/test.json");
   plugin.animation.LoadAnimations(plugin, scene);
+  plugin.audio.LoadAudio(plugin, scene);
 
   // last thing so that all the previous information (maps, animation, etc)
   // can be loaded up. They can still modify the registry if they need tho.
@@ -205,6 +206,7 @@ void ShutdownPluginInfo(
   pul::plugin::Info & plugin, pul::core::SceneBundle & scene
 ) {
   plugin.animation.Shutdown(scene);
+  plugin.audio.Shutdown(scene);
   plugin.map.Shutdown();
   plugin.physics.ClearMapGeometry();
 
@@ -553,6 +555,11 @@ pul::plugin::Info InitializePlugins() {
   , "plugins/plugin-animation.pulcher-plugin"
   );
 
+  pul::plugin::LoadPlugin(
+    plugins, pul::plugin::Type::Audio
+  , "plugins/plugin-audio.pulcher-plugin"
+  );
+
   return plugins;
 }
 
@@ -623,6 +630,9 @@ int main(int argc, char const ** argv) {
 
       // -- rendering, unlimited Hz
       ::ProcessRendering(plugin, sceneBundle, deltaMs, calculatedFrames);
+
+      // -- audio, unlimited Hz
+      plugin.audio.Update(plugin, sceneBundle);
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(0));

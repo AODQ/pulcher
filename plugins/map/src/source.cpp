@@ -95,8 +95,6 @@ void MapSokolPushTile(
     depth = 0;
   }
 
-  spdlog::debug("layer {}", depth);
-
   // locate spritesheet used and the local tile ID
   size_t spritesheetIdx = -1ul;
   size_t localTileId = 0ul;

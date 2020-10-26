@@ -1,6 +1,7 @@
 #include <pulcher-core/scene-bundle.hpp>
 
 #include <pulcher-animation/animation.hpp>
+#include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-physics/intersections.hpp>
 
@@ -8,6 +9,7 @@
 
 struct pul::core::SceneBundle::Impl {
   pul::animation::System animationSystem;
+  pul::audio::System audioSystem;
   pul::controls::Controller playerController;
   pul::physics::DebugQueries physicsQueries;
 
@@ -19,6 +21,10 @@ struct pul::core::SceneBundle::Impl {
 
 pul::animation::System & pul::core::SceneBundle::AnimationSystem() {
   return impl->animationSystem;
+}
+
+pul::audio::System & pul::core::SceneBundle::AudioSystem() {
+  return impl->audioSystem;
 }
 
 pul::controls::Controller & pul::core::SceneBundle::PlayerController() {

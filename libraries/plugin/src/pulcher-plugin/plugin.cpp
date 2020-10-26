@@ -125,6 +125,13 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
       );
       ctx.LoadFunction(unit.UiRender,          "Animation_UiRender");
     } break;
+    case pul::plugin::Type::Audio: {
+      auto & unit = plugin.audio;
+      ctx.LoadFunction(unit.LoadAudio, "Audio_LoadAudio");
+      ctx.LoadFunction(unit.Update,    "Audio_Update");
+      ctx.LoadFunction(unit.Shutdown,  "Audio_Shutdown");
+      ctx.LoadFunction(unit.UiRender,  "Audio_UiRender");
+    } break;
     case pul::plugin::Type::Entity: {
       auto & unit = plugin.entity;
       ctx.LoadFunction(unit.StartScene,   "Entity_StartScene");

@@ -282,7 +282,6 @@ float CalculateSdfDistance(
   // apply tile orientation
   auto const tileOrientation = Idx(tileInfo.orientation);
 
-  spdlog::info("ori: {}", ToStr(tileInfo.orientation));
   if (tileOrientation & Idx(pul::core::TileOrientation::FlipHorizontal))
     { texel.x = 31 - texel.x; }
 

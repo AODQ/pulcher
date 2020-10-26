@@ -993,8 +993,6 @@ void LoadAnimation(
             ->valueint
         ;
 
-        spdlog::debug("getting {}", stateLabel);
-
         state.loops =
           cJSON_GetObjectItemCaseSensitive(stateJson, "loops")
             ->valueint

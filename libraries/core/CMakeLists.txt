@@ -27,6 +27,7 @@ target_link_libraries(
   PRIVATE
     EnTT
     pulcher-animation
+    pulcher-audio
     pulcher-controls
     pulcher-physics
 )
