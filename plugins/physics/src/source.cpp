@@ -290,8 +290,7 @@ float CalculateSdfDistance(
     { texel.y = 31 - texel.y; }
 
   if (tileOrientation & Idx(pul::core::TileOrientation::FlipDiagonal)) {
-    texel.x = 31 - texel.x;
-    texel.y = 31 - texel.y;
+    std::swap(texel.x, texel.y);
   }
 
   // -- compute intersection SDF and accel hints

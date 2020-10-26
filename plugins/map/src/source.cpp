@@ -142,9 +142,9 @@ void MapSokolPushTile(
   renderable->tileIds.emplace_back(localTileId);
   renderable->tileOrientations.emplace_back(
     static_cast<pul::core::TileOrientation>(
-      flipDiagonal   ? Idx(pul::core::TileOrientation::FlipDiagonal)   : 0ul
-    | flipVertical   ? Idx(pul::core::TileOrientation::FlipVertical)   : 0ul
-    | flipHorizontal ? Idx(pul::core::TileOrientation::FlipHorizontal) : 0ul
+      (flipDiagonal   ? Idx(pul::core::TileOrientation::FlipDiagonal)   : 0ul)
+    | (flipVertical   ? Idx(pul::core::TileOrientation::FlipVertical)   : 0ul)
+    | (flipHorizontal ? Idx(pul::core::TileOrientation::FlipHorizontal) : 0ul)
     )
   );
 
