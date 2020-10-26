@@ -712,9 +712,13 @@ void plugin::entity::UpdatePlayer(
         inputAccel *= ::inputAirAccelPostThreshold;
       }
 
+      // set ground accel to 0 on no input
+      if (controller.movementHorizontal == MovementControl::None)
+        { player.prevFrameGroundAcceleration = 0.0f; }
+
       // mix inputAccel with grounded movement to give proper ground-air
       // transition
-      if (player.jumpFallTime > 0.0f) {
+      if (player.jumpFallTime > 0.0f && !player.crouchSliding) {
         inputAccel =
           glm::mix(
             inputAccel
