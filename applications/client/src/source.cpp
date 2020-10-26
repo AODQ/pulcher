@@ -605,22 +605,25 @@ int main(int argc, char const ** argv) {
         timeFrameBegin - timePreviousFrameBegin
       ).count() / 1000.0f;
 
-    // -- update windowing events
-    glfwPollEvents();
+    // if above a certain range then just dismiss this time interval
+    if (deltaMs < 100.0f) {
+      // -- update windowing events
+      glfwPollEvents();
 
-    // -- logic, 90 Hz
-    msToCalculate += deltaMs;
-    size_t calculatedFrames = 0ul;
-    while (msToCalculate >= sceneBundle.calculatedMsPerFrame) {
-      ++ calculatedFrames;
-      msToCalculate -= sceneBundle.calculatedMsPerFrame;
-      ::ProcessLogic(plugin, sceneBundle);
+      // -- logic, 90 Hz
+      msToCalculate += deltaMs;
+      size_t calculatedFrames = 0ul;
+      while (msToCalculate >= sceneBundle.calculatedMsPerFrame) {
+        ++ calculatedFrames;
+        msToCalculate -= sceneBundle.calculatedMsPerFrame;
+        ::ProcessLogic(plugin, sceneBundle);
+      }
+
+      sceneBundle.numCpuFrames = calculatedFrames;
+
+      // -- rendering, unlimited Hz
+      ::ProcessRendering(plugin, sceneBundle, deltaMs, calculatedFrames);
     }
-
-    sceneBundle.numCpuFrames = calculatedFrames;
-
-    // -- rendering, unlimited Hz
-    ::ProcessRendering(plugin, sceneBundle, deltaMs, calculatedFrames);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(0));
 
