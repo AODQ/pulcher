@@ -375,6 +375,21 @@ void UpdatePlayerPhysics(
       }
     }
   }
+
+  // lazy head check
+  if (!player.grounded) {
+    auto rayHead =
+      pul::physics::IntersectorRay::Construct(
+        groundedFloorOrigin - glm::vec2(0, 8.0f)
+      , groundedFloorOrigin - glm::vec2(0, 40.0f)
+      );
+    if (
+      pul::physics::IntersectionResults resultsHead;
+      plugin.physics.IntersectionRaycast(scene, rayHead, resultsHead)
+    ) {
+      player.velocity.y = glm::max(0.0f, player.velocity.y);
+    }
+  }
 }
 
 void UpdatePlayerWeapon(
