@@ -52,6 +52,7 @@ namespace pul::animation {
       std::vector<ComponentPart> components;
       float msDeltaTime;
       bool rotationMirrored = false;
+      bool originInterpolates = false;
       bool rotatePixels = false;
       bool loops = false;
 

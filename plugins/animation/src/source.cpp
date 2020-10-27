@@ -317,10 +317,34 @@ void ComputeCache(
   auto & component = components[stateInfo.componentIt];
 
   // -- compose skeletal matrix
-  // first rotate locally by offset into the pixel it rotates around
   glm::mat3 localMatrix = glm::mat3(1);
-  glm::vec2 localOrigin = piece.origin + component.originOffset;
+  glm::vec2 localOrigin = piece.origin;
 
+  // interpolate origin if requested
+  if (state.originInterpolates) {
+    glm::vec2 previousOrigin = glm::vec2(0.0f);
+
+    // if it loops then wrap around, otherwise can only grab origin offset if
+    // not the first component
+    if (state.loops || stateInfo.componentIt != 0ul) {
+      previousOrigin =
+        components[
+          (stateInfo.componentIt+components.size()-1)%components.size()
+        ].originOffset
+      ;
+    }
+
+    localOrigin +=
+      glm::mix(
+        glm::vec2(previousOrigin),
+        glm::vec2(component.originOffset),
+        stateInfo.deltaTime/state.msDeltaTime
+      );
+  } else {
+    localOrigin += component.originOffset;
+  }
+
+  // first rotate locally by offset into the pixel it rotates around
   if (skeletalFlip) {
     localOrigin.x = piece.dimensions.x - localOrigin.x;
   }
@@ -801,6 +825,10 @@ cJSON * SaveAnimation(pul::animation::Animator& animator) {
       , cJSON_CreateInt(state.rotationMirrored)
       );
       cJSON_AddItemToObject(
+        stateJson, "origin-interpolates"
+      , cJSON_CreateInt(state.originInterpolates)
+      );
+      cJSON_AddItemToObject(
         stateJson, "rotate-pixels"
       , cJSON_CreateInt(state.rotatePixels)
       );
@@ -987,6 +1015,11 @@ void LoadAnimation(
 
         state.rotationMirrored =
           cJSON_GetObjectItemCaseSensitive(stateJson, "rotation-mirrored")
+            ->valueint
+        ;
+
+        state.originInterpolates =
+          cJSON_GetObjectItemCaseSensitive(stateJson, "origin-interpolates")
             ->valueint
         ;
 
@@ -1461,6 +1494,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           ImGui::SameLine();
           ImGui::Checkbox("rotate pixels", &state.rotatePixels);
           ImGui::Checkbox("loops", &state.loops);
+          ImGui::Checkbox("origin interpolates", &state.originInterpolates);
 
           if (ImGui::Button("add range part")) {
             componentParts.emplace_back();
@@ -1479,7 +1513,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
             ImGui::Separator();
 
-            bool const componentTreeNode = 
+            bool const componentTreeNode =
               ImGui::TreeNode(
                 fmt::format("{}", componentPartIt).c_str()
               , "%s"

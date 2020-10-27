@@ -399,7 +399,6 @@ void UpdatePlayerWeapon(
 , pul::core::ComponentPlayer & player
 , pul::animation::ComponentInstance &
 ) {
-  /* auto & registry = scene.EnttRegistry(); */
   auto & controller = scene.PlayerController().current;
   auto & controllerPrev = scene.PlayerController().previous;
 
