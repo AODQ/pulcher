@@ -3,6 +3,7 @@
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
+#include <pulcher-core/pickup.hpp>
 #include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/imgui.hpp>
@@ -11,6 +12,7 @@
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/log.hpp>
 
+#include <entt/entt.hpp>
 #include <imgui/imgui.hpp>
 
 namespace {
@@ -241,6 +243,45 @@ void ApplyGroundedMovement(
     inoutFrictionApplies = false;
     if (facingDirection*(playerVelocityX + inoutInputAccel) > accelTarget) {
       inoutInputAccel = facingDirection*accelTarget - playerVelocityX;
+    }
+  }
+}
+
+void PlayerCheckPickups(
+  pul::core::SceneBundle & scene
+, pul::core::ComponentPlayer & player
+) {
+  auto & registry = scene.EnttRegistry();
+
+  // TODO this should be accelerated with a structure and possibly use
+  // raycast intersection tests too?
+
+  auto view =
+    registry.view<
+      pul::core::ComponentPickup, pul::animation::ComponentInstance
+    >();
+
+  auto const playerOriginCenter = player.origin - glm::vec2(0, 32.0f);
+
+  for (auto entity : view) {
+    auto & pickup = view.get<pul::core::ComponentPickup>(entity);
+    auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+
+    auto const pickupOrigin =
+      glm::vec2(
+        animation.instance.pieceToState["pickups"].cachedLocalSkeletalMatrix
+      * glm::vec3(pickup.origin, 1.0f)
+      )
+    ;
+
+    if (
+        pickup.spawned
+      && glm::length(playerOriginCenter - pickupOrigin) < 32.0f
+    ) {
+      pickup.spawned = false;
+      pickup.spawnTimer = 0ul;
+
+      scene.AudioSystem().pickup[Idx(pickup.type)] |= true;
     }
   }
 }
@@ -1066,7 +1107,7 @@ void plugin::entity::UpdatePlayer(
   }
 
   ::UpdatePlayerWeapon(plugin, scene, player, playerAnim);
-
+  ::PlayerCheckPickups(scene, player);
 
   auto & audioSystem = scene.AudioSystem();
   audioSystem.playerJumped |=

@@ -20,4 +20,5 @@ target_link_libraries(
   pulcher-audio
   PUBLIC
     pulcher-util
+    pulcher-core
 )

@@ -19,6 +19,8 @@ std::array<FMOD_SOUND *, 3> fmodSoundStep = { nullptr };
 std::array<FMOD_SOUND *, 3> fmodSoundDash = { nullptr };
 std::array<FMOD_SOUND *, 3> fmodSoundLand = { nullptr };
 std::array<FMOD_SOUND *, 3> fmodSoundLandEnv = { nullptr };
+std::array<FMOD_SOUND *, Idx(pul::core::PickupType::Size)> fmodSoundPickup =
+  { nullptr };
 
 #define FMOD_ASSERT(X, ...) \
   if (auto result = X; result != FMOD_OK) { \
@@ -43,6 +45,33 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   pul::plugin::Info const &, pul::core::SceneBundle &
 ) {
   ::InitializeSystem();
+
+  //-- pickups
+  for (auto pickup : std::vector<std::pair<int, char const *>> {
+    { Idx(pul::core::PickupType::HealthLarge),  "pick-health3" }
+  , { Idx(pul::core::PickupType::HealthMedium), "pick-health2" }
+  , { Idx(pul::core::PickupType::HealthSmall),  "pick-health1" }
+  , { Idx(pul::core::PickupType::ArmorLarge),   "pick-armor3"  }
+  , { Idx(pul::core::PickupType::ArmorMedium),  "pick-armor2"  }
+  , { Idx(pul::core::PickupType::ArmorSmall),   "pick-armor1"  }
+  }) {
+    auto const str =
+        std::string{"assets/base/audio/sfx/pickups/"}
+      + std::get<1>(pickup) + ".wav"
+    ;
+
+    spdlog::debug("str {}", str);
+    FMOD_ASSERT(
+      FMOD_System_CreateSound(
+        ::fmodSystem
+      , str.c_str()
+      , FMOD_LOOP_OFF | FMOD_2D
+      , nullptr
+      , &::fmodSoundPickup[std::get<0>(pickup)]
+      ), ;
+    );
+  }
+  //-- pickups
 
   FMOD_ASSERT(
     FMOD_System_CreateSound(
@@ -396,6 +425,23 @@ PUL_PLUGIN_DECL void Audio_Update(
       ),
       ;
     );
+  }
+
+  for (size_t idx = 0ul; idx < audioSystem.pickup.size(); ++ idx) {
+    auto & pickup = audioSystem.pickup[idx];
+    if (pickup) {
+      FMOD_ASSERT(
+        FMOD_System_PlaySound(
+          ::fmodSystem
+        , ::fmodSoundPickup[idx]
+        , nullptr
+        , false
+        , nullptr
+        ),
+        ;
+      );
+    }
+    pickup = false;
   }
 
   if (audioSystem.envLanded < 3) {

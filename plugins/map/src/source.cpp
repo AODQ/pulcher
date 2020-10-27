@@ -441,11 +441,23 @@ void ParseLayerObject(
       , cJSON_GetObjectItemCaseSensitive(object, "y")->valueint
       );
 
+    pul::core::PickupType pickupType;
+
+    if (typeStr == "armor-large")
+      { pickupType = pul::core::PickupType::ArmorLarge; }
+    if (typeStr == "armor-medium")
+      { pickupType = pul::core::PickupType::ArmorMedium; }
+    if (typeStr == "armor-small")
+      { pickupType = pul::core::PickupType::ArmorSmall; }
+    if (typeStr == "health-large")
+      { pickupType = pul::core::PickupType::HealthLarge; }
+    if (typeStr == "health-medium")
+      { pickupType = pul::core::PickupType::HealthMedium; }
+    if (typeStr == "health-small")
+      { pickupType = pul::core::PickupType::HealthSmall; }
+
     registry.emplace<pul::core::ComponentPickup>(
-      pickupEntity, pul::core::PickupType::HealthLarge
-    , origin
-    , true
-    , 0ul
+      pickupEntity, pickupType, origin, true, 0ul
     );
 
     pul::animation::Instance pickupAnimationInstance;

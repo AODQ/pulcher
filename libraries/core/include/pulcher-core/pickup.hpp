@@ -5,8 +5,8 @@
 namespace pul::core {
 
   enum class PickupType {
-    HealthLarge, HealthMed, HealthSmall
-  , ArmorLarge,  ArmorMed,  ArmorSmall
+    HealthLarge, HealthMedium, HealthSmall
+  , ArmorLarge,  ArmorMedium,  ArmorSmall
   , Size
   };
 
@@ -17,5 +17,6 @@ namespace pul::core {
 
     bool spawned;
     size_t spawnTimer;
+    size_t spawnTimerSet = 5000ul;
   };
 }

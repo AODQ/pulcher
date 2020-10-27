@@ -97,6 +97,31 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 ) {
   auto & registry = scene.EnttRegistry();
 
+  { // -- pickups
+    auto view =
+      registry.view<
+        pul::core::ComponentPickup
+      , pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      auto & pickup = view.get<pul::core::ComponentPickup>(entity);
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+
+      if (!pickup.spawned) {
+        pickup.spawnTimer += pul::util::MsPerFrame;
+        if (pickup.spawnTimer >= pickup.spawnTimerSet) {
+          pickup.spawnTimer = 0ul;
+          pickup.spawned = true;
+        }
+      }
+
+      animation.instance.pieceToState["pickups"].visible = pickup.spawned;
+
+      animation.instance.origin = pickup.origin;
+    }
+  }
+
   { // -- player
     auto view =
       registry.view<
