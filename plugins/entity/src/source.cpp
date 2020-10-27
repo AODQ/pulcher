@@ -1,6 +1,7 @@
 #include <plugin-entity/player.hpp>
 
 #include <pulcher-animation/animation.hpp>
+#include <pulcher-core/particle.hpp>
 #include <pulcher-core/pickup.hpp>
 #include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
@@ -96,6 +97,24 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
+
+  { // -- particles
+    auto view =
+      registry.view<
+        pul::core::ComponentParticle
+      , pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      auto & particle = view.get<pul::core::ComponentParticle>(entity);
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+
+      if (animation.instance.pieceToState["particle"].animationFinished) {
+        plugin.animation.DestroyInstance(animation.instance);
+        registry.destroy(entity);
+      }
+    }
+  }
 
   { // -- pickups
     auto view =

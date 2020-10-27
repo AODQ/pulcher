@@ -3,6 +3,7 @@
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
+#include <pulcher-core/particle.hpp>
 #include <pulcher-core/pickup.hpp>
 #include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
@@ -509,6 +510,22 @@ void UpdatePlayerWeapon(
           player.grounded = false;
         }
       }
+
+      auto & registry = scene.EnttRegistry();
+      auto volniasFireEntity = registry.create();
+      registry.emplace<pul::core::ComponentParticle>(
+        volniasFireEntity, playerOrigin
+      );
+
+      pul::animation::Instance instance;
+      plugin.animation.ConstructInstance(
+        scene, instance, scene.AnimationSystem(), "volnias-fire"
+      );
+      instance.pieceToState["particle"].Apply("volnias-fire");
+      instance.origin = playerOrigin;
+      registry.emplace<pul::animation::ComponentInstance>(
+        volniasFireEntity, instance
+      );
     } break;
   }
 }
