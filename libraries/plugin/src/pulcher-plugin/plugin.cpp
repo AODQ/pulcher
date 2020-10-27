@@ -145,7 +145,7 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
     } break;
     case pul::plugin::Type::Map: {
       auto & unit = plugin.map;
-      ctx.LoadFunction(unit.Load,     "Map_Load");
+      ctx.LoadFunction(unit.LoadMap,     "Map_LoadMap");
       ctx.LoadFunction(unit.Render,   "Map_Render");
       ctx.LoadFunction(unit.UiRender, "Map_UiRender");
       ctx.LoadFunction(unit.Shutdown, "Map_Shutdown");

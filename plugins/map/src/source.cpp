@@ -1,4 +1,6 @@
+#include <pulcher-animation/animation.hpp>
 #include <pulcher-core/map.hpp>
+#include <pulcher-core/pickup.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
@@ -11,6 +13,7 @@
 #include <pulcher-util/math.hpp>
 
 #include <cjson/cJSON.h>
+#include <entt/entt.hpp>
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>
 
@@ -61,12 +64,34 @@ std::vector<LayerRenderable> renderables;
 struct MapTileset {
   pul::gfx::Spritesheet spritesheet;
   pul::physics::Tileset physicsTileset;
+  cJSON * jsonTiles;
   size_t spritesheetStartingGid;
 };
 
 std::vector<MapTileset> mapTilesets;
 sg_pipeline pipeline;
 sg_shader shader;
+
+bool GetMapTileset(
+  size_t const tileId, size_t & outSpritesheetIdx, size_t & outLocalTileId
+) {
+  outSpritesheetIdx = -1ul;
+  outLocalTileId = 0ul;
+
+  for (size_t idx = 0ul; idx < mapTilesets.size(); ++ idx) {
+    if (mapTilesets[idx].spritesheetStartingGid <= tileId) {
+      outSpritesheetIdx = idx;
+      outLocalTileId = tileId - mapTilesets[idx].spritesheetStartingGid;
+    }
+  }
+
+  if (outSpritesheetIdx == -1ul) {
+    spdlog::error("could not find spritesheet index for tileId {}", tileId);
+    return false;
+  }
+
+  return true;
+}
 
 void MapSokolPushTile(
   std::string const & layer
@@ -98,17 +123,7 @@ void MapSokolPushTile(
   // locate spritesheet used and the local tile ID
   size_t spritesheetIdx = -1ul;
   size_t localTileId = 0ul;
-  for (size_t idx = 0ul; idx < mapTilesets.size(); ++ idx) {
-    if (mapTilesets[idx].spritesheetStartingGid <= tileId) {
-      spritesheetIdx = idx;
-      localTileId = tileId - mapTilesets[idx].spritesheetStartingGid;
-    }
-  }
-
-  if (spritesheetIdx == -1ul) {
-    spdlog::error("could not find spritesheet index for tileId {}", tileId);
-    return;
-  }
+  if (!GetMapTileset(tileId, spritesheetIdx, localTileId)) { return; }
 
   // locate appropiate 'renderable'
   LayerRenderable * renderable = nullptr;
@@ -310,12 +325,146 @@ void MapSokolEnd() {
   }
 }
 
+void ParseLayerTile(
+  pul::plugin::Info const &
+, pul::core::SceneBundle &
+, cJSON * layer
+, char const * layerLabel
+) {
+  cJSON * chunk;
+  cJSON_ArrayForEach(
+    chunk, cJSON_GetObjectItemCaseSensitive(layer, "chunks")
+  ) {
+    auto width =
+      static_cast<uint32_t>(
+        cJSON_GetObjectItemCaseSensitive(chunk, "width")->valueint
+      );
+
+    auto x = cJSON_GetObjectItemCaseSensitive(chunk, "x")->valueint;
+    auto y = cJSON_GetObjectItemCaseSensitive(chunk, "y")->valueint;
+
+    size_t localItr = 0;
+
+    cJSON * gidJson;
+
+    cJSON_ArrayForEach(
+      gidJson
+    , cJSON_GetObjectItemCaseSensitive(chunk, "data")
+    ) {
+      auto gid = gidJson->valueint;
+      auto tileId =
+          gid
+        & ~(
+            FlippedHorizontalGidFlag
+          | FlippedVerticalGidFlag
+          | FlippedDiagonalGidFlag
+          )
+      ;
+
+      bool const
+        flipHorizontal = gid & ::FlippedHorizontalGidFlag
+      , flipVertical   = gid & ::FlippedVerticalGidFlag
+      , flipDiagonal   = gid & ::FlippedDiagonalGidFlag
+      ;
+
+      size_t localX = localItr % width;
+      size_t localY = localItr / width;
+
+      ::MapSokolPushTile(
+        layerLabel
+      , static_cast<uint32_t>(x + localX)
+      , static_cast<uint32_t>(y + localY)
+      , flipHorizontal, flipVertical, flipDiagonal
+      , tileId
+      );
+
+      ++ localItr;
+    }
+  }
+}
+
+void ParseLayerObject(
+  pul::plugin::Info const & plugins
+, pul::core::SceneBundle & scene
+, cJSON * layer
+) {
+  cJSON * object;
+
+  cJSON_ArrayForEach(
+    object, cJSON_GetObjectItemCaseSensitive(layer, "objects")
+  ) {
+    size_t objectId = cJSON_GetObjectItemCaseSensitive(object, "id")->valueint;
+    size_t tileId = cJSON_GetObjectItemCaseSensitive(object, "gid")->valueint;
+    spdlog::debug("parsing object ID {} tile ID", objectId, tileId);
+
+    std::string typeStr = "";
+    auto objectType = cJSON_GetObjectItemCaseSensitive(object, "type");
+    if (!objectType || (typeStr = std::string{objectType->valuestring}) == "") {
+      // if type is empty then check in the tileset for type
+
+      spdlog::debug("setting type from spritesheet");
+
+      // get tile/spritesheet info
+      size_t spritesheetIdx;
+      size_t localTileId;
+      if (!GetMapTileset(tileId, spritesheetIdx, localTileId)) { return; }
+
+      // iterate thru tiles to find ID
+      cJSON * tile;
+      cJSON * jsonTiles = ::mapTilesets[spritesheetIdx].jsonTiles;
+      bool foundId = false;
+      cJSON_ArrayForEach(tile, jsonTiles) {
+        size_t id = cJSON_GetObjectItemCaseSensitive(tile, "id")->valueint;
+        if (id == localTileId) {
+          typeStr = cJSON_GetObjectItemCaseSensitive(tile, "type")->valuestring;
+          foundId = true;
+          break;
+        }
+      }
+
+      if (!foundId) {
+        spdlog::error(
+          "could not find object ID {} for tile {} in tileset {}"
+        , objectId, localTileId
+        , ::mapTilesets[spritesheetIdx].spritesheet.filename
+        );
+      }
+    }
+
+    // just assume it's a pickup for now
+    auto & registry = scene.EnttRegistry();
+    auto pickupEntity = registry.create();
+
+    registry.emplace<pul::core::ComponentPickup>(
+      pickupEntity, pul::core::PickupType::HealthLarge
+    , glm::vec2(
+        cJSON_GetObjectItemCaseSensitive(object, "x")->valueint
+      , cJSON_GetObjectItemCaseSensitive(object, "y")->valueint
+      )
+    , true
+    , 0ul
+    );
+
+    pul::animation::Instance pickupAnimationInstance;
+    plugins.animation.ConstructInstance(
+      scene, pickupAnimationInstance, scene.AnimationSystem(), "pickups"
+    );
+
+    pickupAnimationInstance.pieceToState["pickups"].Apply(typeStr, true);
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      pickupEntity, pickupAnimationInstance
+    );
+  }
+}
+
 } // -- namespace
 
 extern "C" {
 
-PUL_PLUGIN_DECL void Map_Load(
+PUL_PLUGIN_DECL void Map_LoadMap(
   pul::plugin::Info const & plugins
+, pul::core::SceneBundle & scene
 , char const * filename
 ) {
   spdlog::info("Loading '{}'", filename);
@@ -353,8 +502,9 @@ PUL_PLUGIN_DECL void Map_Load(
   ::MapSokolInitialize();
 
   cJSON * tileset;
-  cJSON_ArrayForEach(tileset, cJSON_GetObjectItemCaseSensitive(map, "tilesets"))
-  {
+  cJSON_ArrayForEach(
+    tileset, cJSON_GetObjectItemCaseSensitive(map, "tilesets")
+  ) {
 
     cJSON * tilesetJson;
 
@@ -406,11 +556,17 @@ PUL_PLUGIN_DECL void Map_Load(
       pul::physics::Tileset physxTileset;
       plugins.physics.ProcessTileset(physxTileset, image);
 
+      auto tilesJson = cJSON_GetObjectItemCaseSensitive(tilesetJson, "tiles");
+      // copy tilesJson if not null
+      if (tilesJson)
+        { tilesJson = cJSON_Duplicate(tilesJson, true); }
+
       // emplace tileset w/ spritesheet and related tilemap info
       ::mapTilesets
         .emplace_back(MapTileset {
             pul::gfx::Spritesheet::Construct(image)
           , std::move(physxTileset)
+          , tilesJson
           , static_cast<size_t>(
               cJSON_GetObjectItemCaseSensitive(tileset, "firstgid")->valueint
             )
@@ -425,55 +581,17 @@ PUL_PLUGIN_DECL void Map_Load(
 
     spdlog::debug("parsing layer '{}'", layerLabel);
 
-    cJSON * chunk;
-    cJSON_ArrayForEach(chunk, cJSON_GetObjectItemCaseSensitive(layer, "chunks"))
-    {
-      auto width =
-        static_cast<uint32_t>(
-          cJSON_GetObjectItemCaseSensitive(chunk, "width")->valueint
-        );
+    auto const layerType =
+      std::string{cJSON_GetObjectItemCaseSensitive(layer, "type")->valuestring};
 
-      auto x = cJSON_GetObjectItemCaseSensitive(chunk, "x")->valueint;
-      auto y = cJSON_GetObjectItemCaseSensitive(chunk, "y")->valueint;
-
-      size_t localItr = 0;
-
-      cJSON * gidJson;
-
-      cJSON_ArrayForEach(
-        gidJson
-      , cJSON_GetObjectItemCaseSensitive(chunk, "data")
-      ) {
-        auto gid = gidJson->valueint;
-        auto tileId =
-            gid
-          & ~(
-              FlippedHorizontalGidFlag
-            | FlippedVerticalGidFlag
-            | FlippedDiagonalGidFlag
-            )
-        ;
-
-        bool const
-          flipHorizontal = gid & ::FlippedHorizontalGidFlag
-        , flipVertical   = gid & ::FlippedVerticalGidFlag
-        , flipDiagonal   = gid & ::FlippedDiagonalGidFlag
-        ;
-
-        size_t localX = localItr % width;
-        size_t localY = localItr / width;
-
-        ::MapSokolPushTile(
-          layerLabel
-        , static_cast<uint32_t>(x + localX)
-        , static_cast<uint32_t>(y + localY)
-        , flipHorizontal, flipVertical, flipDiagonal
-        , tileId
-        );
-
-        ++ localItr;
-      }
+    if (layerType == "tilelayer") {
+      ParseLayerTile(plugins, scene, layer, layerLabel);
+    } else if (layerType == "objectgroup") {
+      ParseLayerObject(plugins, scene, layer);
+    } else {
+      spdlog::error("unable to parse layer of type '{}'", layerType);
     }
+
   }
 
   ::MapSokolEnd();
@@ -666,6 +784,11 @@ PUL_PLUGIN_DECL void Map_Shutdown() {
 
   ::pipeline = {};
   ::shader = {};
+
+  for (auto & mapTileset : ::mapTilesets) {
+    if (mapTileset.jsonTiles)
+      { cJSON_Delete(mapTileset.jsonTiles); }
+  }
   ::mapTilesets.clear();
 }
 

@@ -1,6 +1,7 @@
 #include <plugin-entity/player.hpp>
 
 #include <pulcher-animation/animation.hpp>
+#include <pulcher-core/pickup.hpp>
 #include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-core/weapon.hpp>
@@ -96,18 +97,35 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 ) {
   auto & registry = scene.EnttRegistry();
 
-  auto view =
-    registry.view<
-      ComponentControllable, pul::core::ComponentPlayer, ComponentCamera
-    , pul::animation::ComponentInstance
-    >();
+  { // -- pickups
+    auto view =
+      registry.view<
+        pul::core::ComponentPickup
+      , pul::animation::ComponentInstance
+      >();
 
-  for (auto entity : view) {
-    plugin::entity::UpdatePlayer(
-      plugin, scene
-    , view.get<pul::core::ComponentPlayer>(entity)
-    , view.get<pul::animation::ComponentInstance>(entity)
-    );
+    for (auto entity : view) {
+      auto & pickup = view.get<pul::core::ComponentPickup>(entity);
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+
+      animation.instance.origin = pickup.origin;
+    }
+  }
+
+  { // -- player
+    auto view =
+      registry.view<
+        ComponentControllable, pul::core::ComponentPlayer, ComponentCamera
+      , pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      plugin::entity::UpdatePlayer(
+        plugin, scene
+      , view.get<pul::core::ComponentPlayer>(entity)
+      , view.get<pul::animation::ComponentInstance>(entity)
+      );
+    }
   }
 }
 

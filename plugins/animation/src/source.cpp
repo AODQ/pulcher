@@ -305,10 +305,7 @@ void ComputeCache(
       skeletalFlip , skeletalFlip ? skeletalRotation : -skeletalRotation
     );
 
-  PUL_ASSERT(
-    componentsPtr && componentsPtr->size() > 0ul
-  , return;
-  );
+  if (!componentsPtr || componentsPtr->size() == 0ul) { return; }
 
   auto & components = *componentsPtr;
 
@@ -1072,7 +1069,9 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
   }
 
   for (auto const & anim : animationSystem.animators) {
-    spdlog::debug("successfully loaded anim '{}'/'{}'", anim.first, anim.second->label);
+    spdlog::debug(
+      "successfully loaded anim '{}'/'{}'", anim.first, anim.second->label
+    );
   }
 
   { // -- sokol animation program
@@ -1085,6 +1084,10 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
     desc.vs.uniform_blocks[1].uniforms[0].name = "framebufferResolution";
     desc.vs.uniform_blocks[1].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
+    desc.vs.uniform_blocks[2].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[2].uniforms[0].name = "cameraOrigin";
+    desc.vs.uniform_blocks[2].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
     desc.fs.images[0].name = "baseSampler";
     desc.fs.images[0].type = SG_IMAGETYPE_2D;
 
@@ -1096,11 +1099,14 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
 
       uniform vec2 originOffset;
       uniform vec2 framebufferResolution;
+      uniform vec2 cameraOrigin;
 
       void main() {
         vec2 framebufferScale = vec2(2.0f) / framebufferResolution;
         vec2 vertexOrigin = (inOrigin.xy)*vec2(1,-1) * framebufferScale;
-        vertexOrigin += originOffset*vec2(-1, 1) * framebufferScale;
+        vertexOrigin +=
+          (originOffset-cameraOrigin)*vec2(1, -1) * framebufferScale
+        ;
         gl_Position = vec4(vertexOrigin, 0.5001f + inOrigin.z/100000.0f, 1.0f);
         uvCoord = vec2(inUvCoord.x, 1.0f-inUvCoord.y);
       }
@@ -1218,6 +1224,15 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     , sizeof(float) * 2ul
     );
 
+    glm::vec2 cameraOrigin = scene.cameraOrigin;
+
+    sg_apply_uniforms(
+      SG_SHADERSTAGE_VS
+    , 2
+    , &cameraOrigin.x
+    , sizeof(float) * 2ul
+    );
+
     // render each component
     auto view = registry.view<pul::animation::ComponentInstance>();
     for (auto entity : view) {
@@ -1314,6 +1329,8 @@ PUL_PLUGIN_DECL void Animation_UiRender(
     ImGui::Separator();
     ImGui::Separator();
 
+    // TODO this should be moved to the entity viewer
+
     for (auto entity : view) {
       auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
@@ -1326,6 +1343,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           auto & stateInfo = stateInfoPair.second;
 
           pul::imgui::Text("part - '{}'", stateInfoPair.first);
+          pul::imgui::Text("\torigin '{}'", self.instance.origin);
           pul::imgui::Text("\tlabel '{}'", stateInfo.label);
           pul::imgui::Text("\tdelta-time {}", stateInfo.deltaTime);
           pul::imgui::Text(

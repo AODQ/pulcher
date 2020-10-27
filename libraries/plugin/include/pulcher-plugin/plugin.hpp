@@ -87,8 +87,8 @@ namespace pul::plugin {
   };
 
   struct Map {
-    void (*Load)(
-      pul::plugin::Info const & info
+    void (*LoadMap)(
+      pul::plugin::Info const & info, pul::core::SceneBundle &
     , char const * filename
     ) = nullptr;
     void (*Render)(pul::core::SceneBundle &) = nullptr;

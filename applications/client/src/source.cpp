@@ -193,9 +193,10 @@ static void ImGuiApplyStyling()
 void LoadPluginInfo(
   pul::plugin::Info & plugin, pul::core::SceneBundle & scene
 ) {
-  plugin.map.Load(plugin, "assets/base/map/test.json");
   plugin.animation.LoadAnimations(plugin, scene);
   plugin.audio.LoadAudio(plugin, scene);
+
+  plugin.map.LoadMap(plugin, scene, "assets/base/map/test.json");
 
   // last thing so that all the previous information (maps, animation, etc)
   // can be loaded up. They can still modify the registry if they need tho.

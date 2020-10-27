@@ -1036,7 +1036,7 @@ void plugin::entity::UpdatePlayer(
 
     // center camera on this
     scene.cameraOrigin = glm::i32vec2(player.origin);
-    playerAnim.instance.origin = glm::vec2(0.0f);
+    playerAnim.instance.origin = player.origin;
 
     // center weapon origin, first have to update cache for this animation to
     // get the hand position
