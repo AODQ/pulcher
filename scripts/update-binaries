@@ -31,6 +31,16 @@ git add imgui.ini
 git add pulcher-client.exe
 git add *.dll
 
+# check for assets update
+cd assets
+git pull
+cd ..
+git status
+if [[ `git status --porcelain` ]]; then
+  echo " --- updating git assets ---"
+  git add assets
+fi
+
 git commit -m "${commitM}"
 git push
 popd
