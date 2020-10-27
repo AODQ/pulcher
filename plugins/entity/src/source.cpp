@@ -97,21 +97,6 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 ) {
   auto & registry = scene.EnttRegistry();
 
-  { // -- pickups
-    auto view =
-      registry.view<
-        pul::core::ComponentPickup
-      , pul::animation::ComponentInstance
-      >();
-
-    for (auto entity : view) {
-      auto & pickup = view.get<pul::core::ComponentPickup>(entity);
-      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
-
-      animation.instance.origin = pickup.origin;
-    }
-  }
-
   { // -- player
     auto view =
       registry.view<

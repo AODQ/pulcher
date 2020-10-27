@@ -777,9 +777,9 @@ void plugin::entity::UpdatePlayer(
     }
 
     // -- process dashing
-    for (auto & dashCooldown : player.dashCooldown) {
-      if (dashCooldown > 0.0f)
-        { dashCooldown -= pul::util::MsPerFrame; }
+    for (auto & playerDashCooldown : player.dashCooldown) {
+      if (playerDashCooldown > 0.0f)
+        { playerDashCooldown -= pul::util::MsPerFrame; }
     }
 
     // clear dash lock if either we land, or we are jumping on this frame (thus

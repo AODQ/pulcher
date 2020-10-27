@@ -435,12 +435,15 @@ void ParseLayerObject(
     auto & registry = scene.EnttRegistry();
     auto pickupEntity = registry.create();
 
-    registry.emplace<pul::core::ComponentPickup>(
-      pickupEntity, pul::core::PickupType::HealthLarge
-    , glm::vec2(
+    glm::vec2 const origin =
+      glm::vec2(
         cJSON_GetObjectItemCaseSensitive(object, "x")->valueint
       , cJSON_GetObjectItemCaseSensitive(object, "y")->valueint
-      )
+      );
+
+    registry.emplace<pul::core::ComponentPickup>(
+      pickupEntity, pul::core::PickupType::HealthLarge
+    , origin
     , true
     , 0ul
     );
@@ -450,6 +453,7 @@ void ParseLayerObject(
       scene, pickupAnimationInstance, scene.AnimationSystem(), "pickups"
     );
 
+    pickupAnimationInstance.origin = origin;
     pickupAnimationInstance.pieceToState["pickups"].Apply(typeStr, true);
 
     registry.emplace<pul::animation::ComponentInstance>(
