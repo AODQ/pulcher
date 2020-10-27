@@ -15,7 +15,8 @@
 
 namespace {
   int32_t maxAirDashes = 3u;
-  float inputRunAccelTarget = 4.0f;
+  float inputRunAccelTarget = 5.0f;
+  float inputRunAccelTime = 1.5f;
   float slideAccel = 1.0f;
   float slideMinVelocity = 6.0f;
   float slideCooldown   = 300.0f;
@@ -24,7 +25,6 @@ namespace {
   float slideFrictionTransitionPow = 1.0f;
   float slopeStepUpHeight   = 12.0f;
   float slopeStepDownHeight = 12.0f;
-  float inputRunAccelTime = 1.0f;
 
   float inputAirAccelPreThresholdTime = 0.8f;
   float inputAirAccelPostThreshold = 0.02f;
@@ -32,16 +32,16 @@ namespace {
 
   float inputGravityAccelPreThresholdTime = 1.0f;
   float inputGravityAccelPostThreshold = 0.04f;
-  float inputGravityAccelThreshold = 7.0f;
+  float inputGravityAccelThreshold = 8.0f;
 
   float inputWalkAccelTarget = 1.0f;
   float inputWalkAccelTime = 0.5f;
-  float inputCrouchAccelTarget = 1.0f;
+  float inputCrouchAccelTarget = 2.0f;
   float inputCrouchAccelTime = 1.0f;
   float jumpAfterFallTime = 200.0f;
   float jumpingHorizontalAccel = 4.0f;
   float jumpingHorizontalAccelMax = 6.0f;
-  float jumpingVerticalAccel = 6.5f;
+  float jumpingVerticalAccel = 7.0f;
   float jumpingHorizontalTheta = 90.0f;
   float frictionGrounded = 0.8f;
   float dashAccel = 1.0f;
@@ -49,12 +49,12 @@ namespace {
 
   struct TransferPercent {
     float same = 1.0f;
-    float reverse = 0.9f;
-    float degree90 = 0.6f;
+    float reverse = 1.0f;
+    float degree90 = 0.75f;
   };
   TransferPercent dashVerticalTransfer;
   TransferPercent dashHorizontalTransfer;
-  float dashMinVelocity = 4.0f;
+  float dashMinVelocity = 6.0f;
   float dashMinVelocityMultiplier = 2.0f;
   float dashCooldown = 1500.0f;
   float horizontalGroundedVelocityStop = 0.5f;
@@ -567,6 +567,7 @@ void plugin::entity::UpdatePlayer(
           !player.crouching
        || glm::abs(player.velocity.x) < inputCrouchAccelTarget
        || player.jumping
+       || !player.grounded
         )
     ) {
       player.crouchSliding = false;
@@ -701,6 +702,10 @@ void plugin::entity::UpdatePlayer(
         // to keep it around
         if (inputAccel != 0.0f)
           { player.prevFrameGroundAcceleration = inputAccel; }
+
+        // do not allow this since it has no friction to transition w/
+        if (player.crouchSliding)
+          { player.prevFrameGroundAcceleration = 0.0f; }
       }
     } else {
       if (facingDirection*player.velocity.x <= ::inputAirAccelThreshold) {
@@ -864,8 +869,6 @@ void plugin::entity::UpdatePlayer(
       -- player.midairDashesLeft;
     }
   }
-
-  glm::vec2 const velocityPrePhysics = player.velocity;
 
   ::UpdatePlayerPhysics(plugin, scene, player);
 
@@ -1074,7 +1077,6 @@ void plugin::entity::UpdatePlayer(
   auto & audioSystem = scene.AudioSystem();
   audioSystem.playerJumped |=
     frameVerticalJump || frameHorizontalJump || frameWalljump;
-  audioSystem.playerLanded |= !prevGrounded && frameStartGrounded;
   audioSystem.playerSlided |= player.crouchSliding && !prevCrouchSliding;
   audioSystem.playerDashed |= frameHorizontalDash || frameVerticalDash;
   audioSystem.playerTaunted |= controller.taunt && !controllerPrev.taunt;
@@ -1107,9 +1109,11 @@ void plugin::entity::UpdatePlayer(
     ;
     prevComp = legInfo.componentIt;
   }
-  if (audioSystem.envLanded == -1ul && audioSystem.playerLanded) {
+
+  if (audioSystem.envLanded == -1ul && !prevGrounded && frameStartGrounded) {
     audioSystem.envLanded =
       static_cast<size_t>(glm::clamp(player.prevAirVelocity/5.0f, 0.0f, 2.0f));
+    audioSystem.playerLanded |= player.prevAirVelocity > 9.0f;
   }
 }
 

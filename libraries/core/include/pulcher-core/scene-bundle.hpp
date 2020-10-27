@@ -12,6 +12,7 @@ namespace entt { using registry = basic_registry<entity>; }
 namespace pul::animation { struct System; }
 namespace pul::audio { struct System; }
 namespace pul::controls { struct Controller; }
+namespace pul::core { struct ComponentPlayer; }
 namespace pul::physics { struct DebugQueries; }
 
 namespace pul::core {
@@ -29,6 +30,9 @@ namespace pul::core {
     pul::controls::Controller & PlayerController();
     pul::physics::DebugQueries & PhysicsDebugQueries();
     pul::audio::System & AudioSystem();
+
+    // store player between reloads
+    pul::core::ComponentPlayer & StoredDebugPlayerComponent();
 
     entt::registry & EnttRegistry();
 

@@ -3,6 +3,7 @@
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
+#include <pulcher-core/player.hpp>
 #include <pulcher-physics/intersections.hpp>
 
 #include <entt/entt.hpp>
@@ -12,6 +13,7 @@ struct pul::core::SceneBundle::Impl {
   pul::audio::System audioSystem;
   pul::controls::Controller playerController;
   pul::physics::DebugQueries physicsQueries;
+  pul::core::ComponentPlayer storedDebugPlayerComponent;
 
   entt::registry enttRegistry;
 };
@@ -34,6 +36,11 @@ pul::controls::Controller & pul::core::SceneBundle::PlayerController() {
 pul::physics::DebugQueries &
 pul::core::SceneBundle::PhysicsDebugQueries() {
   return impl->physicsQueries;
+}
+
+pul::core::ComponentPlayer &
+pul::core::SceneBundle::StoredDebugPlayerComponent() {
+  return impl->storedDebugPlayerComponent;
 }
 
 entt::registry & pul::core::SceneBundle::EnttRegistry() {

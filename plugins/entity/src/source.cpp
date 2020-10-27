@@ -20,7 +20,6 @@
 
 namespace {
 
-
 struct ComponentLabel {
   std::string label = {};
 };
@@ -57,6 +56,9 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   {
     auto & player = registry.get<pul::core::ComponentPlayer>(playerEntity);
 
+    // overwrite with player component for persistent reloads
+    player = scene.StoredDebugPlayerComponent();
+
     pul::animation::Instance weaponInstance;
     plugin.animation.ConstructInstance(
       scene, weaponInstance, scene.AnimationSystem(), "weapons"
@@ -70,9 +72,23 @@ PUL_PLUGIN_DECL void Entity_StartScene(
 }
 
 PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
+  auto & registry = scene.EnttRegistry();
+
+  // store player
+  auto view =
+    registry.view<
+      ComponentControllable, pul::core::ComponentPlayer, ComponentCamera
+    , pul::animation::ComponentInstance
+    >();
+
+  for (auto entity : view) {
+    // save player component for persistent reloads
+    scene.StoredDebugPlayerComponent() =
+      std::move(view.get<pul::core::ComponentPlayer>(entity));
+  }
 
   // delete registry
-  scene.EnttRegistry() = {};
+  registry = {};
 }
 
 PUL_PLUGIN_DECL void Entity_EntityUpdate(

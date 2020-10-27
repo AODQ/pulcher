@@ -57,7 +57,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/announcer/red-joined.wav"
+    , "assets/base/audio/sfx/pickups/pick-health2.wav"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundSpawn[1]
