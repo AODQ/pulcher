@@ -610,11 +610,23 @@ void DisplayImGuiComponent(
     }
 
     ImGui::SameLine();
-    ImGui::SameLine();
     if (ImGui::Button("+")) {
       components
         .emplace(components.begin() + componentIt + 1, component);
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("+x")) {
+      components
+        .emplace(components.begin() + componentIt + 1, component);
       components.back().tile.x += 1;
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("+y")) {
+      components
+        .emplace(components.begin() + componentIt + 1, component);
+      components.back().tile.y += 1;
     }
 
     ImGui::SameLine();
