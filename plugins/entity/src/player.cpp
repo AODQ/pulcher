@@ -810,12 +810,7 @@ void plugin::entity::UpdatePlayer(
     && player.dashLock[Idx(controller.movementDirection)] == false
     && player.midairDashesLeft > 0
     ) {
-      glm::vec2 const scaledVelocity =
-          player.velocity
-        * glm::vec2(1,1
-          /* ::dashVerticalHorizontalPercent */
-        /* , 1.0f - ::dashVerticalHorizontalPercent */
-        );
+      glm::vec2 const scaledVelocity = player.velocity;
 
       float const transfers =
         CalculateDashTransferVelocity(
