@@ -462,6 +462,7 @@ void ParseLayerObject(
     if (typeStr == "health-small")
       { pickupType = pul::core::PickupType::HealthSmall; }
 
+    bool applyToPickupBg = false;
     if (typeStr == "weapon-pickup" && jsonTile) {
       pickupsStr = "pickup-weapon";
 
@@ -500,6 +501,7 @@ void ParseLayerObject(
 
         break;
       }
+      applyToPickupBg = true;
     }
 
     registry.emplace<pul::core::ComponentPickup>(
@@ -514,6 +516,8 @@ void ParseLayerObject(
 
     pickupAnimationInstance.origin = origin;
     pickupAnimationInstance.pieceToState["pickups"].Apply(typeStr, true);
+    if (applyToPickupBg)
+      {pickupAnimationInstance.pieceToState["pickup-bg"].Apply(typeStr, true);}
 
     registry.emplace<pul::animation::ComponentInstance>(
       pickupEntity, pickupAnimationInstance

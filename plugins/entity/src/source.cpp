@@ -117,6 +117,12 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       }
 
       animation.instance.pieceToState["pickups"].visible = pickup.spawned;
+      if (
+          animation.instance.pieceToState.find("pickup-bg")
+       != animation.instance.pieceToState.end()
+      ) {
+        animation.instance.pieceToState["pickup-bg"].visible = pickup.spawned;
+      }
 
       animation.instance.origin = pickup.origin;
     }
