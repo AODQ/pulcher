@@ -411,38 +411,6 @@ PUL_PLUGIN_DECL void Audio_Update(
     );
   }
 
-  // lazy way for spawn
-  static size_t plugLoad = 0ul;
-  if (plugLoad == 0ul) {
-    plugLoad = 1ul;
-    FMOD_ASSERT(
-      FMOD_System_PlaySound(
-        ::fmodSystem
-      , ::fmodSoundSpawn[0]
-      , nullptr
-      , false
-      , nullptr
-      ),
-      ;
-    );
-  }
-
-  static size_t redJoin = 0ul;
-  if (redJoin <= 50) {
-    redJoin += scene.numCpuFrames;
-    if (redJoin > 50) {
-      FMOD_ASSERT(
-        FMOD_System_PlaySound(
-          ::fmodSystem
-        , ::fmodSoundSpawn[1]
-        , nullptr
-        , false
-        , nullptr
-        ),
-        ;
-      );
-    }
-  }
 
   audioSystem.playerJumped = false;
   audioSystem.playerTaunted = false;
