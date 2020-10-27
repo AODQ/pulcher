@@ -7,6 +7,12 @@ namespace pul::core {
   enum class PickupType {
     HealthLarge, HealthMedium, HealthSmall
   , ArmorLarge,  ArmorMedium,  ArmorSmall
+  , WeaponBadFetus, WeaponDopplerBeam
+  , WeaponGrannibal, WeaponManshredder
+  , WeaponPericaliya, WeaponPMF
+  , WeaponVolnias, WeaponWallbanger
+  , WeaponZeusStinger
+  , WeaponAll
   , Size
   };
 

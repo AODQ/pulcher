@@ -399,6 +399,7 @@ void ParseLayerObject(
 
     std::string typeStr = "";
     auto objectType = cJSON_GetObjectItemCaseSensitive(object, "type");
+    cJSON * jsonTile = nullptr;
     if (!objectType || (typeStr = std::string{objectType->valuestring}) == "") {
       // if type is empty then check in the tileset for type
 
@@ -416,8 +417,12 @@ void ParseLayerObject(
       cJSON_ArrayForEach(tile, jsonTiles) {
         size_t id = cJSON_GetObjectItemCaseSensitive(tile, "id")->valueint;
         if (id == localTileId) {
-          typeStr = cJSON_GetObjectItemCaseSensitive(tile, "type")->valuestring;
-          foundId = true;
+
+          if (auto jsonType = cJSON_GetObjectItemCaseSensitive(tile, "type")) {
+            typeStr = jsonType->valuestring;
+            jsonTile = tile;
+            foundId = true;
+          }
           break;
         }
       }
@@ -442,6 +447,7 @@ void ParseLayerObject(
       );
 
     pul::core::PickupType pickupType;
+    std::string pickupsStr = "pickups";
 
     if (typeStr == "armor-large")
       { pickupType = pul::core::PickupType::ArmorLarge; }
@@ -456,13 +462,54 @@ void ParseLayerObject(
     if (typeStr == "health-small")
       { pickupType = pul::core::PickupType::HealthSmall; }
 
+    if (typeStr == "weapon-pickup" && jsonTile) {
+      pickupsStr = "pickup-weapon";
+
+      cJSON * property;
+      cJSON_ArrayForEach(
+        property, cJSON_GetObjectItemCaseSensitive(jsonTile, "properties")
+      ) {
+        std::string
+          name = cJSON_GetObjectItemCaseSensitive(property, "name")->valuestring
+        , val = cJSON_GetObjectItemCaseSensitive(property, "value")->valuestring
+        ;
+
+        if (name != "weapon") { continue; }
+
+        typeStr = val;
+        if (val == "bad-fetus")
+          { pickupType = pul::core::PickupType::WeaponBadFetus; }
+        if (val == "doppler-beam")
+          { pickupType = pul::core::PickupType::WeaponDopplerBeam; }
+        if (val == "grannibal")
+          { pickupType = pul::core::PickupType::WeaponGrannibal; }
+        if (val == "manshredder")
+          { pickupType = pul::core::PickupType::WeaponManshredder; }
+        if (val == "pericaliya")
+          { pickupType = pul::core::PickupType::WeaponPericaliya; }
+        if (val == "pmf")
+          { pickupType = pul::core::PickupType::WeaponPMF; }
+        if (val == "volnias")
+          { pickupType = pul::core::PickupType::WeaponVolnias; }
+        if (val == "wallbanger")
+          { pickupType = pul::core::PickupType::WeaponWallbanger; }
+        if (val == "zeus-stinger")
+          { pickupType = pul::core::PickupType::WeaponZeusStinger; }
+        if (val == "all")
+          { pickupType = pul::core::PickupType::WeaponAll; }
+
+        break;
+      }
+    }
+
     registry.emplace<pul::core::ComponentPickup>(
       pickupEntity, pickupType, origin, true, 0ul
     );
 
     pul::animation::Instance pickupAnimationInstance;
     plugins.animation.ConstructInstance(
-      scene, pickupAnimationInstance, scene.AnimationSystem(), "pickups"
+      scene, pickupAnimationInstance, scene.AnimationSystem()
+    , pickupsStr.c_str()
     );
 
     pickupAnimationInstance.origin = origin;
