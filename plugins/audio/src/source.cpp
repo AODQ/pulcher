@@ -54,16 +54,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   , { Idx(pul::core::PickupType::ArmorLarge),   "pick-armor3"  }
   , { Idx(pul::core::PickupType::ArmorMedium),  "pick-armor2"  }
   , { Idx(pul::core::PickupType::ArmorSmall),   "pick-armor1"  }
-  , { Idx(pul::core::PickupType::WeaponBadFetus), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponDopplerBeam), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponGrannibal), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponManshredder), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponPericaliya), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponPMF), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponVolnias), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponWallbanger), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponZeusStinger), "pick-weapon" }
-  , { Idx(pul::core::PickupType::WeaponAll), "pick-weapon" }
+  , { Idx(pul::core::PickupType::Weapon), "pick-weapon" }
   }) {
     auto const str =
         std::string{"assets/base/audio/sfx/pickups/"}

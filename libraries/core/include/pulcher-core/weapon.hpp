@@ -1,24 +1,11 @@
 #pragma once
 
+#include <pulcher-core/enum.hpp>
 #include <pulcher-util/enum.hpp>
 
 #include <array>
 
 namespace pul::core {
-
-  enum class WeaponType {
-    BadFetus
-  , DopplerBeam
-  , Grannibal
-  , Manshredder
-  , Pericaliya
-  , PMF
-  , Unarmed
-  , Volnias
-  , Wallbanger
-  , ZeusStinger
-  , Size
-  };
 
   struct ImmutableWeaponInfo {
     WeaponType type;

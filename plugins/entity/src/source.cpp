@@ -230,11 +230,12 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 1.0f, 1.0f), "equipped");
           }
 
+          ImGui::SameLine();
           ImGui::Checkbox("picked up", &weapon.pickedUp);
-          pul::imgui::Text("cooldown {}", weapon.cooldown);
-
           ImGui::SetNextItemWidth(128.0f);
           pul::imgui::SliderInt("ammo", &weapon.ammunition, 0, 1000);
+          ImGui::SameLine();
+          pul::imgui::Text("cooldown {}", weapon.cooldown);
 
           ImGui::PopID(); // weapon
         }

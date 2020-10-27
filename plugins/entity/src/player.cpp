@@ -282,6 +282,26 @@ void PlayerCheckPickups(
       pickup.spawnTimer = 0ul;
 
       scene.AudioSystem().pickup[Idx(pickup.type)] |= true;
+
+      switch (pickup.type) {
+        default: spdlog::error("unknown pickup type {}", pickup.type); break;
+        case pul::core::PickupType::HealthLarge: break;
+        case pul::core::PickupType::HealthMedium: break;
+        case pul::core::PickupType::HealthSmall: break;
+        case pul::core::PickupType::ArmorLarge: break;
+        case pul::core::PickupType::ArmorMedium: break;
+        case pul::core::PickupType::ArmorSmall: break;
+        case pul::core::PickupType::Weapon:
+          player.inventory.weapons[Idx(pickup.weaponType)].pickedUp = true;
+          player.inventory.weapons[Idx(pickup.weaponType)].ammunition = 100;
+        break;
+        case pul::core::PickupType::WeaponAll:
+          for (size_t i = 0ul; i < Idx(pul::core::WeaponType::Size); ++ i) {
+            player.inventory.weapons[i].pickedUp = true;
+            player.inventory.weapons[i].ammunition = 100;
+          }
+        break;
+      }
     }
   }
 }
@@ -470,6 +490,8 @@ void UpdatePlayerWeapon(
   (void)weapon;
   switch (player.inventory.currentWeapon) {
     default: break;
+    case pul::core::WeaponType::Pericaliya: {
+    } break;
     case pul::core::WeaponType::Volnias: {
       auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
       auto ray =

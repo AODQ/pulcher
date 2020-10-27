@@ -1,4 +1,5 @@
 #include <pulcher-animation/animation.hpp>
+#include <pulcher-core/enum.hpp>
 #include <pulcher-core/map.hpp>
 #include <pulcher-core/pickup.hpp>
 #include <pulcher-core/scene-bundle.hpp>
@@ -447,6 +448,7 @@ void ParseLayerObject(
       );
 
     pul::core::PickupType pickupType;
+    pul::core::WeaponType weaponPickupType;
     std::string pickupsStr = "pickups";
 
     if (typeStr == "armor-large")
@@ -466,6 +468,8 @@ void ParseLayerObject(
     if (typeStr == "weapon-pickup" && jsonTile) {
       pickupsStr = "pickup-weapon";
 
+      pickupType = pul::core::PickupType::Weapon;
+
       cJSON * property;
       cJSON_ArrayForEach(
         property, cJSON_GetObjectItemCaseSensitive(jsonTile, "properties")
@@ -479,23 +483,23 @@ void ParseLayerObject(
 
         typeStr = val;
         if (val == "bad-fetus")
-          { pickupType = pul::core::PickupType::WeaponBadFetus; }
+          { weaponPickupType = pul::core::WeaponType::BadFetus; }
         if (val == "doppler-beam")
-          { pickupType = pul::core::PickupType::WeaponDopplerBeam; }
+          { weaponPickupType = pul::core::WeaponType::DopplerBeam; }
         if (val == "grannibal")
-          { pickupType = pul::core::PickupType::WeaponGrannibal; }
+          { weaponPickupType = pul::core::WeaponType::Grannibal; }
         if (val == "manshredder")
-          { pickupType = pul::core::PickupType::WeaponManshredder; }
+          { weaponPickupType = pul::core::WeaponType::Manshredder; }
         if (val == "pericaliya")
-          { pickupType = pul::core::PickupType::WeaponPericaliya; }
+          { weaponPickupType = pul::core::WeaponType::Pericaliya; }
         if (val == "pmf")
-          { pickupType = pul::core::PickupType::WeaponPMF; }
+          { weaponPickupType = pul::core::WeaponType::PMF; }
         if (val == "volnias")
-          { pickupType = pul::core::PickupType::WeaponVolnias; }
+          { weaponPickupType = pul::core::WeaponType::Volnias; }
         if (val == "wallbanger")
-          { pickupType = pul::core::PickupType::WeaponWallbanger; }
+          { weaponPickupType = pul::core::WeaponType::Wallbanger; }
         if (val == "zeus-stinger")
-          { pickupType = pul::core::PickupType::WeaponZeusStinger; }
+          { weaponPickupType = pul::core::WeaponType::ZeusStinger; }
         if (val == "all")
           { pickupType = pul::core::PickupType::WeaponAll; }
 
@@ -505,7 +509,7 @@ void ParseLayerObject(
     }
 
     registry.emplace<pul::core::ComponentPickup>(
-      pickupEntity, pickupType, origin, true, 0ul
+      pickupEntity, pickupType, weaponPickupType, origin, true, 0ul
     );
 
     pul::animation::Instance pickupAnimationInstance;
