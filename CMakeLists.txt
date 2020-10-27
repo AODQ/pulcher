@@ -53,7 +53,12 @@ project (
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "-march=x86-64 -gstabs")
+
+if (PULCHER_PLATFORM STREQUAL "Linux")
+  set(CMAKE_CXX_FLAGS "-march=x86-64")
+elseif (PULCHER_PLATFORM STREQUAL "Win64" OR PULCHER_PLATFORM STREQUAL "Win32")
+  set(CMAKE_CXX_FLAGS "-march=x86-64 -gstabs")
+endif()
 
 ## requires out of source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
