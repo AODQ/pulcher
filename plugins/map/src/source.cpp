@@ -396,7 +396,6 @@ void ParseLayerObject(
   ) {
     size_t objectId = cJSON_GetObjectItemCaseSensitive(object, "id")->valueint;
     size_t tileId = cJSON_GetObjectItemCaseSensitive(object, "gid")->valueint;
-    spdlog::debug("parsing object ID {} tile ID", objectId, tileId);
 
     std::string typeStr = "";
     auto objectType = cJSON_GetObjectItemCaseSensitive(object, "type");

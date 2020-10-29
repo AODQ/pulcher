@@ -477,7 +477,6 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
     // precompute size
     size_t const vertexBufferSize =
       ::ComputeVertexBufferSize(animationInstance.animator->skeleton);
-    spdlog::debug("vertex buffer size {}", vertexBufferSize);
 
     animationInstance.uvCoordBufferData.resize(vertexBufferSize);
     animationInstance.originBufferData.resize(vertexBufferSize);
