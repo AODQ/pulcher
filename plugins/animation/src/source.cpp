@@ -1388,6 +1388,9 @@ PUL_PLUGIN_DECL void Animation_UiRender(
   { // -- display spritesheet info
     ImGui::Text("spritesheets");
 
+    if (ImGui::Button("save animations"))
+      { ::SaveAnimations(scene.AnimationSystem()); }
+
     ImGui::Separator();
     ImGui::Separator();
 
@@ -1496,10 +1499,6 @@ PUL_PLUGIN_DECL void Animation_UiRender(
     ImGui::End();
 
     ImGui::Begin("Animation Editor");
-
-    if (ImGui::Button("save")) {
-      ::SaveAnimations(scene.AnimationSystem());
-    }
 
     ImGui::Separator();
 
