@@ -459,7 +459,7 @@ void UpdatePlayerPhysics(
 void UpdatePlayerWeapon(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , pul::core::ComponentPlayer & player
-, pul::animation::ComponentInstance &
+, pul::animation::ComponentInstance & playerAnim
 ) {
   auto & controller = scene.PlayerController().current;
   auto & controllerPrev = scene.PlayerController().previous;
@@ -495,37 +495,70 @@ void UpdatePlayerWeapon(
     } break;
     case pul::core::WeaponType::Volnias: {
       auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
-      auto ray =
-        pul::physics::IntersectorRay::Construct(
-          playerOrigin
-        , playerOrigin + glm::normalize(controller.lookDirection) * 512.0f
-        );
-      if (
-        pul::physics::IntersectionResults results;
-        plugin.physics.IntersectionRaycast(scene, ray, results)
-      ) {
-        if (glm::length(playerOrigin - glm::vec2(results.origin)) < 64.0f) {
-          player.velocity +=
-            glm::normalize(playerOrigin - glm::vec2(results.origin)) * 10.0f;
-          player.grounded = false;
-        }
-      }
 
       auto & registry = scene.EnttRegistry();
-      auto volniasFireEntity = registry.create();
-      registry.emplace<pul::core::ComponentParticle>(
-        volniasFireEntity, playerOrigin
-      );
 
-      pul::animation::Instance instance;
-      plugin.animation.ConstructInstance(
-        scene, instance, scene.AnimationSystem(), "volnias-fire"
-      );
-      instance.pieceToState["particle"].Apply("volnias-fire");
-      instance.origin = playerOrigin;
-      registry.emplace<pul::animation::ComponentInstance>(
-        volniasFireEntity, instance
-      );
+      {
+        auto volniasFireEntity = registry.create();
+        registry.emplace<pul::core::ComponentParticle>(
+          volniasFireEntity, playerOrigin
+        );
+
+        pul::animation::Instance instance;
+        plugin.animation.ConstructInstance(
+          scene, instance, scene.AnimationSystem(), "volnias-fire"
+        );
+        auto & state = instance.pieceToState["particle"];
+        state.Apply("volnias-fire");
+        state.angle = controller.lookAngle;
+        state.flip = playerAnim.instance.pieceToState["legs"].flip;
+
+        instance.origin = player.origin;
+        instance.automaticCachedMatrixCalculation = false;
+
+        plugin.animation.UpdateCacheWithPrecalculatedMatrix(
+          instance
+        , playerAnim
+            .instance
+            .pieceToState["weapon-placeholder"]
+            .cachedLocalSkeletalMatrix
+        );
+
+        registry.emplace<pul::animation::ComponentInstance>(
+          volniasFireEntity, instance
+        );
+      }
+
+      {
+        auto volniasFireEntity = registry.create();
+        registry.emplace<pul::core::ComponentParticle>(
+          volniasFireEntity, playerOrigin
+        );
+
+        pul::animation::Instance instance;
+        plugin.animation.ConstructInstance(
+          scene, instance, scene.AnimationSystem(), "volnias-projectile"
+        );
+        auto & state = instance.pieceToState["particle"];
+        state.Apply("volnias-projectile");
+        state.angle = controller.lookAngle;
+        state.flip = playerAnim.instance.pieceToState["legs"].flip;
+
+        instance.origin = player.origin;
+        instance.automaticCachedMatrixCalculation = false;
+
+        plugin.animation.UpdateCacheWithPrecalculatedMatrix(
+          instance
+        , playerAnim
+            .instance
+            .pieceToState["weapon-placeholder"]
+            .cachedLocalSkeletalMatrix
+        );
+
+        registry.emplace<pul::animation::ComponentInstance>(
+          volniasFireEntity, instance
+        );
+      }
     } break;
   }
 }

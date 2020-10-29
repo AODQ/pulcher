@@ -106,7 +106,6 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       >();
 
     for (auto entity : view) {
-      auto & particle = view.get<pul::core::ComponentParticle>(entity);
       auto & animation = view.get<pul::animation::ComponentInstance>(entity);
 
       if (animation.instance.pieceToState["particle"].animationFinished) {

@@ -21,6 +21,8 @@ void pul::controls::UpdateControls(
     , (static_cast<float>(ypos) - playerCenterY)
     };
     current.lookDirection = glm::normalize(current.lookDirection);
+    current.lookAngle =
+      std::atan2(current.lookDirection.x, current.lookDirection.y);
   }
 
   current.movementHorizontal =

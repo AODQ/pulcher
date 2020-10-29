@@ -126,3 +126,21 @@ template<> struct fmt::formatter<glm::vec4> {
       );
   }
 };
+
+////////////////////////////////////////////////////////////////////////////////
+template<> struct fmt::formatter<glm::mat3> {
+  std::string p = "{}";
+  auto parse(format_parse_context & ctx) { return ::StandardFormat(p, ctx); }
+
+  template <typename FmtCtx> auto format(glm::mat3 const & m, FmtCtx & ctx)
+  {
+    return
+      format_to(
+        ctx.out()
+      , "[{}, {}, {}, {}, {}, {}, {}, {}, {}]"
+      , m[0][0], m[0][1], m[0][2]
+      , m[1][0], m[1][1], m[1][2]
+      , m[2][0], m[2][1], m[2][2]
+      );
+  }
+};

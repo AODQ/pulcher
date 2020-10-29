@@ -404,8 +404,6 @@ void ParseLayerObject(
     if (!objectType || (typeStr = std::string{objectType->valuestring}) == "") {
       // if type is empty then check in the tileset for type
 
-      spdlog::debug("setting type from spritesheet");
-
       // get tile/spritesheet info
       size_t spritesheetIdx;
       size_t localTileId;

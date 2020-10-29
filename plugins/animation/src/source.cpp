@@ -290,6 +290,8 @@ void ComputeCache(
 , bool & skeletalFlip
 , float & skeletalRotation
 ) {
+  if (instance.hasCalculatedCachedInfo) { return; }
+
   auto & piece = instance.animator->pieces[skeletal.label];
   auto & stateInfo = instance.pieceToState[skeletal.label];
   auto & state = piece.states[stateInfo.label];
@@ -1261,12 +1263,10 @@ PUL_PLUGIN_DECL void Animation_UpdateFrame(
   for (auto entity : view) {
     auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
-    if (!self.instance.hasCalculatedCachedInfo) {
-      ::ComputeCache(
-        self.instance, self.instance.animator->skeleton
-      , glm::mat3(1.0f), false, 0.0f
-      );
-    }
+    ::ComputeCache(
+      self.instance, self.instance.animator->skeleton
+    , glm::mat3(1.0f), false, 0.0f
+    );
 
     ::ComputeVertices(scene, self.instance, true);
   }
@@ -1307,7 +1307,8 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     for (auto entity : view) {
       auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
-      self.instance.hasCalculatedCachedInfo = false;
+      if (self.instance.automaticCachedMatrixCalculation)
+        { self.instance.hasCalculatedCachedInfo = false; }
 
       if (
           !self.instance.visible

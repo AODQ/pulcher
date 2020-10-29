@@ -33,6 +33,7 @@ namespace pul::controls {
       bool weaponSwitchNext = false, weaponSwitchPrev = false;
 
       glm::vec2 lookDirection = { 0.0f, 0.0f };
+      float lookAngle;
     };
 
     Frame current, previous;

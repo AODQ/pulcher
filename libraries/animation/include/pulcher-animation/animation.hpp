@@ -130,6 +130,10 @@ namespace pul::animation {
 
     std::map<std::string, StateInfo> pieceToState;
 
+    // if set to false, the matrix will no longer be recalculated every render
+    // frame. This allows an animation matrix to not have to be set every frame
+    bool automaticCachedMatrixCalculation = true;
+
     bool hasCalculatedCachedInfo = false;
 
     glm::vec2 origin = glm::vec2(0.0);
