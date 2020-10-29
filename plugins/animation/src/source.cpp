@@ -1166,10 +1166,21 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
       layout(location = 1) in vec2 inUvCoord;
 
       out vec2 uvCoord;
+      out vec2 vertexCoord;
 
       uniform vec2 originOffset;
       uniform vec2 framebufferResolution;
       uniform vec2 cameraOrigin;
+
+      const vec2 vertexArray[6] = vec2[](
+        vec2(0.0f,  0.0f)
+      , vec2(1.0f,  1.0f)
+      , vec2(1.0f,  0.0f)
+
+      , vec2(0.0f,  0.0f)
+      , vec2(0.0f,  1.0f)
+      , vec2(1.0f,  1.0f)
+      );
 
       void main() {
         vec2 framebufferScale = vec2(2.0f) / framebufferResolution;
@@ -1179,16 +1190,22 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
         ;
         gl_Position = vec4(vertexOrigin, 0.5001f + inOrigin.z/100000.0f, 1.0f);
         uvCoord = vec2(inUvCoord.x, 1.0f-inUvCoord.y);
+        vertexCoord = vertexArray[gl_VertexID%6];
       }
     );
 
     desc.fs.source = PUL_SHADER(
       uniform sampler2D baseSampler;
       in vec2 uvCoord;
+      in vec2 vertexCoord;
       out vec4 outColor;
       void main() {
         outColor = texture(baseSampler, uvCoord);
         if (outColor.a < 0.1f) { discard; }
+        if (
+            vertexCoord.y < 0.0001f || vertexCoord.x < 0.0001f
+         || vertexCoord.y > 0.9999f || vertexCoord.x > 0.9999f
+        ) { discard; }
       }
     );
 
