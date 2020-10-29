@@ -72,6 +72,10 @@ std::vector<pul::animation::Animator::Component> JsonLoadComponents(
     component.tile.y =
       cJSON_GetObjectItemCaseSensitive(componentJson, "y")->valueint;
 
+    component.msDeltaTimeOverride =
+      cJSON_GetObjectItemCaseSensitive(componentJson, "ms-delta-time-override")
+        ->valueint;
+
     if (
       auto offX =
         cJSON_GetObjectItemCaseSensitive(componentJson, "origin-offset-x")
@@ -186,16 +190,18 @@ void ComputeVertices(
   // update delta time and if animation update is necessary, apply uv coord
   // updates
   bool hasUpdate = forceUpdate;
-  if (state.msDeltaTime > 0.0f && !stateInfo.animationFinished) {
+  float const msDeltaTime = state.MsDeltaTime(component);
+
+  if (msDeltaTime > 0.0f && !stateInfo.animationFinished) {
     stateInfo.deltaTime += pul::util::MsPerFrame;
-    if (stateInfo.deltaTime > state.msDeltaTime) {
+    if (stateInfo.deltaTime > msDeltaTime) {
       if (state.loops) {
-        stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
+        stateInfo.deltaTime = stateInfo.deltaTime - msDeltaTime;
         stateInfo.componentIt = (stateInfo.componentIt + 1) % components.size();
         hasUpdate = true;
       } else {
         if (stateInfo.componentIt < components.size()-1) {
-          stateInfo.deltaTime = stateInfo.deltaTime - state.msDeltaTime;
+          stateInfo.deltaTime = stateInfo.deltaTime - msDeltaTime;
           stateInfo.componentIt = stateInfo.componentIt + 1;
           hasUpdate = true;
         } else {
@@ -338,7 +344,7 @@ void ComputeCache(
       glm::mix(
         glm::vec2(previousOrigin),
         glm::vec2(component.originOffset),
-        stateInfo.deltaTime/state.msDeltaTime
+        stateInfo.deltaTime/state.MsDeltaTime(component)
       );
   } else {
     localOrigin += component.originOffset;
@@ -603,6 +609,7 @@ void DisplayImGuiComponent(
     pul::imgui::DragInt2("tile", &component.tile.x, 0.025f);
 
     pul::imgui::DragInt2("origin-offset", &component.originOffset.x, 0.025f);
+    pul::imgui::DragInt("ms-time", &component.msDeltaTimeOverride, 0.25f);
 
     if (ImGui::Button("-")) {
       components.erase(components.begin() + componentIt);
@@ -656,8 +663,21 @@ void DisplayImGuiComponents(
 ) {
   if (components.size() > 0ul)
   { // display image
-    size_t componentIt = static_cast<size_t>(animMsTimer / state.msDeltaTime);
-    componentIt %= components.size();
+    float tempMsDeltaTime = animMsTimer;
+    { // wrap tempMsDeltaTime first
+      float totalComponentTime = 0.0f;
+      for (auto & component : components)
+        { totalComponentTime += state.MsDeltaTime(component); }
+      tempMsDeltaTime = glm::mod(tempMsDeltaTime, totalComponentTime);
+    }
+
+    // then subtract until we reach the component
+    size_t componentIt = 0ul;
+    for (componentIt = 0ul; componentIt < components.size(); ++ componentIt) {
+      auto & component = components[componentIt];
+      if (tempMsDeltaTime - state.MsDeltaTime(component) < 0.0f) { break; }
+      tempMsDeltaTime -= state.MsDeltaTime(component);
+    }
 
     // render w/ previous sprite alpha if requested
 
@@ -760,6 +780,10 @@ cJSON * SaveAnimationComponent(
     cJSON_AddItemToObject(
       componentJson, "origin-offset-y"
     , cJSON_CreateInt(component.originOffset.y)
+    );
+    cJSON_AddItemToObject(
+      componentJson, "ms-delta-time-override"
+    , cJSON_CreateInt(component.msDeltaTimeOverride)
     );
   }
 
@@ -1480,6 +1504,11 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
       if (ImGui::TreeNode(piecePair.first.c_str())) {
 
+        pul::imgui::Text(
+          "img dimensions {}x{}"
+        , animator.spritesheet.width, animator.spritesheet.height
+        );
+
         pul::imgui::InputInt2("dimensions", &piece.dimensions.x);
         pul::imgui::DragInt2("origin", &piece.origin.x, 0.01f);
         pul::imgui::DragInt("render order", &piece.renderOrder, 0.01f);
@@ -1494,7 +1523,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           auto & state = statePair.second;
           (void)state;
 
-          ImGui::DragFloat(
+          pul::imgui::DragInt(
             "delta time", &statePair.second.msDeltaTime, 1.0f
           );
 
