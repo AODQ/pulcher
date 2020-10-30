@@ -392,7 +392,7 @@ void UpdatePlayerPhysics(
     }
 
     if (ray.beginOrigin.y < ray.endOrigin.y) {
-      player.origin.y = results.origin.y - 1.0f;
+      player.origin.y = results.origin.y;
     } else if (ray.beginOrigin.y > ray.endOrigin.y) {
       // the groundedFloorOrigin is -(0, 2), so we need to account for that
       player.origin.y = results.origin.y + 3.0f;
