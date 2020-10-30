@@ -1541,6 +1541,29 @@ PUL_PLUGIN_DECL void Animation_UiRender(
     ImGui::Separator();
     ImGui::Separator();
 
+    { // piece add
+      if (ImGui::Button("add piece")) {
+        ImGui::OpenPopup("adding piece");
+      }
+
+      if (ImGui::BeginPopup("adding piece")) {
+        static std::string pieceLabel = "";
+        if (
+          pul::imgui::InputText(
+            "label", &pieceLabel, ImGuiInputTextFlags_EnterReturnsTrue
+          )
+        ) {
+          if (pieceLabel != "") {
+            animator.pieces[pieceLabel] = {};
+          }
+          pieceLabel = "";
+          ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+      }
+    }
+
     size_t pieceIt = 0ul;
     for (auto & piecePair : animator.pieces) {
       ImGui::Separator();
@@ -1551,6 +1574,22 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
       if (ImGui::TreeNode(piecePair.first.c_str())) {
 
+      { // delete piece
+        if (ImGui::Button("x"))
+          { ImGui::OpenPopup("piece delete confirm"); }
+
+        if (ImGui::BeginPopup("piece delete confirm")) {
+          if (ImGui::Button("confirm deletion")) {
+            animator.pieces.erase(animator.pieces.find(piecePair.first));
+            ImGui::EndPopup();
+            ImGui::TreePop();
+            break;
+          }
+          ImGui::EndPopup();
+        }
+      }
+
+
         pul::imgui::Text(
           "img dimensions {}x{}"
         , animator.spritesheet.width, animator.spritesheet.height
@@ -1560,11 +1599,49 @@ PUL_PLUGIN_DECL void Animation_UiRender(
         pul::imgui::DragInt2("origin", &piece.origin.x, 0.01f);
         pul::imgui::DragInt("render depth", &piece.renderDepth, 0.01f);
 
+        { // state adding
+          if (ImGui::Button("add state")) {
+            ImGui::OpenPopup("state add confirm");
+          }
+
+          if (ImGui::BeginPopup("state add confirm")) {
+            static std::string newStateLabel = "";
+            if (
+              pul::imgui::InputText(
+                "label", &newStateLabel, ImGuiInputTextFlags_EnterReturnsTrue
+              )
+            ) {
+              if (newStateLabel != "") {
+                piece.states[newStateLabel] = {};
+              }
+              newStateLabel = "";
+              ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+          }
+        }
+
         for (auto & statePair : piece.states) {
           ImGui::Separator();
 
           if (!ImGui::TreeNode(statePair.first.c_str())) {
             continue;
+          }
+
+          { // delete state
+            if (ImGui::Button("x"))
+              { ImGui::OpenPopup("state delete confirm"); }
+
+            if (ImGui::BeginPopup("state delete confirm")) {
+              if (ImGui::Button("confirm deletion")) {
+                piece.states.erase(piece.states.find(statePair.first));
+                ImGui::EndPopup();
+                ImGui::TreePop();
+                break;
+              }
+              ImGui::EndPopup();
+            }
           }
 
           auto & state = statePair.second;
