@@ -85,4 +85,8 @@ namespace pul::imgui {
   }
 
   bool CheckImageClicked(glm::vec2 & pixelClicked);
+
+  bool InputText(
+    char const * label, std::string * str, ImGuiInputTextFlags = 0
+  );
 }
