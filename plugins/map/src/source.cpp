@@ -445,7 +445,7 @@ void ParseLayerObject(
       );
 
     pul::core::PickupType pickupType;
-    pul::core::WeaponType weaponPickupType;
+    pul::core::WeaponType weaponPickupType = pul::core::WeaponType::Size;
     std::string pickupsStr = "pickups";
 
     if (typeStr == "armor-large")
@@ -773,6 +773,8 @@ PUL_PLUGIN_DECL void Map_UiRender(pul::core::SceneBundle & scene) {
     }
   }
 
+  ImGui::End();
+
   if (tileInfoTilesetIdx != -1ul) {
     ImGui::End();
 
@@ -812,9 +814,9 @@ PUL_PLUGIN_DECL void Map_UiRender(pul::core::SceneBundle & scene) {
       }
 
       pul::imgui::Text("{}", physxStr);
-
-      ImGui::End();
     }
+
+    ImGui::End();
   }
 
   ImGui::Begin("Map Info");

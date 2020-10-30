@@ -99,7 +99,7 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
     ::RenderKey(current.crouch, "crouch", "");
     ::RenderKey(current.walk, "walk", "");
 
-    ImGui::Columns(0);
+    ImGui::Columns(1);
 
   ImGui::End();
 
