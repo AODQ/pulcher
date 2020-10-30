@@ -55,6 +55,7 @@ namespace pul::animation {
       bool rotationMirrored = false;
       bool originInterpolates = false;
       bool rotatePixels = false;
+      bool flipXAxis = false;
       bool loops = false;
 
       size_t ComponentPartIdxLookup(float const angle);

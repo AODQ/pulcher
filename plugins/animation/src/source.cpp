@@ -227,6 +227,8 @@ void ComputeVertices(
     auto uv = v;
     if (skeletalFlip) { uv.x = 1.0f - uv.x; }
 
+    if (state.flipXAxis) { uv.x = 1.0f - uv.x; }
+
     instance.uvCoordBufferData[indexOffset] =
         (uv*pieceDimensions + glm::vec2(component.tile)*pieceDimensions)
       * instance.animator->spritesheet.InvResolution()
@@ -870,6 +872,10 @@ cJSON * SaveAnimation(pul::animation::Animator& animator) {
       , cJSON_CreateInt(state.rotatePixels)
       );
       cJSON_AddItemToObject(
+        stateJson, "flip-x-axis"
+      , cJSON_CreateInt(state.flipXAxis)
+      );
+      cJSON_AddItemToObject(
         stateJson, "loops"
       , cJSON_CreateInt(state.loops)
       );
@@ -1067,6 +1073,11 @@ void LoadAnimation(
 
         state.rotatePixels =
           cJSON_GetObjectItemCaseSensitive(stateJson, "rotate-pixels")
+            ->valueint
+        ;
+
+        state.flipXAxis =
+          cJSON_GetObjectItemCaseSensitive(stateJson, "flip-x-axis")
             ->valueint
         ;
 
@@ -1552,6 +1563,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           ImGui::Checkbox("rotate pixels", &state.rotatePixels);
           ImGui::Checkbox("loops", &state.loops);
           ImGui::Checkbox("origin interpolates", &state.originInterpolates);
+          ImGui::Checkbox("flip X axis", &state.flipXAxis);
 
           if (ImGui::Button("add range part")) {
             componentParts.emplace_back();
