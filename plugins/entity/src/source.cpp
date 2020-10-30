@@ -15,9 +15,10 @@
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 
-#include <entt/entt.hpp>
-
 #include <cjson/cJSON.h>
+#include <entt/entt.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
+#include <glm/gtx/transform2.hpp>
 #include <imgui/imgui.hpp>
 
 namespace {
@@ -98,6 +99,27 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 ) {
   auto & registry = scene.EnttRegistry();
 
+  { // -- particle explode
+    auto view =
+      registry.view<
+        pul::animation::ComponentInstance
+      , pul::core::ComponentParticleExploder
+      >();
+
+    for (auto entity : view) {
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+      auto & exploder = view.get<pul::core::ComponentParticleExploder>(entity);
+
+      if (animation.instance.pieceToState["particle"].animationFinished) {
+        auto finAnimation = registry.create();
+        exploder.animationInstance.origin = animation.instance.origin;
+        registry.emplace<pul::animation::ComponentInstance>(
+          finAnimation, (exploder.animationInstance)
+        );
+      }
+    }
+  }
+
   { // -- particles
     auto view =
       registry.view<
@@ -107,6 +129,12 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
     for (auto entity : view) {
       auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+      auto & particle = view.get<pul::core::ComponentParticle>(entity);
+
+      if (particle.velocity != glm::vec2()) {
+        particle.origin += particle.velocity;
+        animation.instance.origin = particle.origin;
+      }
 
       if (animation.instance.pieceToState["particle"].animationFinished) {
         plugin.animation.DestroyInstance(animation.instance);

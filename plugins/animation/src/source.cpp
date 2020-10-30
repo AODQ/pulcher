@@ -9,14 +9,12 @@
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/log.hpp>
 
-#include <entt/entt.hpp>
-
 #include <cjson/cJSON.h>
+#include <entt/entt.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
+#include <glm/gtx/transform2.hpp>
 #include <imgui/imgui.hpp>
 #include <sokol/gfx.hpp>
-
-#include <glm/gtx/transform2.hpp>
-#include <glm/gtx/matrix_transform_2d.hpp>
 
 #include <fstream>
 
@@ -366,9 +364,8 @@ void ComputeCache(
 
   // flip origin
 
-  if (state.rotatePixels) {
-    localMatrix = glm::rotate(localMatrix, theta);
-  }
+  if (state.rotatePixels)
+    { localMatrix = glm::rotate(localMatrix, theta); }
 
   localMatrix =
     glm::translate(

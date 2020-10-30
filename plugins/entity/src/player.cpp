@@ -530,11 +530,7 @@ void UpdatePlayerWeapon(
       }
 
       {
-        auto volniasFireEntity = registry.create();
-        registry.emplace<pul::core::ComponentParticle>(
-          volniasFireEntity, playerOrigin
-        );
-
+        auto volniasProjectileEntity = registry.create();
         pul::animation::Instance instance;
         plugin.animation.ConstructInstance(
           scene, instance, scene.AnimationSystem(), "volnias-projectile"
@@ -556,7 +552,23 @@ void UpdatePlayerWeapon(
         );
 
         registry.emplace<pul::animation::ComponentInstance>(
-          volniasFireEntity, instance
+          volniasProjectileEntity, instance
+        );
+
+        registry.emplace<pul::core::ComponentParticle>(
+          volniasProjectileEntity
+        , instance.origin, controller.lookDirection * 20.0f
+        );
+
+        pul::animation::Instance hitAnimationInstance;
+        plugin.animation.ConstructInstance(
+          scene, instance, scene.AnimationSystem(), "volnias-hit"
+        );
+        hitAnimationInstance.pieceToState["particle"].Apply("volnias-hit");
+
+        registry.emplace<pul::core::ComponentParticleExploder>(
+          volniasProjectileEntity
+        , true, true, (hitAnimationInstance)
         );
       }
     } break;
