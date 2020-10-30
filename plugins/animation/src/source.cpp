@@ -1168,6 +1168,10 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
     desc.vs.uniform_blocks[2].uniforms[0].name = "cameraOrigin";
     desc.vs.uniform_blocks[2].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
+    desc.vs.uniform_blocks[3].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[3].uniforms[0].name = "textureResolution";
+    desc.vs.uniform_blocks[3].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+
     desc.fs.images[0].name = "baseSampler";
     desc.fs.images[0].type = SG_IMAGETYPE_2D;
 
@@ -1206,12 +1210,16 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
 
     desc.fs.source = PUL_SHADER(
       uniform sampler2D baseSampler;
+
       in vec2 uvCoord;
       in vec2 vertexCoord;
+
       out vec4 outColor;
+
       void main() {
         outColor = texture(baseSampler, uvCoord);
-        if (outColor.a < 0.1f) { discard; }
+        if (outColor.a < 0.1f)
+          { discard; }
         if (
             vertexCoord.y < 0.0001f || vertexCoord.x < 0.0001f
          || vertexCoord.y > 0.9999f || vertexCoord.x > 0.9999f
@@ -1347,6 +1355,19 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
         SG_SHADERSTAGE_VS
       , 0
       , &self.instance.origin.x
+      , sizeof(float) * 2ul
+      );
+
+      glm::vec2 resolution =
+        glm::vec2(
+          self.instance.animator->spritesheet.width
+        , self.instance.animator->spritesheet.height
+        );
+
+      sg_apply_uniforms(
+        SG_SHADERSTAGE_VS
+      , 3
+      , &resolution.x
       , sizeof(float) * 2ul
       );
 
