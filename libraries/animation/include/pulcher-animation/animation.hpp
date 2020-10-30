@@ -41,7 +41,7 @@ namespace pul::animation {
     struct Component {
       glm::u32vec2 tile = {};
       glm::i32vec2 originOffset = {};
-      size_t msDeltaTimeOverride = -1ul;
+      uint32_t msDeltaTimeOverride = -1u;
     };
 
     struct ComponentPart {
@@ -51,7 +51,7 @@ namespace pul::animation {
 
     struct State {
       std::vector<ComponentPart> components;
-      size_t msDeltaTime;
+      uint32_t msDeltaTime;
       bool rotationMirrored = false;
       bool originInterpolates = false;
       bool rotatePixels = false;
@@ -62,7 +62,7 @@ namespace pul::animation {
       float MsDeltaTime(Component & component) {
         return
           static_cast<float>(
-              component.msDeltaTimeOverride == -1ul
+              component.msDeltaTimeOverride == -1u
             ? msDeltaTime : component.msDeltaTimeOverride
           )
         ;
