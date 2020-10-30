@@ -636,14 +636,16 @@ void DisplayImGuiComponent(
       components.back().tile.y += 1;
     }
 
-    ImGui::SameLine();
-    if (componentIt > 0ul && ImGui::Button("^")) {
-      std::swap(components[componentIt], components[componentIt-1]);
+    if (componentIt > 0ul) {
+      ImGui::SameLine();
+      if(ImGui::Button("^"))
+        { std::swap(components[componentIt], components[componentIt-1]); }
     }
 
-    ImGui::SameLine();
-    if (componentIt < components.size()-1 && ImGui::Button("V")) {
-      std::swap(components[componentIt], components[componentIt+1]);
+    if (componentIt < components.size()-1) {
+      ImGui::SameLine();
+      if (ImGui::Button("V"))
+        { std::swap(components[componentIt], components[componentIt+1]); }
     }
 
     ImGui::NextColumn();
