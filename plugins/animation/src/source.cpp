@@ -242,7 +242,7 @@ void ComputeVertices(
       { origin = glm::vec3(-99999.0f); }
 
     instance.originBufferData[indexOffset] =
-        glm::vec3(origin.x, origin.y, static_cast<float>(piece.renderOrder));
+        glm::vec3(origin.x, origin.y, static_cast<float>(piece.renderDepth));
   }
 }
 
@@ -840,7 +840,7 @@ cJSON * SaveAnimation(pul::animation::Animator& animator) {
       pieceJson, "origin-y", cJSON_CreateInt(piece.origin.y)
     );
     cJSON_AddItemToObject(
-      pieceJson, "render-order", cJSON_CreateInt(piece.renderOrder)
+      pieceJson, "render-order", cJSON_CreateInt(piece.renderDepth)
     );
 
     cJSON * statesJson = cJSON_CreateArray();
@@ -1029,17 +1029,17 @@ void LoadAnimation(
         cJSON_GetObjectItemCaseSensitive(pieceJson, "origin-y")->valueint;
 
       {
-        auto order =
+        auto depth =
           cJSON_GetObjectItemCaseSensitive(pieceJson, "render-order")->valueint;
-        if (order < 0u || order >= 100u) {
+        if (depth < 0u || depth >= 100u) {
           spdlog::error(
-            "render-order for '{}' of '{}' is OOB ({}); "
+            "render-depth for '{}' of '{}' is OOB ({}); "
             "range must be from 0 to 100"
-          , pieceLabel, animator->label, order
+          , pieceLabel, animator->label, depth
           );
-          order = 99u;
+          depth = 99u;
         }
-        piece.renderOrder = order;
+        piece.renderDepth = depth;
       }
 
       cJSON * stateJson;
@@ -1538,7 +1538,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
         pul::imgui::InputInt2("dimensions", &piece.dimensions.x);
         pul::imgui::DragInt2("origin", &piece.origin.x, 0.01f);
-        pul::imgui::DragInt("render order", &piece.renderOrder, 0.01f);
+        pul::imgui::DragInt("render depth", &piece.renderDepth, 0.01f);
 
         for (auto & statePair : piece.states) {
           ImGui::Separator();
