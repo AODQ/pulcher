@@ -4,6 +4,7 @@
 #include <pulcher-util/enum.hpp>
 
 #include <array>
+#include <variant>
 
 namespace pul::core {
 
@@ -27,6 +28,32 @@ namespace pul::core {
 
   struct WeaponInfo {
     WeaponType type;
+
+    struct WiBadFetus { };
+    struct WiDopplerBeam { };
+    struct WiGrannibal { };
+    struct WiManshredder { };
+    struct WiPericaliya { };
+    struct WiPMF { };
+    struct WiUnarmed { };
+    struct WiVolnias {
+      float primaryChargeupTimer = 0.0f;
+      uint8_t secondaryChargedShots = 0;
+      bool overchargedSecondary = false;
+      bool hasChargedPrimary = false;
+      float secondaryChargeupTimer = 0.0f;
+      bool dischargingSecondary = false;
+      float dischargingTimer = 0.0f;
+    };
+    struct WiWallbanger { };
+    struct WiZeusStinger { };
+
+    std::variant<
+      WiBadFetus, WiDopplerBeam, WiGrannibal, WiManshredder
+    , WiPericaliya, WiPMF, WiUnarmed, WiVolnias, WiWallbanger
+    , WiZeusStinger
+    > info {};
+
     bool pickedUp = false;
     int16_t cooldown = 0;
     uint16_t ammunition = 0;
@@ -34,16 +61,16 @@ namespace pul::core {
 
   struct Inventory {
     std::array<WeaponInfo, Idx(WeaponType::Size)> weapons {{
-      { WeaponType::BadFetus }
-    , { WeaponType::DopplerBeam }
-    , { WeaponType::Grannibal }
-    , { WeaponType::Manshredder }
-    , { WeaponType::Pericaliya }
-    , { WeaponType::PMF }
-    , { WeaponType::Unarmed, true } // unarmed always is picked up
-    , { WeaponType::Volnias }
-    , { WeaponType::Wallbanger }
-    , { WeaponType::ZeusStinger }
+      { WeaponType::BadFetus,    WeaponInfo::WiBadFetus{} }
+    , { WeaponType::DopplerBeam, WeaponInfo::WiDopplerBeam{} }
+    , { WeaponType::Grannibal,   WeaponInfo::WiGrannibal{} }
+    , { WeaponType::Manshredder, WeaponInfo::WiManshredder{} }
+    , { WeaponType::Pericaliya,  WeaponInfo::WiPericaliya{} }
+    , { WeaponType::PMF,         WeaponInfo::WiPMF{} }
+    , { WeaponType::Unarmed,     WeaponInfo::WiUnarmed{}, true }
+    , { WeaponType::Volnias,     WeaponInfo::WiVolnias{} }
+    , { WeaponType::Wallbanger,  WeaponInfo::WiWallbanger{} }
+    , { WeaponType::ZeusStinger, WeaponInfo::WiZeusStinger{} }
     }};
 
     WeaponType

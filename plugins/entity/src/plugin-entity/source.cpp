@@ -147,6 +147,8 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           finAnimation, animation.instance.origin
         );
 
+        if (exploder.audioTrigger) *exploder.audioTrigger = true;
+
         registry.destroy(entity);
       }
     }
@@ -238,9 +240,9 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
     }
 
     if (registry.has<pul::core::ComponentPlayer>(entity)) {
+      ImGui::Begin("Player");
       ImGui::Text("--- player ---"); ImGui::SameLine(); ImGui::Separator();
       auto & self = registry.get<pul::core::ComponentPlayer>(entity);
-      ImGui::PushID(&self);
       pul::imgui::Text(
         "weapon anim ID {}", static_cast<size_t>(self.weaponAnimation)
       );
@@ -313,7 +315,25 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
           ImGui::SetNextItemWidth(128.0f);
           pul::imgui::SliderInt("ammo", &weapon.ammunition, 0, 1000);
           ImGui::SameLine();
-          pul::imgui::Text("cooldown {}", weapon.cooldown);
+          pul::imgui::Text("| cooldown {}", weapon.cooldown);
+
+          switch (weapon.type) {
+            default: break;
+            case pul::core::WeaponType::Volnias:
+              auto & volInfo =
+                std::get<pul::core::WeaponInfo::WiVolnias>(weapon.info);
+
+              pul::imgui::Text(
+                "chargeup timer {}", volInfo.primaryChargeupTimer
+              );
+              pul::imgui::Text(
+                "secondary charged shots {}", volInfo.secondaryChargedShots
+              );
+              pul::imgui::Text(
+                "seocndary chargeup timer {}", volInfo.secondaryChargeupTimer
+              );
+            break;
+          }
 
           ImGui::PopID(); // weapon
         }
@@ -324,7 +344,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
       pul::imgui::Text(
         "prev    weapon: '{}'", ToStr(self.inventory.previousWeapon)
       );
-      ImGui::PopID(); // player
+      ImGui::End();
     }
 
     if (registry.has<ComponentControllable>(entity)) {

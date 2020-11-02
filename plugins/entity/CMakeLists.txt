@@ -1,7 +1,13 @@
 add_library(plugin-entity SHARED)
 
 target_include_directories(plugin-entity PUBLIC "include/")
-target_sources(plugin-entity PRIVATE src/source.cpp src/player.cpp)
+target_sources(
+  plugin-entity
+  PRIVATE
+    src/plugin-entity/source.cpp
+    src/plugin-entity/player.cpp
+    src/plugin-entity/weapon.cpp
+)
 
 target_link_libraries(
   plugin-entity

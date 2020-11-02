@@ -16,5 +16,6 @@ namespace pul::core {
     bool explodeOnDelete = false;
     bool explodeOnCollide = false;
     pul::animation::Instance animationInstance;
+    bool * audioTrigger = nullptr; // really silly
   };
 }

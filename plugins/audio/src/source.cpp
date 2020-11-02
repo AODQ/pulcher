@@ -15,6 +15,9 @@ std::array<FMOD_SOUND *, 2> fmodSoundSpawn = { nullptr };
 std::array<FMOD_SOUND *, 5> fmodSoundTaunt = { nullptr };
 std::array<FMOD_SOUND *, 3> fmodSoundJump = { nullptr };
 std::array<FMOD_SOUND *, 3> fmodSoundSlide = { nullptr };
+std::array<FMOD_SOUND *, 4> fmodSoundVolniasFire = { nullptr };
+std::array<FMOD_SOUND *, 3> fmodSoundVolniasHit = { nullptr };
+std::array<FMOD_SOUND *, 5> fmodSoundVolnias = { nullptr };
 std::array<FMOD_SOUND *, 3> fmodSoundStep = { nullptr };
 std::array<FMOD_SOUND *, 3> fmodSoundDash = { nullptr };
 std::array<FMOD_SOUND *, 3> fmodSoundLand = { nullptr };
@@ -231,6 +234,121 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
     ), ;
   );
 
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-charge1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolnias[0]
+    ), ;
+  );
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-charge2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolnias[1]
+    ), ;
+  );
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-end.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolnias[2]
+    ), ;
+  );
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-prefire1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolnias[3]
+    ), ;
+  );
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-prefire2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolnias[4]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-fire1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolniasFire[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-fire2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolniasFire[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-fire3.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolniasFire[2]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-fire4.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolniasFire[3]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-hit1.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolniasHit[0]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-hit2.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolniasHit[1]
+    ), ;
+  );
+
+  FMOD_ASSERT(
+    FMOD_System_CreateSound(
+      ::fmodSystem
+    , "assets/base/audio/sfx/weapons/volnias-hit3.wav"
+    , FMOD_LOOP_OFF | FMOD_2D
+    , nullptr
+    , &::fmodSoundVolniasHit[2]
+    ), ;
+  );
 
 
   FMOD_ASSERT(
@@ -368,6 +486,76 @@ PUL_PLUGIN_DECL void Audio_Update(
     );
   }
 
+  if (audioSystem.volniasFire != -1ul) {
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundVolniasFire[audioSystem.volniasFire]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+  if (audioSystem.volniasHit) {
+    static size_t it = 0;
+    ++ it;
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem
+      , ::fmodSoundVolniasHit[it % 3]
+      , nullptr
+      , false
+      , nullptr
+      ),
+      ;
+    );
+  }
+
+
+  if (audioSystem.volniasChargePrimary) {
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem, ::fmodSoundVolnias[0], nullptr, false, nullptr
+      ),
+      ;
+    );
+  }
+  if (audioSystem.volniasChargeSecondary) {
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem, ::fmodSoundVolnias[1], nullptr, false, nullptr
+      ),
+      ;
+    );
+  }
+  if (audioSystem.volniasEndPrimary) {
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem, ::fmodSoundVolnias[2], nullptr, false, nullptr
+      ),
+      ;
+    );
+  }
+  if (audioSystem.volniasPrefirePrimary) {
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem, ::fmodSoundVolnias[3], nullptr, false, nullptr
+      ),
+      ;
+    );
+  }
+  if (audioSystem.volniasPrefireSecondary) {
+    FMOD_ASSERT(
+      FMOD_System_PlaySound(
+        ::fmodSystem, ::fmodSoundVolnias[4], nullptr, false, nullptr
+      ),
+      ;
+    );
+  }
+
   if (audioSystem.playerStepped) {
     static size_t it = 0;
     ++ it;
@@ -461,6 +649,13 @@ PUL_PLUGIN_DECL void Audio_Update(
 
   audioSystem.playerJumped = false;
   audioSystem.playerTaunted = false;
+  audioSystem.volniasHit = false;
+  audioSystem.volniasChargePrimary = false;
+  audioSystem.volniasChargeSecondary = false;
+  audioSystem.volniasEndPrimary = false;
+  audioSystem.volniasPrefirePrimary = false;
+  audioSystem.volniasPrefireSecondary = false;
+  audioSystem.volniasFire = -1ul;
   audioSystem.playerSlided = false;
   audioSystem.playerStepped = false;
   audioSystem.playerDashed = false;
