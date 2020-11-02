@@ -14,7 +14,7 @@ are affected by gravity.
 
 Manshredder: Primary, a very short range hitscan. Secondary, a fast projectile
 that you can use for "rocket jumps", low dmg. Secondary projectile isn't
-affected by gravity.  
+affected by gravity.
 
 Pericaliya: Primary, a self guided rocket projectile. Secondary, this might
 need an image example to go with. Basically I want there to be three
@@ -22,7 +22,7 @@ projectiles that fly on same line in relation with each other. If you keep
 holding the fire mode after firing, they will expand until you let go of the
 firemode, which is when the projectiles will pass through each in a single
 point. This might be a completely stupid idea that might not work as nicely as
-I'm imagining it. Projectiles in this weapon aren't affected by gravity. 
+I'm imagining it. Projectiles in this weapon aren't affected by gravity.
 
 PMF: A huge projectile bomb that can be activated and fired separately. Primary
 firemode launches the projectile and secondary activates the bomb. Projectile
@@ -33,7 +33,7 @@ activate 10 seconds after you launched it.
 Punching/Unarmed: Primary, quick bunches. If you hold primary fire mode, you
 can charge a stronger punch. Secondary firemode is for guarding, which gives
 you 5-10% discount from all damage.  5% if it hits you anywhere on your body,
-10% if you block it directly with your arms. 
+10% if you block it directly with your arms.
 
 Völnias: Primary is a chaingun that has a brief delay before projectiles start
 flying. Secondary can "load up" 5 projectiles for 5 times and then you can

@@ -6,6 +6,7 @@ void pul::controls::UpdateControls(
   GLFWwindow * window
 , uint32_t playerCenterX, uint32_t playerCenterY
 , pul::controls::Controller & controller
+, bool wantCaptureKeyboard, bool wantCaptureMouse
 ) {
 
   // move current to previous

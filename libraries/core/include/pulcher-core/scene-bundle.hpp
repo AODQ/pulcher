@@ -22,6 +22,8 @@ namespace pul::core {
     float calculatedMsPerFrame = pul::util::MsPerFrame;
     size_t numCpuFrames = 0ul;
 
+    bool debugFrameBufferHovered = false;
+
     pul::core::Config config = {};
 
     glm::u32vec2 playerCenter = {};

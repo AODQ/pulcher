@@ -226,11 +226,15 @@ void ProcessLogic(
   queries.intersectorRays.clear();
   queries.intersectorPoints.clear();
 
+  auto & imguiIo = ImGui::GetIO();
+
   pul::controls::UpdateControls(
     pul::gfx::DisplayWindow()
   , scene.playerCenter.x
   , scene.playerCenter.y
   , scene.PlayerController()
+  , false
+  , scene.debugFrameBufferHovered ? false : imguiIo.WantCaptureMouse
   );
   plugin.entity.EntityUpdate(plugin, scene);
   plugin.animation.UpdateFrame(plugin, scene);
@@ -455,6 +459,8 @@ void ProcessRendering(
       , ImVec4(1, 1, 1, 1)
       , ImVec4(1, 1, 1, 1)
       );
+
+      scene.debugFrameBufferHovered = ImGui::IsItemHovered();
 
       if (zoomImage) {
         ImGuiIO & io = ImGui::GetIO();
