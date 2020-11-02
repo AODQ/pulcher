@@ -53,7 +53,7 @@ PUL_PLUGIN_DECL void Entity_StartScene(
     scene, instance, scene.AnimationSystem(), "nygelstromn"
   );
   registry.emplace<pul::animation::ComponentInstance>(
-    playerEntity, instance
+    playerEntity, std::move(instance)
   );
 
   {
@@ -69,7 +69,7 @@ PUL_PLUGIN_DECL void Entity_StartScene(
 
     player.weaponAnimation = registry.create();
     registry.emplace<pul::animation::ComponentInstance>(
-      player.weaponAnimation, weaponInstance
+      player.weaponAnimation, std::move(weaponInstance)
     );
   }
 }
@@ -104,18 +104,50 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       registry.view<
         pul::animation::ComponentInstance
       , pul::core::ComponentParticleExploder
+      , pul::core::ComponentParticle
       >();
 
     for (auto entity : view) {
       auto & animation = view.get<pul::animation::ComponentInstance>(entity);
       auto & exploder = view.get<pul::core::ComponentParticleExploder>(entity);
+      auto & particle = view.get<pul::core::ComponentParticle>(entity);
 
-      if (animation.instance.pieceToState["particle"].animationFinished) {
+      bool explode =
+        animation.instance.pieceToState["particle"].animationFinished
+      ;
+
+      glm::vec2 explodeOrigin = particle.origin;
+
+      // check if physics bound
+      if (!explode) {
+        auto ray =
+          pul::physics::IntersectorRay::Construct(
+            animation.instance.origin,
+            animation.instance.origin + particle.velocity
+          );
+
+        if (
+          pul::physics::IntersectionResults results;
+          plugin.physics.IntersectionRaycast(scene, ray, results)
+        ) {
+          explodeOrigin = results.origin;
+          explode = true;
+        }
+      }
+
+      if (explode) {
+        PUL_ASSERT(exploder.animationInstance.animator , continue;);
+
         auto finAnimation = registry.create();
-        exploder.animationInstance.origin = animation.instance.origin;
+        exploder.animationInstance.origin = explodeOrigin;
         registry.emplace<pul::animation::ComponentInstance>(
-          finAnimation, (exploder.animationInstance)
+          finAnimation, std::move(exploder.animationInstance)
         );
+        registry.emplace<pul::core::ComponentParticle>(
+          finAnimation, animation.instance.origin
+        );
+
+        registry.destroy(entity);
       }
     }
   }
@@ -137,7 +169,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       }
 
       if (animation.instance.pieceToState["particle"].animationFinished) {
-        plugin.animation.DestroyInstance(animation.instance);
+        animation.instance = {};
         registry.destroy(entity);
       }
     }

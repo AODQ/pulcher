@@ -28,7 +28,7 @@ namespace pul::controls {
 
       bool taunt = false;
 
-      bool shoot = false;
+      bool shootPrimary = false, shootSecondary = false;
 
       bool weaponSwitchNext = false, weaponSwitchPrev = false;
 

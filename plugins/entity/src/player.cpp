@@ -485,7 +485,16 @@ void UpdatePlayerWeapon(
     );
   }
 
-  if (!(controller.shoot && !controllerPrev.shoot)) { return; }
+  static size_t cooldown = 10ul;
+
+  if (cooldown > 0) { -- cooldown; }
+
+  if (
+      cooldown > 0ul
+   || (!controller.shootPrimary && !controller.shootSecondary)
+ ) { return; }
+
+  cooldown = 10ul;
 
   auto & weapon = player.inventory.weapons[Idx(player.inventory.currentWeapon)];
   (void)weapon;
@@ -509,7 +518,7 @@ void UpdatePlayerWeapon(
           scene, instance, scene.AnimationSystem(), "volnias-fire"
         );
         auto & state = instance.pieceToState["particle"];
-        state.Apply("volnias-fire");
+        state.Apply("volnias-fire", true);
         state.angle = controller.lookAngle;
         state.flip = playerAnim.instance.pieceToState["legs"].flip;
 
@@ -525,7 +534,7 @@ void UpdatePlayerWeapon(
         );
 
         registry.emplace<pul::animation::ComponentInstance>(
-          volniasFireEntity, instance
+          volniasFireEntity, std::move(instance)
         );
       }
 
@@ -536,23 +545,14 @@ void UpdatePlayerWeapon(
           scene, instance, scene.AnimationSystem(), "volnias-projectile"
         );
         auto & state = instance.pieceToState["particle"];
-        state.Apply("volnias-projectile");
+        state.Apply("volnias-projectile", true);
         state.angle = controller.lookAngle;
         state.flip = playerAnim.instance.pieceToState["legs"].flip;
 
-        instance.origin = player.origin;
-        instance.automaticCachedMatrixCalculation = false;
-
-        plugin.animation.UpdateCacheWithPrecalculatedMatrix(
-          instance
-        , playerAnim
-            .instance
-            .pieceToState["weapon-placeholder"]
-            .cachedLocalSkeletalMatrix
-        );
+        instance.origin = playerOrigin - glm::vec2(0.0f, 8.0f);
 
         registry.emplace<pul::animation::ComponentInstance>(
-          volniasProjectileEntity, instance
+          volniasProjectileEntity, std::move(instance)
         );
 
         registry.emplace<pul::core::ComponentParticle>(
@@ -560,15 +560,22 @@ void UpdatePlayerWeapon(
         , instance.origin, controller.lookDirection * 20.0f
         );
 
-        pul::animation::Instance hitAnimationInstance;
+
+        pul::core::ComponentParticleExploder exploder;
+        exploder.explodeOnDelete = true;
+        exploder.explodeOnCollide = true;
+
         plugin.animation.ConstructInstance(
-          scene, instance, scene.AnimationSystem(), "volnias-hit"
+          scene, exploder.animationInstance, scene.AnimationSystem()
+        , "volnias-hit"
         );
-        hitAnimationInstance.pieceToState["particle"].Apply("volnias-hit");
+
+        exploder
+          .animationInstance
+          .pieceToState["particle"].Apply("volnias-hit", true);
 
         registry.emplace<pul::core::ComponentParticleExploder>(
-          volniasProjectileEntity
-        , true, true, (hitAnimationInstance)
+          volniasProjectileEntity, std::move(exploder)
         );
       }
     } break;
@@ -1089,29 +1096,42 @@ void plugin::entity::UpdatePlayer(
       }
     }
 
-    // -- arm animation
-    if (player.grounded) {
-      if (controller.crouch) {
-        playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
-        playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
-      }
-      else if (legInfo.label == "walk" || legInfo.label == "walk-turn") {
-        playerAnim.instance.pieceToState["arm-back"].Apply("unequip-walk");
-        playerAnim.instance.pieceToState["arm-front"].Apply("unequip-walk");
-      }
-      else if (legInfo.label == "run" || legInfo.label == "run-turn") {
-        playerAnim.instance.pieceToState["arm-back"].Apply("unequip-run");
-        playerAnim.instance.pieceToState["arm-front"].Apply("unequip-run");
-      } else {
-        playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
-        playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
-      }
-    } else {
-      playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
-      playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
-    }
+    auto const & currentWeaponInfo =
+      pul::core::weaponInfo[Idx(player.inventory.currentWeapon)];
 
+    // -- arm animation
     bool playerDirFlip = playerAnim.instance.pieceToState["legs"].flip;
+    switch (currentWeaponInfo.requiredHands) {
+      case 0:
+        if (player.grounded) {
+          if (controller.crouch) {
+            playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
+            playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
+          }
+          else if (legInfo.label == "walk" || legInfo.label == "walk-turn") {
+            playerAnim.instance.pieceToState["arm-back"].Apply("unequip-walk");
+            playerAnim.instance.pieceToState["arm-front"].Apply("unequip-walk");
+          }
+          else if (legInfo.label == "run" || legInfo.label == "run-turn") {
+            playerAnim.instance.pieceToState["arm-back"].Apply("unequip-run");
+            playerAnim.instance.pieceToState["arm-front"].Apply("unequip-run");
+          } else {
+            playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
+            playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
+          }
+        }
+      break;
+      case 1:
+        if (playerDirFlip)
+          playerAnim.instance.pieceToState["arm-back"].Apply("equip-1H");
+        else
+          playerAnim.instance.pieceToState["arm-front"].Apply("equip-1H");
+      break;
+      case 2:
+        playerAnim.instance.pieceToState["arm-back"].Apply("equip-2H");
+        playerAnim.instance.pieceToState["arm-front"].Apply("equip-2H");
+      break;
+    }
 
     if (
         controller.movementHorizontal
@@ -1128,28 +1148,13 @@ void plugin::entity::UpdatePlayer(
 
     playerAnim.instance.pieceToState["legs"].flip = playerDirFlip;
 
-    auto const & currentWeaponInfo =
-      pul::core::weaponInfo[Idx(player.inventory.currentWeapon)];
-
-    switch (currentWeaponInfo.requiredHands) {
-      case 0: break;
-      case 1:
-        if (playerDirFlip)
-          playerAnim.instance.pieceToState["arm-back"].Apply("equip-1H");
-        else
-          playerAnim.instance.pieceToState["arm-front"].Apply("equip-1H");
-      break;
-      case 2:
-        playerAnim.instance.pieceToState["arm-back"].Apply("equip-2H");
-        playerAnim.instance.pieceToState["arm-front"].Apply("equip-2H");
-      break;
-    }
-
     float const angle =
       std::atan2(controller.lookDirection.x, controller.lookDirection.y);
 
-    playerAnim.instance.pieceToState["arm-back"].angle = angle;
-    playerAnim.instance.pieceToState["arm-front"].angle = angle;
+    playerAnim.instance.pieceToState["arm-back"].angle
+      = playerAnim.instance.pieceToState["arm-front"].angle
+      = angle
+    ;
 
     playerAnim.instance.pieceToState["head"].angle = angle;
 

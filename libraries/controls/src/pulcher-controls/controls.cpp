@@ -55,5 +55,9 @@ void pul::controls::UpdateControls(
       glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS
     || glfwGetKey(window, GLFW_KEY_BACKSPACE) == GLFW_PRESS
     );
-  current.shoot = glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS;
+  current.shootPrimary =
+    glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+
+  current.shootSecondary =
+    glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 }

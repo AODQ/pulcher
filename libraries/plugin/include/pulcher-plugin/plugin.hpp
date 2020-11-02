@@ -33,9 +33,6 @@ namespace pul::plugin {
   };
 
   struct Animation {
-    void (*DestroyInstance)(
-      pul::animation::Instance &
-    ) = nullptr;
     void (*ConstructInstance)(
       pul::core::SceneBundle & scene
     , pul::animation::Instance &

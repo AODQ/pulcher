@@ -1,32 +1,105 @@
 #include <pulcher-animation/animation.hpp>
 
-size_t pul::animation::Animator::State::ComponentPartIdxLookup(
-  float const angle
-) {
-  for (size_t compIdx = 0ul; compIdx < components.size(); ++ compIdx) {
-    auto & component = components[compIdx];
-    if (angle <= component.rangeMax) {
-      return compIdx;
-      break;
-    }
-  }
+#include <pulcher-util/log.hpp>
 
-  return 0ul;
+size_t pul::animation::Animator::State::VariationIdxLookup(
+  VariationRuntimeInfo const & variationRti
+) {
+  switch (variationType) {
+    default: return 0ul;
+    case pul::animation::VariationType::Range:
+      for (size_t compIdx = 0ul; compIdx < variations.size(); ++ compIdx) {
+        auto & variation = variations[compIdx];
+        if (variationRti.range.angle <= variation.range.rangeMax) {
+          return compIdx;
+          break;
+        }
+      }
+
+      return 0ul;
+
+    case pul::animation::VariationType::Random:
+      return variationRti.random.idx;
+
+    case pul::animation::VariationType::Normal:
+      return 0ul;
+  }
 }
 
-std::vector<pul::animation::Animator::Component> *
+std::vector<pul::animation::Component> *
 pul::animation::Animator::State::ComponentLookup(
-  bool const flip, float const angle
+  VariationRuntimeInfo const & variationRti
 ) {
-  if (components.size() == 0ul) { return nullptr; }
+  if (variations.size() == 0ul) { return nullptr; }
 
-  auto & component = components[this->ComponentPartIdxLookup(angle)];
+  auto & variation = variations[this->VariationIdxLookup(variationRti)];
 
-  // apply flipping if requested & possible
-  if (flip && component.data[1].size() > 0ul) {
-    return &component.data[1];
+  switch (variationType) {
+    default: return nullptr;
+    case pul::animation::VariationType::Range:
+      // apply flipping if requested & possible
+      if (variationRti.range.flip && variation.range.data[1].size() > 0ul) {
+        return &variation.range.data[1];
+      }
+
+      // default / normal state
+      return &variation.range.data[0];
+
+    case pul::animation::VariationType::Random:
+      return &variation.random.data;
+
+    case pul::animation::VariationType::Normal:
+      return &variation.normal.data;
+  }
+}
+
+void pul::animation::Instance::StateInfo::Apply(
+  std::string const & nLabel, bool force
+) {
+  if (!force && label == nLabel) { return; }
+  label = nLabel;
+  deltaTime = 0.0f;
+  componentIt = 0ul;
+  animationFinished = false;
+
+  variationRti = {};
+
+  auto const & state = animator->pieces[pieceLabel].states[label];
+
+  spdlog::debug("piece label {}", pieceLabel);
+  if (pieceLabel == "particle") {
+    spdlog::debug("variation type {}", state.variationType);
   }
 
-  // default / normal state
-  return &component.data[0];
+  switch (state.variationType) {
+    default: spdlog::error("variation type default"); break;
+    case pul::animation::VariationType::Normal: break;
+    case pul::animation::VariationType::Range: break;
+    case pul::animation::VariationType::Random:
+      static size_t rand = 0ul;
+      ++ rand;
+      variationRti.random.idx = rand % state.variations.size();
+      spdlog::debug("rand {} idx {}", rand, variationRti.random.idx);
+    break;
+  }
+}
+
+char const * ToStr(pul::animation::VariationType type) {
+  switch (type) {
+    default: return "n/a";
+    case pul::animation::VariationType::Range:  return "range";
+    case pul::animation::VariationType::Random: return "random";
+    case pul::animation::VariationType::Normal: return "normal";
+  }
+}
+
+pul::animation::VariationType pul::animation::ToVariationType(
+  char const * label
+) {
+  auto labelStr = std::string{label};
+  if (labelStr == "range") { return pul::animation::VariationType::Range; }
+  if (labelStr == "random") { return pul::animation::VariationType::Random; }
+  if (labelStr == "normal") { return pul::animation::VariationType::Normal; }
+  spdlog::critical("unknown variation type {}", label);
+  return pul::animation::VariationType::Normal;
 }

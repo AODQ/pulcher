@@ -6,7 +6,7 @@
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
-#include <pulcher-util/consts.hpp>
+#include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <cjson/cJSON.h>
@@ -56,14 +56,14 @@ void JsonParseRecursiveSkeleton(
   }
 }
 
-std::vector<pul::animation::Animator::Component> JsonLoadComponents(
+std::vector<pul::animation::Component> JsonLoadComponents(
   cJSON * componentsJson
 ) {
-  std::vector<pul::animation::Animator::Component> components;
+  std::vector<pul::animation::Component> components;
 
   cJSON * componentJson;
   cJSON_ArrayForEach(componentJson, componentsJson) {
-    pul::animation::Animator::Component component;
+    pul::animation::Component component;
     component.tile.x =
       cJSON_GetObjectItemCaseSensitive(componentJson, "x")->valueint;
 
@@ -133,20 +133,25 @@ size_t ComputeVertexBufferSize(
   return vertices;
 }
 
-void ComputeVertices(
-  pul::core::SceneBundle &
-, pul::animation::Instance & instance
+// used to compute generic animation info necessary for computing vertices and
+// caching animation state. Returns a pointer to list of components, nullptr if
+// none were found
+std::tuple<
+  pul::animation::Animator::Piece &
+, pul::animation::Instance::StateInfo &
+, pul::animation::Animator::State &
+, std::vector<pul::animation::Component> *
+> ComputeAnimationInfo(
+  pul::animation::Instance & instance
 , pul::animation::Animator::SkeletalPiece const & skeletal
-, size_t & indexOffset
 , bool & skeletalFlip
 , float & skeletalRotation
-, bool & forceUpdate
 ) {
   // okay the below is crazy with the map lookups, I need to cache the
   // state somehow
-  auto & piece = instance.animator->pieces[skeletal.label];
+  auto & piece     = instance.animator->pieces[skeletal.label];
   auto & stateInfo = instance.pieceToState[skeletal.label];
-  auto & state = piece.states[stateInfo.label];
+  auto & state     = piece.states[stateInfo.label];
 
   // update skeletal information (origins, flip, rotation, etc)
   skeletalFlip ^= stateInfo.flip;
@@ -157,11 +162,32 @@ void ComputeVertices(
     skeletalFlip ^= 1;
   }
 
+  // modify component runtime info based off skeletal info
+  pul::animation::VariationRuntimeInfo variationRti = stateInfo.variationRti;
+  switch (state.variationType) {
+    case pul::animation::VariationType::Range:
+      variationRti.range.flip = skeletalFlip;
+      variationRti.range.angle = skeletalRotation;
+    break;
+    default: break;
+  }
+
   // grab component from flip/rotation
-  auto * componentsPtr =
-    state.ComponentLookup(
-      skeletalFlip , skeletalFlip ? skeletalRotation : -skeletalRotation
-    );
+  auto * componentsPtr = state.ComponentLookup(variationRti);
+  return { piece, stateInfo, state, componentsPtr };
+}
+
+void ComputeVertices(
+  pul::core::SceneBundle &
+, pul::animation::Instance & instance
+, pul::animation::Animator::SkeletalPiece const & skeletal
+, size_t & indexOffset
+, bool & skeletalFlip
+, float & skeletalRotation
+, bool & forceUpdate
+) {
+  auto const & [piece, stateInfo, state, componentsPtr] =
+    ComputeAnimationInfo(instance, skeletal, skeletalFlip, skeletalRotation);
 
   // if there are no components to render, output a degenerate tile
   if (!componentsPtr || componentsPtr->size() == 0ul) {
@@ -292,26 +318,9 @@ void ComputeCache(
 ) {
   if (instance.hasCalculatedCachedInfo) { return; }
 
-  auto & piece = instance.animator->pieces[skeletal.label];
-  auto & stateInfo = instance.pieceToState[skeletal.label];
-  auto & state = piece.states[stateInfo.label];
 
-  // update skeletal information (origins, flip, rotation, etc)
-  skeletalFlip ^= stateInfo.flip;
-
-  skeletalRotation += stateInfo.angle;
-
-  if (state.rotationMirrored && ((skeletalRotation > 0.0f) ^ skeletalFlip)) {
-    skeletalFlip ^= 1;
-  }
-
-  float const theta = -skeletalRotation - pul::Pi*0.5f + skeletalFlip*pul::Pi;
-
-  // grab component from flip/rotation
-  auto * componentsPtr =
-    state.ComponentLookup(
-      skeletalFlip , skeletalFlip ? skeletalRotation : -skeletalRotation
-    );
+  auto const & [piece, stateInfo, state, componentsPtr] =
+    ComputeAnimationInfo(instance, skeletal, skeletalFlip, skeletalRotation);
 
   if (!componentsPtr || componentsPtr->size() == 0ul) { return; }
 
@@ -364,6 +373,7 @@ void ComputeCache(
 
   // flip origin
 
+  float const theta = -skeletalRotation - pul::Pi*0.5f + skeletalFlip*pul::Pi;
   if (state.rotatePixels)
     { localMatrix = glm::rotate(localMatrix, theta); }
 
@@ -423,25 +433,6 @@ void ComputeCache(
 } // -- namespace
 
 extern "C" {
-PUL_PLUGIN_DECL void Animation_DestroyInstance(
-  pul::animation::Instance & instance
-) {
-  if (instance.sgBufferOrigin.id) {
-    sg_destroy_buffer(instance.sgBufferOrigin);
-    instance.sgBufferOrigin = {};
-  }
-
-  if (instance.sgBufferUvCoord.id) {
-    sg_destroy_buffer(instance.sgBufferUvCoord);
-    instance.sgBufferUvCoord = {};
-  }
-
-  instance.uvCoordBufferData = {};
-  instance.originBufferData = {};
-  instance.pieceToState = {};
-  instance.animator = {};
-}
-
 PUL_PLUGIN_DECL void Animation_ConstructInstance(
   pul::core::SceneBundle & scene
 , pul::animation::Instance & animationInstance
@@ -467,8 +458,10 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
       );
       continue;
     }
-    animationInstance.pieceToState[piecePair.first] =
-      {piecePair.second.states.begin()->first};
+    auto & pieceToState = animationInstance.pieceToState[piecePair.first];
+    pieceToState.label = piecePair.second.states.begin()->first;
+    pieceToState.animator = animationInstance.animator;
+    pieceToState.pieceLabel = piecePair.first;
   }
 
   { // -- compute initial sokol buffers
@@ -488,7 +481,8 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
       desc.usage = SG_USAGE_STREAM;
       desc.content = nullptr;
       desc.label = "origin buffer";
-      animationInstance.sgBufferOrigin = sg_make_buffer(&desc);
+      animationInstance.sgBufferOrigin = std::make_unique<pul::gfx::SgBuffer>();
+      animationInstance.sgBufferOrigin->buffer = sg_make_buffer(&desc);
     }
 
     { // -- uv coord
@@ -497,14 +491,15 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
       desc.usage = SG_USAGE_STREAM;
       desc.content = nullptr;
       desc.label = "uv coord buffer";
-      animationInstance.sgBufferUvCoord = sg_make_buffer(&desc);
+      animationInstance.sgBufferUvCoord = std::make_unique<pul::gfx::SgBuffer>();
+      animationInstance.sgBufferUvCoord->buffer = sg_make_buffer(&desc);
     }
 
     // bindings
     animationInstance.sgBindings.vertex_buffers[0] =
-      animationInstance.sgBufferOrigin;
+      *animationInstance.sgBufferOrigin;
     animationInstance.sgBindings.vertex_buffers[1] =
-      animationInstance.sgBufferUvCoord;
+      *animationInstance.sgBufferUvCoord;
     animationInstance.sgBindings.fs_images[0] =
       animationInstance.animator->spritesheet.Image();
 
@@ -524,7 +519,7 @@ void ReconstructInstances(pul::core::SceneBundle & scene) {
   for (auto entity : view) {
     auto & self = view.get<pul::animation::ComponentInstance>(entity);
     auto label = self.instance.animator->label;
-    Animation_DestroyInstance(self.instance);
+    self.instance = {};
     Animation_ConstructInstance(scene, self.instance, system, label.c_str());
   }
 }
@@ -532,7 +527,7 @@ void ReconstructInstances(pul::core::SceneBundle & scene) {
 void ImGuiRenderSpritesheetTile(
   pul::gfx::Spritesheet & spritesheet
 , pul::animation::Animator::Piece & piece
-, pul::animation::Animator::Component & component
+, pul::animation::Component & component
 , float alpha = 1.0f
 ) {
   auto pieceDimensions = glm::vec2(piece.dimensions);
@@ -577,7 +572,7 @@ void ImGuiRenderSpritesheetTile(
 void DisplayImGuiComponent(
   pul::animation::Animator & animator
 , pul::animation::Animator::Piece & piece
-, std::vector<pul::animation::Animator::Component> & components
+, std::vector<pul::animation::Component> & components
 , size_t componentIt
 ) {
   auto & component = components[componentIt];
@@ -661,7 +656,7 @@ void DisplayImGuiComponents(
   pul::animation::Animator & animator
 , pul::animation::Animator::State & state
 , pul::animation::Animator::Piece & piece
-, std::vector<pul::animation::Animator::Component> & components
+, std::vector<pul::animation::Component> & components
 ) {
   if (components.size() > 0ul)
   { // display image
@@ -761,7 +756,7 @@ void DisplayImGuiSkeleton(
 }
 
 cJSON * SaveAnimationComponent(
-  std::vector<pul::animation::Animator::Component> const & components
+  std::vector<pul::animation::Component> const & components
 ) {
   cJSON * componentsJson = cJSON_CreateArray();
 
@@ -879,27 +874,53 @@ cJSON * SaveAnimation(pul::animation::Animator& animator) {
       , cJSON_CreateInt(state.loops)
       );
 
-      cJSON * componentPartsJson = cJSON_CreateArray();
-      cJSON_AddItemToObject(stateJson, "components", componentPartsJson);
+      cJSON * variationsJson = cJSON_CreateArray();
+      cJSON_AddItemToObject(stateJson, "variations", variationsJson);
+      cJSON_AddItemToObject(
+        stateJson, "variationType"
+      , cJSON_CreateString(ToStr(state.variationType))
+      );
 
-      for (auto const & componentPart : state.components) {
-        cJSON * componentPartJson = cJSON_CreateObject();
-        cJSON_AddItemToArray(componentPartsJson, componentPartJson);
+      for (auto const & variation : state.variations) {
+        cJSON * variationJson = cJSON_CreateObject();
+        cJSON_AddItemToArray(variationsJson, variationJson);
 
-        cJSON_AddItemToObject(
-          componentPartJson, "angle-range-max"
-        , cJSON_CreateNumber(static_cast<double>(componentPart.rangeMax))
-        );
+        switch (state.variationType) {
+          default:
+            spdlog::critical("unknown variation type {}", state.variationType);
+          break;
+          case pul::animation::VariationType::Normal:
+            cJSON_AddItemToObject(
+              variationJson, "default"
+            , SaveAnimationComponent(variation.normal.data)
+            );
+          break;
+          case pul::animation::VariationType::Random:
+            spdlog::debug("saving {}", variation.random.data.size());
+            cJSON_AddItemToObject(
+              variationJson, "default"
+            , SaveAnimationComponent(variation.random.data)
+            );
+          break;
+          case pul::animation::VariationType::Range:
+            cJSON_AddItemToObject(
+              variationJson, "angle-range-max"
+            , cJSON_CreateNumber(
+                static_cast<double>(variation.range.rangeMax)
+              )
+            );
 
-        cJSON_AddItemToObject(
-          componentPartJson, "default"
-        , SaveAnimationComponent(componentPart.data[0])
-        );
+            cJSON_AddItemToObject(
+              variationJson, "default"
+            , SaveAnimationComponent(variation.range.data[0])
+            );
 
-        cJSON_AddItemToObject(
-          componentPartJson, "flipped"
-        , SaveAnimationComponent(componentPart.data[1])
-        );
+            cJSON_AddItemToObject(
+              variationJson, "flipped"
+            , SaveAnimationComponent(variation.range.data[1])
+            );
+          break;
+        }
       }
     }
   }
@@ -1080,29 +1101,54 @@ void LoadAnimation(
             ->valueint
         ;
 
-        cJSON * componentPartJson;
+        cJSON * variationJson;
         cJSON_ArrayForEach(
-          componentPartJson
-        , cJSON_GetObjectItemCaseSensitive(stateJson, "components")
+          variationJson
+        , cJSON_GetObjectItemCaseSensitive(stateJson, "variations")
         ) {
-          pul::animation::Animator::ComponentPart componentPart;
-          componentPart.rangeMax =
-            cJSON_GetObjectItemCaseSensitive(
-              componentPartJson, "angle-range-max"
-            )->valuedouble
-          ;
+          pul::animation::Variation variation;
 
-          componentPart.data[0] =
-            ::JsonLoadComponents(
-              cJSON_GetObjectItemCaseSensitive(componentPartJson, "default")
+          state.variationType =
+            pul::animation::ToVariationType(
+              cJSON_GetObjectItemCaseSensitive(
+                stateJson, "variationType"
+              )->valuestring
             );
 
-          componentPart.data[1] =
-            ::JsonLoadComponents(
-              cJSON_GetObjectItemCaseSensitive(componentPartJson, "flipped")
-            );
+          switch (state.variationType) {
+            default: break;
+            case pul::animation::VariationType::Normal:
+              variation.normal.data =
+                ::JsonLoadComponents(
+                  cJSON_GetObjectItemCaseSensitive(variationJson, "default")
+                );
+            break;
+            case pul::animation::VariationType::Random:
+              variation.random.data =
+                ::JsonLoadComponents(
+                  cJSON_GetObjectItemCaseSensitive(variationJson, "default")
+                );
+            break;
+            case pul::animation::VariationType::Range:
+              variation.range.rangeMax =
+                cJSON_GetObjectItemCaseSensitive(
+                  variationJson, "angle-range-max"
+                )->valuedouble
+              ;
 
-          state.components.emplace_back(std::move(componentPart));
+              variation.range.data[0] =
+                ::JsonLoadComponents(
+                  cJSON_GetObjectItemCaseSensitive(variationJson, "default")
+                );
+
+              variation.range.data[1] =
+                ::JsonLoadComponents(
+                  cJSON_GetObjectItemCaseSensitive(variationJson, "flipped")
+                );
+            break;
+          }
+
+          state.variations.emplace_back(std::move(variation));
         }
 
         piece.states[stateLabel] = std::move(state);
@@ -1278,7 +1324,7 @@ PUL_PLUGIN_DECL void Animation_Shutdown(pul::core::SceneBundle & scene) {
     for (auto entity : view) {
       auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
-      Animation_DestroyInstance(self.instance);
+      self.instance = {};
     }
   }
 
@@ -1373,12 +1419,12 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
 
       // must update entire animation buffer
       sg_update_buffer(
-        self.instance.sgBufferUvCoord,
+        *self.instance.sgBufferUvCoord,
         self.instance.uvCoordBufferData.data(),
         self.instance.uvCoordBufferData.size() * sizeof(glm::vec2)
       );
       sg_update_buffer(
-        self.instance.sgBufferOrigin,
+        *self.instance.sgBufferOrigin,
         self.instance.originBufferData.data(),
         self.instance.originBufferData.size() * sizeof(glm::vec3)
       );
@@ -1473,6 +1519,37 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           pul::imgui::Text("\tflip {}", stateInfo.flip);
           pul::imgui::Text("\tangle {}", stateInfo.angle);
           pul::imgui::Text("\tvisible {}", stateInfo.visible);
+
+          auto & mat = stateInfo.cachedLocalSkeletalMatrix;
+          pul::imgui::Text(
+            "\tcached matrix\n"
+            "\t\t{} {} {}\n\t\t{} {} {}\n\t\t{} {} {}"
+          , mat[0][0], mat[0][1], mat[0][2]
+          , mat[1][0], mat[1][1], mat[1][2]
+          , mat[2][0], mat[2][1], mat[2][2]
+          );
+
+          auto variationType =
+            self.instance.animator
+              ->pieces[stateInfoPair.first]
+              .states[stateInfoPair.second.label]
+              .variationType
+          ;
+
+          pul::imgui::Text("\tvariation type '{}'", ToStr(variationType));
+
+          switch (variationType) {
+            default: break;
+            case pul::animation::VariationType::Normal:
+            break;
+            case pul::animation::VariationType::Range:
+            break;
+            case pul::animation::VariationType::Random:
+              pul::imgui::Text(
+                "random it {}", stateInfo.variationRti.random.idx
+              );
+            break;
+          }
         }
 
         ImGui::TreePop();
@@ -1651,49 +1728,114 @@ PUL_PLUGIN_DECL void Animation_UiRender(
             "delta time", &statePair.second.msDeltaTime, 1.0f
           );
 
-          auto & componentParts = statePair.second.components;
+          auto & variations = statePair.second.variations;
 
-          bool angleRangeChanged = false;
+          bool variationChanged = false;
 
-          ImGui::Checkbox("rotation mirrored", &state.rotationMirrored);
-          ImGui::SameLine();
-          ImGui::Checkbox("rotate pixels", &state.rotatePixels);
-          ImGui::Checkbox("loops", &state.loops);
-          ImGui::Checkbox("origin interpolates", &state.originInterpolates);
-          ImGui::Checkbox("flip X axis", &state.flipXAxis);
+          // select variation, but can only be done if no variations exist
+          if (
+            ImGui::BeginCombo("variation", ToStr(state.variationType))
+          ) {
+            if (variations.empty()) {
+              for (
+                size_t i = 0;
+                i < Idx(pul::animation::VariationType::Size);
+                ++ i
+              ) {
+                auto v = static_cast<pul::animation::VariationType>(i);
+                if (ImGui::Selectable(ToStr(v), v == state.variationType)) {
+                  state.variationType = v;
+                }
+              }
+            }
 
-          if (ImGui::Button("add range part")) {
-            componentParts.emplace_back();
-            angleRangeChanged = true;
+            ImGui::EndCombo();
+          }
+
+          if (ImGui::TreeNode("metadata")) {
+            ImGui::Checkbox("rotation mirrored", &state.rotationMirrored);
+            ImGui::SameLine();
+            ImGui::Checkbox("rotate pixels", &state.rotatePixels);
+            ImGui::Checkbox("loops", &state.loops);
+            ImGui::Checkbox("origin interpolates", &state.originInterpolates);
+            ImGui::Checkbox("flip X axis", &state.flipXAxis);
+
+            ImGui::TreePop();
+          }
+
+          // add part only works under certain conditions
+          bool hasAddPartOption = false;
+          switch (state.variationType) {
+            default: break;
+            case pul::animation::VariationType::Normal:
+              hasAddPartOption = variations.empty();
+            break;
+            case pul::animation::VariationType::Range:
+              hasAddPartOption = true;
+            break;
+            case pul::animation::VariationType::Random:
+              hasAddPartOption = true;
+            break;
+          }
+
+          if (hasAddPartOption && ImGui::Button("add part")) {
+            variations.emplace_back();
+            variationChanged = true;
           }
 
           for (
-            size_t componentPartIt = 0ul;
-            componentPartIt < componentParts.size();
-            ++ componentPartIt
+            size_t variationIt = 0ul;
+            variationIt < variations.size();
+            ++ variationIt
           ) {
 
-            ImGui::PushID(&componentParts[componentPartIt]);
+            ImGui::PushID(&variations[variationIt]);
 
-            auto & componentPart = componentParts[componentPartIt];
+            auto & variation = variations[variationIt];
 
             ImGui::Separator();
 
-            bool const componentTreeNode =
-              ImGui::TreeNode(
-                fmt::format("{}", componentPartIt).c_str()
-              , "%s"
-              , fmt::format(
-                  "[{:.2f}]"
-                , componentPart.rangeMax * 360.0f / pul::Tau
-                ).c_str()
-              );
+            // -- render tree / split
+            bool componentTreeNode = false;
+
+            switch (state.variationType) {
+              default: spdlog::critical("unknown variation type"); break;
+              case pul::animation::VariationType::Range:
+              componentTreeNode =
+                ImGui::TreeNode(
+                  fmt::format("{}", variationIt).c_str()
+                , "%s"
+                , fmt::format(
+                    "[{:.2f}]"
+                  , variation.range.rangeMax * 360.0f / pul::Tau
+                  ).c_str()
+                );
+              break;
+              case pul::animation::VariationType::Random:
+                componentTreeNode =
+                  ImGui::TreeNode(
+                    fmt::format("{}", variationIt).c_str()
+                  , "%s"
+                  , fmt::format("{}", variationIt).c_str()
+                  );
+              break;
+              case pul::animation::VariationType::Normal:
+                componentTreeNode =
+                  ImGui::TreeNode(
+                    fmt::format("{}", variationIt).c_str()
+                  , "%s"
+                  , fmt::format("{}", variationIt).c_str()
+                  );
+              break;
+            }
+
 
             if (!componentTreeNode) {
               ImGui::PopID();
               continue;
             }
 
+            if (state.variationType == pul::animation::VariationType::Range)
             { // draw angle
               ImDrawList * drawList = ImGui::GetWindowDrawList();
 
@@ -1704,14 +1846,14 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
               drawList->AddCircle(pos, 16.0f, ImColor(col), 20, 1.0f);
 
-              float const theta = componentPart.rangeMax + pul::Pi*0.5f;
+              float const theta = variation.range.rangeMax + pul::Pi*0.5f;
 
               // render angles for both sides
               drawList->AddLine(
                 pos
               , ImVec2(
                   pos.x + 16.0f * glm::cos(theta)
-                , pos.y + 16.0f - 32.0f * (componentPart.rangeMax / pul::Pi)
+                , pos.y + 16.0f - 32.0f * (variation.range.rangeMax/pul::Pi)
                 )
               , ImColor(ImVec4(1.0f, 0.7f, 0.7f, 1.0f))
               , 2.0f
@@ -1721,7 +1863,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
                 pos
               , ImVec2(
                   pos.x - 16.0f * glm::cos(theta)
-                , pos.y + 16.0f - 32.0f * (componentPart.rangeMax / pul::Pi)
+                , pos.y + 16.0f - 32.0f * (variation.range.rangeMax/pul::Pi)
                 )
               , ImColor(ImVec4(1.0f, 0.7f, 0.7f, 1.0f))
               , 2.0f
@@ -1729,8 +1871,8 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
               // render angles for both sides for previous
               float const prevRange =
-                  componentPartIt == 0ul
-                ? 0.0f : componentParts[componentPartIt-1].rangeMax
+                  variationIt == 0ul
+                ? 0.0f : variations[variationIt-1].range.rangeMax
               ;
               float const prevTheta = prevRange + pul::Pi*0.5f;
 
@@ -1757,60 +1899,105 @@ PUL_PLUGIN_DECL void Animation_UiRender(
             }
 
             if (ImGui::Button("remove")) {
-              componentParts.erase(componentParts.begin()+componentPartIt);
-              -- componentPartIt;
+              variations.erase(variations.begin()+variationIt);
+              -- variationIt;
               ImGui::PopID();
             }
 
-            ImGui::DragFloat(
-              "angle range", &componentPart.rangeMax
-            , 0.0025f, 0.0f, pul::Pi, "%.2f"
-            );
+            switch (state.variationType) {
+              default: break;
+              case pul::animation::VariationType::Normal: {
+                ImGui::Separator();
 
-            angleRangeChanged |= ImGui::IsItemActive();
+                auto & components = variation.normal.data;
 
-            ImGui::Separator();
+                // add components by default TODO this should prolly happen
+                // automatically
+                if (components.size() == 0ul) { components.emplace_back(); }
 
-            auto & componentsDefault = componentPart.data[0];
-            auto & componentsFlipped = componentPart.data[1];
-
-            if (
-                componentsDefault.size() == 0ul
-             && ImGui::Button("add default")
-            ) {
-              componentsDefault.emplace_back();
-            }
-
-            DisplayImGuiComponents(animator, state, piece, componentsDefault);
-
-            if (componentsFlipped.size() > 0ul) {
-
-              ImGui::Text("flipped state");
-              ImGui::Separator();
-
-              ImGui::PushID(1);
-
-              DisplayImGuiComponents(animator, state, piece, componentsFlipped);
-
-              ImGui::PopID();
-            } else {
-              if (ImGui::Button("add flipped")) {
-                componentsFlipped.emplace_back();
+                DisplayImGuiComponents(
+                  animator, state, piece, components
+                );
               }
+              break;
+              case pul::animation::VariationType::Random: {
+                ImGui::Separator();
+
+                auto & components = variation.random.data;
+
+                // add components by default TODO this should prolly happen
+                // automatically
+                if (components.size() == 0ul) { components.emplace_back(); }
+
+                DisplayImGuiComponents(
+                  animator, state, piece, components
+                );
+              }
+              break;
+              case pul::animation::VariationType::Range: {
+                ImGui::DragFloat(
+                  "angle range", &variation.range.rangeMax
+                , 0.0025f, 0.0f, pul::Pi, "%.2f"
+                );
+
+                variationChanged |= ImGui::IsItemActive();
+
+                ImGui::Separator();
+
+                auto & componentsDefault = variation.range.data[0];
+                auto & componentsFlipped = variation.range.data[1];
+
+                if (
+                    componentsDefault.size() == 0ul
+                 && ImGui::Button("add default")
+                ) {
+                  componentsDefault.emplace_back();
+                }
+
+                DisplayImGuiComponents(
+                  animator, state, piece, componentsDefault
+                );
+
+                if (componentsFlipped.size() > 0ul) {
+
+                  ImGui::Text("flipped state");
+                  ImGui::Separator();
+
+                  ImGui::PushID(1);
+
+                  DisplayImGuiComponents(
+                    animator, state, piece, componentsFlipped
+                  );
+
+                  ImGui::PopID();
+                } else {
+                  if (ImGui::Button("add flipped")) {
+                    componentsFlipped.emplace_back();
+                  }
+                }
+              } break;
             }
 
             ImGui::PopID();
             ImGui::TreePop();
           }
 
-          // can only sort when user is not modifying anymore
-          if (!angleRangeChanged) {
-            std::sort(
-              componentParts.begin(), componentParts.end()
-            , [](auto & partA, auto& partB) {
-                return partA.rangeMax < partB.rangeMax;
+          // post modification (ei sorting)
+          switch (state.variationType) {
+            default: break;
+            case pul::animation::VariationType::Normal: break;
+            case pul::animation::VariationType::Random: break;
+            case pul::animation::VariationType::Range:
+              // can only sort when user is not modifying anymore
+              if (!variationChanged) {
+                std::sort(
+                  variations.begin(), variations.end()
+                , [](auto & partA, auto& partB) {
+                    return partA.range.rangeMax < partB.range.rangeMax;
+                  }
+                );
               }
-            );
+            break;
           }
 
           ImGui::TreePop(); // state

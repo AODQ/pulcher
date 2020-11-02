@@ -112,7 +112,6 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
     default: spdlog::critical("Unknown type in LoadPluginFunctions"); break;
     case pul::plugin::Type::Animation: {
       auto & unit = plugin.animation;
-      ctx.LoadFunction(unit.DestroyInstance,   "Animation_DestroyInstance");
       ctx.LoadFunction(unit.ConstructInstance, "Animation_ConstructInstance");
       ctx.LoadFunction(unit.LoadAnimations,    "Animation_LoadAnimations");
       ctx.LoadFunction(unit.Shutdown,          "Animation_Shutdown");

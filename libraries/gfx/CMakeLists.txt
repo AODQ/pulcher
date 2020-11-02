@@ -7,6 +7,7 @@ target_sources(
     src/pulcher-gfx/context.cpp
     src/pulcher-gfx/image.cpp
     src/pulcher-gfx/imgui.cpp
+    src/pulcher-gfx/sokol.cpp
     src/pulcher-gfx/spritesheet.cpp
 )
 

@@ -521,7 +521,7 @@ void ParseLayerObject(
       {pickupAnimationInstance.pieceToState["pickup-bg"].Apply(typeStr, true);}
 
     registry.emplace<pul::animation::ComponentInstance>(
-      pickupEntity, pickupAnimationInstance
+      pickupEntity, std::move(pickupAnimationInstance)
     );
   }
 }

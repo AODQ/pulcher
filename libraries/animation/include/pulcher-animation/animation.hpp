@@ -1,8 +1,8 @@
 #pragma once
 
+#include <pulcher-gfx/sokol.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
-
-#include <sokol/gfx.hpp>
+#include <pulcher-util/log.hpp>
 
 #include <cstdint>
 #include <map>
@@ -13,21 +13,23 @@ namespace pul::animation {
 
   /*
 
-    Animator
-      |
-      |           - State - components...
-      "---- Piece - State - components...
-      |           - State - components...
-      ...
-      |
-      "---- Piece
+    Check `docs/animation-system.dot` for an example layout
+
+    AnimationSystem (json files)
+    |
+    |             - Piece   - State   - Variation   - Component
+    Spritesheet --- Piece --- State --- Variation --- Component
+                  - Piece   - State   - Variation   - Component
 
 
   For example, player has multiple pieces (head, legs, body, hands, etc)
     Each piece has multiple states dictated by some form of logic (running,
     walking, etc)
 
-    Each state has a list of components that are animated thru using the State.
+    Each state has a list of components that are animated thru using the State,
+      however they are controlled by variation; thus allowing different
+      animation states to be played with generic info, such as angle, random,
+      or iteratively.
 
     Pieces are connected together using "parent" and thus they get
     skeletal-esque animation as their offsets are compounded together.
@@ -36,21 +38,57 @@ namespace pul::animation {
 
   */
 
-  struct Animator {
-    // -- structs
-    struct Component {
-      glm::u32vec2 tile = {};
-      glm::i32vec2 originOffset = {};
-      uint32_t msDeltaTimeOverride = -1u;
+  struct Component {
+    glm::u32vec2 tile = {};
+    glm::i32vec2 originOffset = {};
+    uint32_t msDeltaTimeOverride = -1u;
+  };
+
+  enum class VariationType {
+    Range, Random, Normal, Size
+  };
+
+  VariationType ToVariationType(char const * label);
+
+  struct VariationRuntimeInfo {
+    struct Range {
+      float angle; // this gets set by StateIno::angle, so don't set it yourself
+      bool flip; // this gets set by StateInfo::flip; so don't set it yourself
+    };
+    struct Random {
+      size_t idx;
+    };
+    struct Normal {
     };
 
-    struct ComponentPart {
+    Range range;
+    Random random;
+    Normal normal;
+  };
+
+  struct Variation {
+    struct Range {
       float rangeMax = 0.0f;
       std::array<std::vector<Component>, 2> data = {};
     };
+    struct Random {
+      std::vector<Component> data = {};
+    };
+    struct Normal {
+      std::vector<Component> data = {};
+    };
+    Range range;
+    Random random;
+    Normal normal;
 
+    VariationType type;
+  };
+
+  struct Animator {
+    // -- structs
     struct State {
-      std::vector<ComponentPart> components;
+      VariationType variationType;
+      std::vector<Variation> variations;
       uint32_t msDeltaTime;
       bool rotationMirrored = false;
       bool originInterpolates = false;
@@ -58,7 +96,9 @@ namespace pul::animation {
       bool flipXAxis = false;
       bool loops = false;
 
-      size_t ComponentPartIdxLookup(float const angle);
+      // TODO it should be Variation variation instead of
+      //      std::vector<Variation> variations
+      size_t VariationIdxLookup(VariationRuntimeInfo const &);
 
       float MsDeltaTime(Component & component) {
         return
@@ -69,9 +109,7 @@ namespace pul::animation {
         ;
       }
 
-      std::vector<Component> * ComponentLookup(
-        bool const flip, float const angle
-      );
+      std::vector<Component> * ComponentLookup(VariationRuntimeInfo const &);
 
       void (*Update)(State & state) = nullptr;
     };
@@ -105,31 +143,29 @@ namespace pul::animation {
   };
 
   struct Instance {
-    std::string animatorLabel;
-    std::shared_ptr<Animator> animator;
+    std::string animatorLabel = {};
+    std::shared_ptr<Animator> animator = {};
 
     struct StateInfo {
       std::string label;
       float deltaTime = 0.0f;
       size_t componentIt = 0ul;
-      bool flip = false;
       float angle = 0.0f;
+      bool flip = false;
       bool visible = true;
       bool animationFinished = false;
 
-      glm::mat3 cachedLocalSkeletalMatrix = glm::mat3(1.0f);
+      std::shared_ptr<Animator> animator;
+      std::string pieceLabel;
 
-      void Apply(std::string const & nLabel, bool force = false) {
-        if (force || label != nLabel) {
-          label = nLabel;
-          deltaTime = 0.0f;
-          componentIt = 0ul;
-          animationFinished = false;
-        }
-      }
+      VariationRuntimeInfo variationRti = {};
+
+      glm::mat3 cachedLocalSkeletalMatrix = glm::mat3(0.0f);
+
+      void Apply(std::string const & nLabel, bool force = false);
     };
 
-    std::map<std::string, StateInfo> pieceToState;
+    std::map<std::string, StateInfo> pieceToState = {};
 
     // if set to false, the matrix will no longer be recalculated every render
     // frame. This allows an animation matrix to not have to be set every frame
@@ -139,16 +175,16 @@ namespace pul::animation {
 
     glm::vec2 origin = glm::vec2(0.0);
 
-    sg_buffer sgBufferOrigin = {};
-    sg_buffer sgBufferUvCoord = {};
+    std::unique_ptr<pul::gfx::SgBuffer> sgBufferOrigin = {};
+    std::unique_ptr<pul::gfx::SgBuffer> sgBufferUvCoord = {};
     sg_bindings sgBindings = {};
     size_t drawCallCount = 0ul;
 
     bool visible = true;
 
     // keep origin/uv coord buffer data around for streaming updates
-    std::vector<glm::vec2> uvCoordBufferData;
-    std::vector<glm::vec3> originBufferData;
+    std::vector<glm::vec2> uvCoordBufferData = {};
+    std::vector<glm::vec3> originBufferData = {};
   };
 
   struct ComponentInstance {
@@ -156,3 +192,5 @@ namespace pul::animation {
   };
 
 }
+
+char const * ToStr(pul::animation::VariationType type);
