@@ -1,0 +1,103 @@
+digraph AnimationSystem {
+
+  subgraph cluster_AnimationSystem {
+    node [style=filled; shape=record;];
+    "player/data.json";
+    "weapon/data.json";
+    node [color=darkblue; fontcolor=white; style=filled; shape=record;];
+      "AnimationSystem";
+    color = darkblue
+  }
+
+  subgraph cluster_Spritesheet {
+    node [style=filled; shape=record;];
+    "characters";
+    "equipped-weapons";
+    "weapon-projectiles";
+    node [color=darkblue; fontcolor=white; style=filled; shape=record;];
+      "Spritesheets";
+    color = darkblue
+    labeljust = "l";
+  }
+
+  subgraph cluster_Sprite {
+    node [style=filled; shape=record;];
+    "nygelstromn";
+    "volnias-muzzle-flash";
+    "volnias-hit-splash";
+    "volnias-projectile";
+    node [color=darkblue; fontcolor=white; style=filled; shape=record;];
+      "Sprite";
+    color = darkblue
+    labeljust = "l";
+
+  }
+
+  subgraph cluster_Pieces {
+    node [style=filled; shape=record;];
+    "head"; "body"; "legs"; "arms"; "muzzle-flash";
+    node [color=darkblue; fontcolor=white; style=filled; shape=record;];
+      "Pieces";
+    color = darkblue
+    labeljust = "l";
+  }
+
+  subgraph cluster_State {
+    node [style=filled; shape=record;];
+    "muzzle-flash-default"; "head-default"; "jump"; "stand";
+    node [color=darkblue; fontcolor=white; style=filled; shape=record;]; "State";
+    color = darkblue
+    labeljust = "l";
+  }
+
+  subgraph cluster_VariationType {
+    node [style=filled; shape=record;];
+    "Random"; "Range"; "Normal";
+    node [color=darkblue; fontcolor=white; style=filled; shape=record;];
+      "VariationType";
+    color = darkblue
+    labeljust = "l";
+  }
+
+  subgraph cluster_Components {
+    node [style=filled; shape=record;];
+    "projectile-0"; "projectile-1"; "up"; "down";
+    node [color=darkblue; fontcolor=white; style=filled; shape=record;];
+      "Components"
+    color = darkblue
+    labeljust = "l";
+  }
+
+  "player/data.json" -> "characters";
+  "weapon/data.json" -> "equipped-weapons"
+  "weapon/data.json" -> "weapon-projectiles";
+
+  "nygelstromn" -> "head";
+  "nygelstromn" -> "legs";
+  "nygelstromn" -> "arms";
+
+  "head" -> "head-default";
+
+  "legs" -> "jump";
+  "legs" -> "stand";
+
+  "head-default" -> "Range";
+
+  "muzzle-flash" -> "muzzle-flash-default";
+  "muzzle-flash-default" -> "Random";
+
+  "jump" -> "Normal";
+
+  "Range" -> "up";
+  "Range" -> "down";
+
+  "Random" -> "projectile-0";
+  "Random" -> "projectile-1";
+
+  "weapon-projectiles" -> "volnias-muzzle-flash";
+  "weapon-projectiles" -> "volnias-hit-splash";
+  "weapon-projectiles" -> "volnias-projectile";
+
+  "volnias-muzzle-flash" -> "muzzle-flash";
+  "characters" -> "nygelstromn";
+}
