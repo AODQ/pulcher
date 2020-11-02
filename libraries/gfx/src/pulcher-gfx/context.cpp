@@ -17,6 +17,7 @@ sg_pass  scenePass  = {};
 
 void InitializeSokol() {
   sg_desc description = {};
+  description.buffer_pool_size = 5192;
   sg_setup(&description);
 
   simgui_desc_t imguiDescr = {};
