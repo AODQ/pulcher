@@ -537,6 +537,29 @@ void plugin::entity::FireDopplerBeamPrimary(
     , instance.origin, direction * 5.0f, false, true
     );
 
+    { // emitter
+      pul::core::ComponentParticleEmitter emitter;
+
+      // -- animation
+      plugin.animation.ConstructInstance(
+        scene, emitter.animationInstance, scene.AnimationSystem()
+      , "doppler-beam-projectile-trail"
+      );
+
+      emitter
+        .animationInstance
+        .pieceToState["particle"]
+        .Apply("doppler-beam-projectile-trail", true);
+
+      // -- timer
+      emitter.velocity = glm::vec2();
+      emitter.originDist = 1.0f;
+      emitter.prevOrigin = instance.origin;
+
+      registry.emplace<pul::core::ComponentParticleEmitter>(
+        dopplerBeamProjectileEntity, std::move(emitter)
+      );
+    }
 
     pul::core::ComponentParticleExploder exploder;
     exploder.explodeOnDelete = true;
@@ -566,9 +589,7 @@ void plugin::entity::FireDopplerBeamSecondary(
 , bool const flip, glm::mat3 const & matrix
 ) {
   std::array<float, 9> shotPattern {{
-    -0.04f,  0.00f, +0.02f
-  , -0.15f,  0.10f, +0.05f
-  , -0.09f, -0.04f, +0.01f
+    -0.1f,  0.00f, +0.1f
   }};
   for (auto fireAngle : shotPattern) {
     fireAngle += angle;

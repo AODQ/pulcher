@@ -1,7 +1,7 @@
 We'll decide on speed, dmg and other factors on these weapons somewhere on the way, but here's basic description on what they're meant to do.
 
 Bad Fetus: Primary is a hitscan beam that pulls players that hit towards you,
-seconadry is a slow ricocheting projectile that implodes after a while.  You
+secondary is a slow ricocheting projectile that implodes after a while.  You
 can use primary beam to pick up a ball and throw it away further. Secondary
 projectile is affected by gravity, but not after it's thrown with primary.
 
