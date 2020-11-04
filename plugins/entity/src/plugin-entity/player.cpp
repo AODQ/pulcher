@@ -510,6 +510,17 @@ void UpdatePlayerWeapon(
     default: break;
     case pul::core::WeaponType::Pericaliya: {
     } break;
+    case pul::core::WeaponType::Grannibal: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFireGrannibal(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      );
+    } break;
     case pul::core::WeaponType::Volnias: {
       auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireVolnias(

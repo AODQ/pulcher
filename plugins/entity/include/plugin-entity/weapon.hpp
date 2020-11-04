@@ -25,4 +25,24 @@ namespace plugin::entity {
   , glm::vec2 const & origin, float const angle
   , bool const flip, glm::mat3 const & matrix
   );
+
+  void PlayerFireGrannibal(
+    bool const primary, bool const secondary
+  , glm::vec2 & velocity
+  , pul::core::WeaponInfo & weaponInfo
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FireGrannibalPrimary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FireGrannibalSecondary(
+    uint8_t shots, uint8_t shotSet
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
 }

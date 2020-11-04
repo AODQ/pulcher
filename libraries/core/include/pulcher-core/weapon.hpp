@@ -31,7 +31,9 @@ namespace pul::core {
 
     struct WiBadFetus { };
     struct WiDopplerBeam { };
-    struct WiGrannibal { };
+    struct WiGrannibal {
+      float dischargingTimer = 0.0f;
+    };
     struct WiManshredder { };
     struct WiPericaliya { };
     struct WiPMF { };

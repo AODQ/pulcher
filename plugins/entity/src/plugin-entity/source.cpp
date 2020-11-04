@@ -214,7 +214,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
       if (particle.velocity != glm::vec2()) {
         particle.origin += particle.velocity;
-        animation.instance.origin = particle.origin;
+        animation.instance.origin += particle.velocity;
       }
 
       if (animation.instance.pieceToState["particle"].animationFinished) {

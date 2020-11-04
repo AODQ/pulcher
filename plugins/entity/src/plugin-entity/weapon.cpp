@@ -216,3 +216,113 @@ void plugin::entity::FireVolniasSecondary(
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+
+void plugin::entity::PlayerFireGrannibal(
+  bool const primary, [[maybe_unused]] bool const secondary
+, [[maybe_unused]] glm::vec2 & velocity
+, pul::core::WeaponInfo & weaponInfo
+, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, bool const flip, glm::mat3 const & matrix
+) {
+  auto & grannibalInfo =
+    std::get<pul::core::WeaponInfo::WiGrannibal>(weaponInfo.info);
+
+  if (grannibalInfo.dischargingTimer > 0.0f) {
+    grannibalInfo.dischargingTimer -= pul::util::MsPerFrame;
+    return;
+  }
+
+  if (primary) {
+    grannibalInfo.dischargingTimer = 1000.0f;
+    plugin::entity::FireGrannibalPrimary(
+      plugin, scene, origin, direction, angle, flip, matrix
+    );
+  }
+}
+
+void plugin::entity::FireGrannibalPrimary(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, bool const flip, glm::mat3 const & matrix
+) {
+  auto & registry = scene.EnttRegistry();
+
+  {
+    auto grannibalFireEntity = registry.create();
+    registry.emplace<pul::core::ComponentParticle>(
+      grannibalFireEntity, origin, glm::vec2(0.0f, -1.0f)
+    );
+
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "grannibal-fire"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("grannibal-fire", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin + glm::vec2(0.0f, 32.0f);
+    instance.automaticCachedMatrixCalculation = false;
+
+    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      grannibalFireEntity, std::move(instance)
+    );
+  }
+
+  {
+    auto grannibalProjectileEntity = registry.create();
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "grannibal-projectile"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("grannibal-projectile", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin - glm::vec2(0.0f, 8.0f);
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      grannibalProjectileEntity, std::move(instance)
+    );
+
+    registry.emplace<pul::core::ComponentParticle>(
+      grannibalProjectileEntity
+    , instance.origin, direction*5.0f
+    );
+
+    pul::core::ComponentParticleExploder exploder;
+    exploder.explodeOnDelete = true;
+    exploder.explodeOnCollide = true;
+
+    plugin.animation.ConstructInstance(
+      scene, exploder.animationInstance, scene.AnimationSystem()
+    , "grannibal-hit"
+    );
+
+    exploder
+      .animationInstance
+      .pieceToState["particle"].Apply("grannibal-hit", true);
+
+    registry.emplace<pul::core::ComponentParticleExploder>(
+      grannibalProjectileEntity, std::move(exploder)
+    );
+  }
+}
+
+void plugin::entity::FireGrannibalSecondary(
+  [[maybe_unused]] uint8_t shots, [[maybe_unused]] uint8_t shotSet
+, [[maybe_unused]] pul::plugin::Info const & plugin
+, [[maybe_unused]] pul::core::SceneBundle & scene
+, [[maybe_unused]] glm::vec2 const & origin
+, [[maybe_unused]] float const angle
+, [[maybe_unused]] bool const flip
+, [[maybe_unused]] glm::mat3 const & matrix
+) {
+}
