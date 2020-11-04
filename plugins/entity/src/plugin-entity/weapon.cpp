@@ -27,6 +27,7 @@ void plugin::entity::PlayerFireVolnias(
 
   if (!primary && prevPrim && volInfo.primaryChargeupTimer >= 400.0f) {
     audioSystem.volniasEndPrimary = true;
+    weaponInfo.cooldown = 300.0f;
   }
 
   prevPrim = primary;
@@ -52,7 +53,7 @@ void plugin::entity::PlayerFireVolnias(
         plugin, scene, origin, direction, angle, flip, matrix
       );
 
-      velocity += -direction*0.5f;
+      velocity += -direction*0.7f;
     }
   }
 
@@ -73,13 +74,13 @@ void plugin::entity::PlayerFireVolnias(
       volInfo.secondaryChargeupTimer += pul::util::MsPerFrame;
       if (
           !volInfo.overchargedSecondary
-       && volInfo.secondaryChargeupTimer >= 1000.0f
+       && volInfo.secondaryChargeupTimer >= 5500.0f
       ) {
         audioSystem.volniasPrefireSecondary = true;
         volInfo.overchargedSecondary = true;
       }
 
-      if (volInfo.secondaryChargeupTimer >= 1800.0f) {
+      if (volInfo.secondaryChargeupTimer >= 6000.0f) {
         forceCooldown = true;
       }
     }
@@ -87,7 +88,7 @@ void plugin::entity::PlayerFireVolnias(
 
   // secondary fires on release
   if (!secondary || forceCooldown) {
-    volInfo.secondaryChargeupTimer = 0.0f;
+    volInfo.secondaryChargeupTimer = 580.0f;
     volInfo.overchargedSecondary = false;
     if (volInfo.secondaryChargedShots > 0u) {
       if (!volInfo.dischargingSecondary) {
@@ -105,6 +106,7 @@ void plugin::entity::PlayerFireVolnias(
         if (--volInfo.secondaryChargedShots == 0u) {
           volInfo.dischargingSecondary = false;
           volInfo.dischargingTimer = 0.0f;
+          weaponInfo.cooldown = 300.0f;
         }
       }
     }
