@@ -18,7 +18,7 @@
 
 namespace {
 
-bool showPhysicsQueries = true;
+bool showPhysicsQueries = false;
 
 struct DebugRenderInfo {
   sg_buffer bufferOrigin;

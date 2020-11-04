@@ -569,6 +569,14 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
                 "muzzle trail left {}", grannibalInfo.primaryMuzzleTrailLeft
               );
             } break;
+            case pul::core::WeaponType::DopplerBeam: {
+              auto & volInfo =
+                std::get<pul::core::WeaponInfo::WiDopplerBeam>(weapon.info);
+
+              pul::imgui::Text(
+                "chargeup timer {}", volInfo.dischargingTimer
+              );
+            } break;
             case pul::core::WeaponType::Volnias: {
               auto & volInfo =
                 std::get<pul::core::WeaponInfo::WiVolnias>(weapon.info);

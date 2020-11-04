@@ -30,7 +30,9 @@ namespace pul::core {
     WeaponType type;
 
     struct WiBadFetus { };
-    struct WiDopplerBeam { };
+    struct WiDopplerBeam {
+      float dischargingTimer = 0.0f;
+    };
     struct WiGrannibal {
       float dischargingTimer = 0.0f;
       float primaryMuzzleTrailTimer = 0.0f;

@@ -448,3 +448,133 @@ void plugin::entity::FireGrannibalSecondary(
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+
+void plugin::entity::PlayerFireDopplerBeam(
+  bool const primary, bool const secondary
+, [[maybe_unused]] glm::vec2 & velocity
+, pul::core::WeaponInfo & weaponInfo
+, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, bool const flip, glm::mat3 const & matrix
+) {
+  auto & dopplerBeamInfo =
+    std::get<pul::core::WeaponInfo::WiDopplerBeam>(weaponInfo.info);
+
+  if (dopplerBeamInfo.dischargingTimer > 0.0f) {
+    dopplerBeamInfo.dischargingTimer -= pul::util::MsPerFrame;
+    return;
+  }
+
+  if (primary) {
+    dopplerBeamInfo.dischargingTimer = 150.0f;
+    plugin::entity::FireDopplerBeamPrimary(
+      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    );
+  }
+
+  if (secondary) {
+    dopplerBeamInfo.dischargingTimer = 1000.0f;
+    plugin::entity::FireDopplerBeamSecondary(
+      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    );
+  }
+}
+
+void plugin::entity::FireDopplerBeamPrimary(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, [[maybe_unused]] pul::core::WeaponInfo & weaponInfo
+, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, bool const flip, glm::mat3 const & matrix
+) {
+  auto & registry = scene.EnttRegistry();
+
+  {
+    auto dopplerBeamFireEntity = registry.create();
+    registry.emplace<pul::core::ComponentParticle>(
+      dopplerBeamFireEntity, origin
+    );
+
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "doppler-beam-fire"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("doppler-beam-fire", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin + glm::vec2(0.0f, 32.0f);
+    instance.automaticCachedMatrixCalculation = false;
+
+    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      dopplerBeamFireEntity, std::move(instance)
+    );
+  }
+
+  {
+    auto dopplerBeamProjectileEntity = registry.create();
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "doppler-beam-projectile"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("doppler-beam-projectile", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin - glm::vec2(0.0f, 8.0f);
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      dopplerBeamProjectileEntity, std::move(instance)
+    );
+
+    registry.emplace<pul::core::ComponentParticle>(
+      dopplerBeamProjectileEntity
+    , instance.origin, direction * 5.0f, false, true
+    );
+
+
+    pul::core::ComponentParticleExploder exploder;
+    exploder.explodeOnDelete = true;
+    exploder.explodeOnCollide = true;
+
+    plugin.animation.ConstructInstance(
+      scene, exploder.animationInstance, scene.AnimationSystem()
+    , "doppler-beam-hit"
+    );
+
+    exploder
+      .animationInstance
+      .pieceToState["particle"].Apply("doppler-beam-hit", true);
+
+    registry.emplace<pul::core::ComponentParticleExploder>(
+      dopplerBeamProjectileEntity, std::move(exploder)
+    );
+  }
+}
+
+void plugin::entity::FireDopplerBeamSecondary(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::WeaponInfo & weaponInfo
+, glm::vec2 const & origin
+, [[maybe_unused]] glm::vec2 const & direction
+, float const angle
+, bool const flip, glm::mat3 const & matrix
+) {
+  std::array<float, 9> shotPattern {{
+    -0.04f,  0.00f, +0.02f
+  , -0.15f,  0.10f, +0.05f
+  , -0.09f, -0.04f, +0.01f
+  }};
+  for (auto fireAngle : shotPattern) {
+    fireAngle += angle;
+    auto dir = glm::vec2(glm::sin(fireAngle), glm::cos(fireAngle));
+    plugin::entity::FireDopplerBeamPrimary(
+      plugin, scene, weaponInfo, origin, dir, fireAngle, flip, matrix
+    );
+  }
+}

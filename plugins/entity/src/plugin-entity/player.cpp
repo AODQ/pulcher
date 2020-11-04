@@ -521,6 +521,17 @@ void UpdatePlayerWeapon(
       , weaponFlip, weaponMatrix
       );
     } break;
+    case pul::core::WeaponType::DopplerBeam: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFireDopplerBeam(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      );
+    } break;
     case pul::core::WeaponType::Volnias: {
       auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireVolnias(
