@@ -1,6 +1,7 @@
 #include <plugin-entity/player.hpp>
 
 #include <pulcher-animation/animation.hpp>
+#include <pulcher-controls/controls.hpp>
 #include <pulcher-core/particle.hpp>
 #include <pulcher-core/pickup.hpp>
 #include <pulcher-core/player.hpp>
@@ -21,14 +22,22 @@
 #include <glm/gtx/transform2.hpp>
 #include <imgui/imgui.hpp>
 
+#include <random>
+
 namespace {
+
+bool botPlays = false;
 
 struct ComponentLabel {
   std::string label = {};
 };
 
-struct ComponentControllable {
+struct ComponentController {
+  pul::controls::Controller controller;
 };
+
+struct ComponentPlayerControllable { };
+struct ComponentBotControllable { };
 
 struct ComponentCamera {
 };
@@ -42,35 +51,73 @@ PUL_PLUGIN_DECL void Entity_StartScene(
 ) {
   auto & registry = scene.EnttRegistry();
 
-  auto playerEntity = registry.create();
-  registry.emplace<pul::core::ComponentPlayer>(playerEntity);
-  registry.emplace<ComponentControllable>(playerEntity);
-  registry.emplace<ComponentCamera>(playerEntity);
-  registry.emplace<ComponentLabel>(playerEntity, "Player");
-
-  pul::animation::Instance instance;
-  plugin.animation.ConstructInstance(
-    scene, instance, scene.AnimationSystem(), "nygelstromn"
-  );
-  registry.emplace<pul::animation::ComponentInstance>(
-    playerEntity, std::move(instance)
-  );
-
+  // player
   {
-    auto & player = registry.get<pul::core::ComponentPlayer>(playerEntity);
+    auto playerEntity = registry.create();
+    registry.emplace<pul::core::ComponentPlayer>(playerEntity);
+    registry.emplace<ComponentController>(playerEntity);
+    registry.emplace<ComponentPlayerControllable>(playerEntity);
+    registry.emplace<ComponentCamera>(playerEntity);
+    registry.emplace<ComponentLabel>(playerEntity, "Player");
 
-    // overwrite with player component for persistent reloads
-    player = scene.StoredDebugPlayerComponent();
-
-    pul::animation::Instance weaponInstance;
+    pul::animation::Instance instance;
     plugin.animation.ConstructInstance(
-      scene, weaponInstance, scene.AnimationSystem(), "weapons"
+      scene, instance, scene.AnimationSystem(), "nygelstromn"
+    );
+    registry.emplace<pul::animation::ComponentInstance>(
+      playerEntity, std::move(instance)
     );
 
-    player.weaponAnimation = registry.create();
-    registry.emplace<pul::animation::ComponentInstance>(
-      player.weaponAnimation, std::move(weaponInstance)
+    // load up player weapon animation & state from previous plugin load
+    {
+      auto & player = registry.get<pul::core::ComponentPlayer>(playerEntity);
+
+      // overwrite with player component for persistent reloads
+      player = scene.StoredDebugPlayerComponent();
+
+      // load weapon animation
+      pul::animation::Instance weaponInstance;
+      plugin.animation.ConstructInstance(
+        scene, weaponInstance, scene.AnimationSystem(), "weapons"
+      );
+      player.weaponAnimation = registry.create();
+
+      registry.emplace<pul::animation::ComponentInstance>(
+        player.weaponAnimation, std::move(weaponInstance)
+      );
+    }
+  }
+
+  // bot/AI
+  {
+    auto botEntity = registry.create();
+    registry.emplace<pul::core::ComponentPlayer>(botEntity);
+    registry.emplace<ComponentController>(botEntity);
+    registry.emplace<ComponentBotControllable>(botEntity);
+    registry.emplace<ComponentLabel>(botEntity, "Bot");
+
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "nygelstromn"
     );
+    registry.emplace<pul::animation::ComponentInstance>(
+      botEntity, std::move(instance)
+    );
+
+    {
+      auto & bot = registry.get<pul::core::ComponentPlayer>(botEntity);
+
+      // load weapon animation
+      pul::animation::Instance weaponInstance;
+      plugin.animation.ConstructInstance(
+        scene, weaponInstance, scene.AnimationSystem(), "weapons"
+      );
+      bot.weaponAnimation = registry.create();
+
+      registry.emplace<pul::animation::ComponentInstance>(
+        bot.weaponAnimation, std::move(weaponInstance)
+      );
+    }
   }
 }
 
@@ -80,8 +127,8 @@ PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
   // store player
   auto view =
     registry.view<
-      ComponentControllable, pul::core::ComponentPlayer, ComponentCamera
-    , pul::animation::ComponentInstance
+      ComponentPlayerControllable, pul::core::ComponentPlayer
+    , ComponentCamera, pul::animation::ComponentInstance
     >();
 
   for (auto entity : view) {
@@ -208,19 +255,90 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
     }
   }
 
+  { // -- bot
+    auto view =
+      registry.view<
+        ComponentController, ComponentBotControllable
+      , pul::core::ComponentPlayer, pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      auto & bot = view.get<pul::core::ComponentPlayer>(entity);
+
+      auto & controller = view.get<ComponentController>(entity).controller;
+
+      static std::random_device device;
+      static std::mt19937 generator(device());
+      static std::uniform_int_distribution<int> distribution(1, 1000);
+
+      controller.previous = std::move(controller.current);
+      controller.current = {};
+
+      if (::botPlays)
+      { // update controls
+
+        bool dir =
+            controller.previous.movementHorizontal
+         == pul::controls::Controller::Movement::Right
+        ;
+
+        static float angle = 0.0f;
+        if (distribution(generator) < 15) {
+          dir ^= 1;
+          controller.previous.movementHorizontal =
+            dir
+              ? pul::controls::Controller::Movement::Right
+              : pul::controls::Controller::Movement::Left
+          ;
+        }
+        if (distribution(generator) < 25) {
+          controller.current.jump = true;
+        }
+        if (distribution(generator) < 5) {
+          controller.current.crouch = true;
+        }
+        if (distribution(generator) < 10) {
+          controller.current.dash = true;
+        }
+        controller.current.lookAngle = dir ? -4 : +3;
+        controller.current.lookDirection =
+          glm::vec2(glm::cos(angle), glm::sin(angle));
+
+        {
+          controller.current.movementHorizontal =
+            dir
+              ? pul::controls::Controller::Movement::Right
+              : pul::controls::Controller::Movement::Left
+          ;
+        }
+      }
+
+      plugin::entity::UpdatePlayer(
+        plugin, scene
+      , controller, bot
+      , view.get<pul::animation::ComponentInstance>(entity)
+      );
+    }
+  }
+
   { // -- player
     auto view =
       registry.view<
-        ComponentControllable, pul::core::ComponentPlayer, ComponentCamera
+        ComponentController, ComponentPlayerControllable
+      , pul::core::ComponentPlayer, ComponentCamera
       , pul::animation::ComponentInstance
       >();
 
     for (auto entity : view) {
+      auto & player = view.get<pul::core::ComponentPlayer>(entity);
       plugin::entity::UpdatePlayer(
-        plugin, scene
-      , view.get<pul::core::ComponentPlayer>(entity)
+        plugin, scene, scene.PlayerController()
+      , player
       , view.get<pul::animation::ComponentInstance>(entity)
       );
+
+      // center camera on this
+      scene.cameraOrigin = glm::i32vec2(player.origin);
     }
   }
 }
@@ -229,6 +347,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   ImGui::Begin("Entity");
+  ImGui::Checkbox("allow bot to move around", &::botPlays);
   registry.each([&](auto entity) {
     pul::imgui::Text("entity ID {}", static_cast<size_t>(entity));
 
@@ -347,21 +466,6 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
       ImGui::End();
     }
 
-    if (registry.has<ComponentControllable>(entity)) {
-      ImGui::Text("--- controllable ---"); ImGui::SameLine(); ImGui::Separator();
-    }
-
-    if (registry.has<ComponentCamera>(entity)) {
-      ImGui::Text("--- camera ---"); ImGui::SameLine(); ImGui::Separator();
-    }
-
-    if (registry.has<pul::animation::ComponentInstance>(entity)) {
-      ImGui::Text("--- animation ---"); ImGui::SameLine(); ImGui::Separator();
-      auto & self = registry.get<pul::animation::ComponentInstance>(entity);
-      pul::imgui::Text("label: {}", self.instance.animator->label);
-      pul::imgui::Text("origin: {}", self.instance.origin);
-    }
-
     ImGui::Separator();
     ImGui::Separator();
   });
@@ -369,7 +473,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
 
   auto view =
     registry.view<
-      ComponentControllable, pul::core::ComponentPlayer, ComponentCamera
+      pul::core::ComponentPlayer
     , pul::animation::ComponentInstance
     >();
 

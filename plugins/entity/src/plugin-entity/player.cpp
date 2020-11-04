@@ -459,11 +459,12 @@ void UpdatePlayerPhysics(
 
 void UpdatePlayerWeapon(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::controls::Controller const & controls
 , pul::core::ComponentPlayer & player
 , pul::animation::ComponentInstance & playerAnim
 ) {
-  auto & controller = scene.PlayerController().current;
-  auto & controllerPrev = scene.PlayerController().previous;
+  auto const & controller = controls.current;
+  auto const & controllerPrev = controls.previous;
 
   if (!controllerPrev.weaponSwitchNext && controller.weaponSwitchNext) {
     player.inventory.ChangeWeapon(
@@ -498,6 +499,13 @@ void UpdatePlayerWeapon(
 
   bool const weaponFlip = playerAnim.instance.pieceToState["legs"].flip;
 
+  if (weapon.cooldown > 0.0f) {
+    weapon.cooldown -= pul::util::MsPerFrame;
+    return; // do not execute weapon code
+  } else {
+    weapon.cooldown = 0.0f;
+  }
+
   switch (player.inventory.currentWeapon) {
     default: break;
     case pul::core::WeaponType::Pericaliya: {
@@ -520,13 +528,15 @@ void UpdatePlayerWeapon(
 
 void plugin::entity::UpdatePlayer(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::controls::Controller const & controls
 , pul::core::ComponentPlayer & player
 , pul::animation::ComponentInstance & playerAnim
 ) {
 
   auto & registry = scene.EnttRegistry();
-  auto & controller = scene.PlayerController().current;
-  auto & controllerPrev = scene.PlayerController().previous;
+
+  auto const & controller = controls.current;
+  auto const & controllerPrev = controls.previous;
 
   // error checking
   if (glm::abs(player.velocity.x) > 1000.0f) {
@@ -561,7 +571,6 @@ void plugin::entity::UpdatePlayer(
   bool const prevGrounded = player.grounded;
 
   // gravity/ground check
-  if (player.velocity.y >= 0.0f)
   {
     pul::physics::IntersectorPoint point;
     point.origin = player.origin + glm::vec2(0.0f, 1.0f);
@@ -1092,8 +1101,6 @@ void plugin::entity::UpdatePlayer(
 
     playerAnim.instance.pieceToState["head"].angle = angle;
 
-    // center camera on this
-    scene.cameraOrigin = glm::i32vec2(player.origin);
     playerAnim.instance.origin = player.origin;
 
     // center weapon origin, first have to update cache for this animation to
@@ -1129,7 +1136,7 @@ void plugin::entity::UpdatePlayer(
     }
   }
 
-  ::UpdatePlayerWeapon(plugin, scene, player, playerAnim);
+  ::UpdatePlayerWeapon(plugin, scene, controls, player, playerAnim);
   ::PlayerCheckPickups(scene, player);
 
   auto & audioSystem = scene.AudioSystem();
