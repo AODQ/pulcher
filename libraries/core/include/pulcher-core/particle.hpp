@@ -2,6 +2,7 @@
 
 #include <pulcher-animation/animation.hpp>
 
+#include <functional>
 #include <string>
 
 namespace pul::core {
@@ -11,6 +12,8 @@ namespace pul::core {
     glm::vec2 velocity = {};
     bool physicsBound = false;
     bool gravityAffected = false;
+
+    std::function<void(glm::vec2 & velocity)> velocityModifierFn = {};
   };
 
   struct ComponentParticleGrenade {

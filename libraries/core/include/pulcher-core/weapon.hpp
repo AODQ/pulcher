@@ -39,7 +39,11 @@ namespace pul::core {
       uint8_t primaryMuzzleTrailLeft = 0u;
     };
     struct WiManshredder { };
-    struct WiPericaliya { };
+    struct WiPericaliya {
+      float dischargingTimer = 0.0f;
+      bool isPrimaryActive;
+      bool isSecondaryActive;
+    };
     struct WiPMF { };
     struct WiUnarmed { };
     struct WiVolnias {

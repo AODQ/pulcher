@@ -339,7 +339,7 @@ void plugin::entity::FireGrannibalPrimary(
 
       // -- timer
       emitter.velocity = glm::vec2();
-      emitter.originDist = 11.0f;
+      emitter.originDist = 10.0f;
       emitter.prevOrigin = instance.origin;
 
       registry.emplace<pul::core::ComponentParticleEmitter>(
@@ -599,3 +599,153 @@ void plugin::entity::FireDopplerBeamSecondary(
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
+void plugin::entity::PlayerFirePericaliya(
+  bool const primary, bool const secondary
+, glm::vec2 & velocity
+, pul::core::WeaponInfo & weaponInfo
+, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, bool const flip, glm::mat3 const & matrix
+) {
+  auto & pericaliyaInfo =
+    std::get<pul::core::WeaponInfo::WiPericaliya>(weaponInfo.info);
+
+  if (pericaliyaInfo.dischargingTimer > 0.0f) {
+    pericaliyaInfo.dischargingTimer -= pul::util::MsPerFrame;
+    return;
+  }
+
+  if (primary) {
+    pericaliyaInfo.dischargingTimer = 1000.0f;
+    plugin::entity::FirePericaliyaPrimary(
+      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    );
+  }
+
+  if (secondary) {
+    pericaliyaInfo.dischargingTimer = 1000.0f;
+    plugin::entity::FirePericaliyaSecondary(
+      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    );
+  }
+}
+
+void plugin::entity::FirePericaliyaPrimary(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::WeaponInfo & weaponInfo
+, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, bool const flip, glm::mat3 const & matrix
+) {
+  auto & registry = scene.EnttRegistry();
+
+  auto & pericaliyaInfo =
+    std::get<pul::core::WeaponInfo::WiPericaliya>(weaponInfo.info);
+
+  {
+    auto pericaliyaMuzzleEntity = registry.create();
+    registry.emplace<pul::core::ComponentParticle>(
+      pericaliyaMuzzleEntity, origin
+    );
+
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "pericaliya-muzzle"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("pericaliya-muzzle", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin + glm::vec2(0.0f, 32.0f);
+    instance.automaticCachedMatrixCalculation = false;
+
+    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      pericaliyaMuzzleEntity, std::move(instance)
+    );
+  }
+
+  {
+    auto pericaliyaProjectileEntity = registry.create();
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "pericaliya-primary-projectile"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("pericaliya-primary-projectile", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin - glm::vec2(-20.0f, -20.0f)*direction;
+
+    { // emitter
+      pul::core::ComponentParticleEmitter emitter;
+
+      // -- animation
+      plugin.animation.ConstructInstance(
+        scene, emitter.animationInstance, scene.AnimationSystem()
+      , "pericaliya-primary-projectile-trail"
+      );
+
+      emitter
+        .animationInstance
+        .pieceToState["particle"]
+        .Apply("pericaliya-primary-projectile-trail", true);
+
+      // -- timer
+      emitter.velocity = glm::vec2();
+      emitter.originDist = 5.0f;
+      emitter.prevOrigin = instance.origin;
+
+      registry.emplace<pul::core::ComponentParticleEmitter>(
+        pericaliyaProjectileEntity, std::move(emitter)
+      );
+    }
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      pericaliyaProjectileEntity, std::move(instance)
+    );
+
+    registry.emplace<pul::core::ComponentParticle>(
+      pericaliyaProjectileEntity
+    , instance.origin, direction, false, false
+    , [&direction](glm::vec2 & vel) {
+        vel = direction*4.0f;
+      }
+    );
+
+    pul::core::ComponentParticleExploder exploder;
+    exploder.explodeOnDelete = true;
+    exploder.explodeOnCollide = true;
+
+    plugin.animation.ConstructInstance(
+      scene, exploder.animationInstance, scene.AnimationSystem()
+    , "pericaliya-primary-explosion"
+    );
+
+    exploder
+      .animationInstance
+      .pieceToState["particle"].Apply("pericaliya-primary-explosion", true);
+
+    registry.emplace<pul::core::ComponentParticleExploder>(
+      pericaliyaProjectileEntity, std::move(exploder)
+    );
+  }
+}
+
+void plugin::entity::FirePericaliyaSecondary(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::WeaponInfo & weaponInfo
+, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, bool const flip, glm::mat3 const & matrix
+) {
+}
+
+#pragma GCC diagnostic pop

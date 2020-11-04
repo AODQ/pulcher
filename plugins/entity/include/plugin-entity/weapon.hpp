@@ -67,4 +67,25 @@ namespace plugin::entity {
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
   );
+
+  void PlayerFirePericaliya(
+    bool const primary, bool const secondary
+  , glm::vec2 & velocity
+  , pul::core::WeaponInfo & weaponInfo
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FirePericaliyaPrimary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FirePericaliyaSecondary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
 }

@@ -281,6 +281,9 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           }
         }
 
+        if (particle.velocityModifierFn)
+          { particle.velocityModifierFn(particle.velocity); }
+
         // TODO fix this
         particle.origin += particle.velocity;
         animation.instance.origin += particle.velocity;
@@ -440,6 +443,9 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         animationInstance
           .pieceToState["particle"]
           .Apply(emitter.animationInstance.animator->label.c_str(), true);
+
+        animationInstance.pieceToState["particle"].angle
+          = animation.instance.pieceToState["particle"].angle;
 
         animationInstance.origin = animation.instance.origin;
 

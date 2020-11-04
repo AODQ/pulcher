@@ -509,6 +509,15 @@ void UpdatePlayerWeapon(
   switch (player.inventory.currentWeapon) {
     default: break;
     case pul::core::WeaponType::Pericaliya: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFirePericaliya(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      );
     } break;
     case pul::core::WeaponType::Grannibal: {
       auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
