@@ -33,6 +33,8 @@ namespace pul::core {
     struct WiDopplerBeam { };
     struct WiGrannibal {
       float dischargingTimer = 0.0f;
+      float primaryMuzzleTrailTimer = 0.0f;
+      uint8_t primaryMuzzleTrailLeft = 0u;
     };
     struct WiManshredder { };
     struct WiPericaliya { };

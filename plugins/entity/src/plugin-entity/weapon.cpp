@@ -9,6 +9,41 @@
 
 #include <entt/entt.hpp>
 
+namespace {
+
+void GrannibalMuzzleTrail(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, glm::vec2 const & origin
+, bool const flip, glm::mat3 const & matrix
+) {
+  auto & registry = scene.EnttRegistry();
+  auto grannibalFireEntity = registry.create();
+
+  registry.emplace<pul::core::ComponentParticle>(
+    grannibalFireEntity, origin, glm::vec2(0.0f, -1.0f)
+  );
+
+  pul::animation::Instance instance;
+  plugin.animation.ConstructInstance(
+    scene, instance, scene.AnimationSystem(), "grannibal-fire"
+  );
+  auto & state = instance.pieceToState["particle"];
+  state.Apply("grannibal-fire", true);
+  state.angle = 0.0f;
+  state.flip = flip;
+
+  instance.origin = origin + glm::vec2(0.0f, 32.0f);
+  instance.automaticCachedMatrixCalculation = false;
+
+  plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+
+  registry.emplace<pul::animation::ComponentInstance>(
+    grannibalFireEntity, std::move(instance)
+  );
+}
+
+}
+
 void plugin::entity::PlayerFireVolnias(
   bool const primary, bool const secondary
 , glm::vec2 & velocity
@@ -230,6 +265,15 @@ void plugin::entity::PlayerFireGrannibal(
   auto & grannibalInfo =
     std::get<pul::core::WeaponInfo::WiGrannibal>(weaponInfo.info);
 
+  if (grannibalInfo.primaryMuzzleTrailLeft > 0) {
+    if (grannibalInfo.primaryMuzzleTrailTimer <= 0.0f) {
+      ::GrannibalMuzzleTrail(plugin, scene, origin, flip, matrix);
+      -- grannibalInfo.primaryMuzzleTrailLeft;
+      grannibalInfo.primaryMuzzleTrailTimer = 50.0f;
+    }
+    grannibalInfo.primaryMuzzleTrailTimer -= pul::util::MsPerFrame;
+  }
+
   if (grannibalInfo.dischargingTimer > 0.0f) {
     grannibalInfo.dischargingTimer -= pul::util::MsPerFrame;
     return;
@@ -238,42 +282,26 @@ void plugin::entity::PlayerFireGrannibal(
   if (primary) {
     grannibalInfo.dischargingTimer = 1000.0f;
     plugin::entity::FireGrannibalPrimary(
-      plugin, scene, origin, direction, angle, flip, matrix
+      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     );
   }
 }
 
 void plugin::entity::FireGrannibalPrimary(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 ) {
   auto & registry = scene.EnttRegistry();
 
-  {
-    auto grannibalFireEntity = registry.create();
-    registry.emplace<pul::core::ComponentParticle>(
-      grannibalFireEntity, origin, glm::vec2(0.0f, -1.0f)
-    );
+  auto & grannibalInfo =
+    std::get<pul::core::WeaponInfo::WiGrannibal>(weaponInfo.info);
 
-    pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
-      scene, instance, scene.AnimationSystem(), "grannibal-fire"
-    );
-    auto & state = instance.pieceToState["particle"];
-    state.Apply("grannibal-fire", true);
-    state.angle = angle;
-    state.flip = flip;
+  grannibalInfo.primaryMuzzleTrailLeft = 8;
+  grannibalInfo.primaryMuzzleTrailTimer = 50.0f;
 
-    instance.origin = origin + glm::vec2(0.0f, 32.0f);
-    instance.automaticCachedMatrixCalculation = false;
-
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
-
-    registry.emplace<pul::animation::ComponentInstance>(
-      grannibalFireEntity, std::move(instance)
-    );
-  }
+  ::GrannibalMuzzleTrail(plugin, scene, origin, flip, matrix);
 
   {
     auto grannibalProjectileEntity = registry.create();

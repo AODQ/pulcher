@@ -362,6 +362,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
       ImGui::Begin("Player");
       ImGui::Text("--- player ---"); ImGui::SameLine(); ImGui::Separator();
       auto & self = registry.get<pul::core::ComponentPlayer>(entity);
+      ImGui::PushID(&self);
       pul::imgui::Text(
         "weapon anim ID {}", static_cast<size_t>(self.weaponAnimation)
       );
@@ -438,7 +439,22 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
 
           switch (weapon.type) {
             default: break;
-            case pul::core::WeaponType::Volnias:
+            case pul::core::WeaponType::Grannibal: {
+              auto & grannibalInfo =
+                std::get<pul::core::WeaponInfo::WiGrannibal>(weapon.info);
+
+              pul::imgui::Text(
+                "discharge timer {}", grannibalInfo.dischargingTimer
+              );
+              pul::imgui::Text(
+                "primary muzzle trail timer {}"
+              , grannibalInfo.primaryMuzzleTrailTimer
+              );
+              pul::imgui::Text(
+                "muzzle trail left {}", grannibalInfo.primaryMuzzleTrailLeft
+              );
+            } break;
+            case pul::core::WeaponType::Volnias: {
               auto & volInfo =
                 std::get<pul::core::WeaponInfo::WiVolnias>(weapon.info);
 
@@ -449,9 +465,9 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
                 "secondary charged shots {}", volInfo.secondaryChargedShots
               );
               pul::imgui::Text(
-                "seocndary chargeup timer {}", volInfo.secondaryChargeupTimer
+                "secondary chargeup timer {}", volInfo.secondaryChargeupTimer
               );
-            break;
+            } break;
           }
 
           ImGui::PopID(); // weapon
@@ -463,6 +479,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
       pul::imgui::Text(
         "prev    weapon: '{}'", ToStr(self.inventory.previousWeapon)
       );
+      ImGui::PopID();
       ImGui::End();
     }
 
