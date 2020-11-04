@@ -61,7 +61,7 @@ bool pul::gfx::InitializeContext(pul::core::Config & config) {
   glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
   glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
   glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
-  glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
+  glfwWindowHint(GLFW_FLOATING, GLFW_FALSE);
   glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
   glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_FALSE);
   glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_FALSE);
