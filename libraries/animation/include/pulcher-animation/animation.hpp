@@ -131,6 +131,7 @@ namespace pul::animation {
     pul::gfx::Spritesheet spritesheet;
     std::map<std::string, pul::animation::Animator::Piece> pieces;
     std::vector<SkeletalPiece> skeleton;
+    glm::uvec2 uvCoordOffset = glm::uvec2(0);
     std::string label;
     std::string filename;
   };

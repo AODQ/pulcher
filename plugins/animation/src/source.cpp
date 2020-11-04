@@ -254,7 +254,10 @@ void ComputeVertices(
     if (state.flipXAxis) { uv.x = 1.0f - uv.x; }
 
     instance.uvCoordBufferData[indexOffset] =
-        (uv*pieceDimensions + glm::vec2(component.tile)*pieceDimensions)
+      (
+          (uv*pieceDimensions + glm::vec2(component.tile)*pieceDimensions)
+        + glm::vec2(instance.animator->uvCoordOffset)
+      )
       * instance.animator->spritesheet.InvResolution()
     ;
     auto origin = glm::vec3(v*pieceDimensions, 1.0f);
@@ -525,19 +528,22 @@ void ReconstructInstances(pul::core::SceneBundle & scene) {
 }
 
 void ImGuiRenderSpritesheetTile(
-  pul::gfx::Spritesheet & spritesheet
+  pul::animation::Animator & animator
 , pul::animation::Animator::Piece & piece
 , pul::animation::Component & component
 , float alpha = 1.0f
 ) {
   auto pieceDimensions = glm::vec2(piece.dimensions);
   auto const imgUl =
-    glm::vec2(component.tile)*pieceDimensions
-  * spritesheet.InvResolution()
+    (
+      glm::vec2(animator.uvCoordOffset)
+    + glm::vec2(component.tile)*pieceDimensions
+    )
+  * animator.spritesheet.InvResolution()
   ;
 
   auto const imgLr =
-    imgUl + pieceDimensions * spritesheet.InvResolution()
+    imgUl + pieceDimensions * animator.spritesheet.InvResolution()
   ;
 
   ImVec2 dimensions = ImVec2(piece.dimensions.x, piece.dimensions.y);
@@ -548,7 +554,7 @@ void ImGuiRenderSpritesheetTile(
   }
 
   ImGui::Image(
-    reinterpret_cast<void *>(spritesheet.Image().id)
+    reinterpret_cast<void *>(animator.spritesheet.Image().id)
   , dimensions
   , ImVec2(imgUl.x, 1.0f-imgUl.y)
   , ImVec2(imgLr.x, 1.0f-imgLr.y)
@@ -591,13 +597,13 @@ void DisplayImGuiComponent(
   ImVec2 pos = ImGui::GetCursorScreenPos();
   if (animShowPreviousSprite > 0.0f) {
     ::ImGuiRenderSpritesheetTile(
-      animator.spritesheet, piece
+      animator, piece
     , components[(components.size() + componentIt - 1) % components.size()]
     , animShowPreviousSprite
     );
   }
   ImGui::SetCursorScreenPos(pos);
-  ::ImGuiRenderSpritesheetTile(animator.spritesheet, piece, component);
+  ::ImGuiRenderSpritesheetTile(animator, piece, component);
 
   if (!::animShowZoom) {
     ImGui::NextColumn();
@@ -681,15 +687,12 @@ void DisplayImGuiComponents(
     ImVec2 pos = ImGui::GetCursorScreenPos();
     if (animShowPreviousSprite > 0.0f) {
       ::ImGuiRenderSpritesheetTile(
-        animator.spritesheet,
-        piece
+        animator, piece
       , components[(components.size() + componentIt - 1) % components.size()]
       );
     }
     ImGui::SetCursorScreenPos(pos);
-    ::ImGuiRenderSpritesheetTile(
-      animator.spritesheet, piece, components[componentIt]
-    );
+    ::ImGuiRenderSpritesheetTile(animator, piece, components[componentIt]);
 
     ImGui::Separator();
   }
@@ -792,6 +795,14 @@ cJSON * SaveAnimation(pul::animation::Animator& animator) {
 
   cJSON_AddItemToObject(
     spritesheetJson, "label", cJSON_CreateString(animator.label.c_str())
+  );
+
+  cJSON_AddItemToObject(
+    spritesheetJson, "uv-offset-x", cJSON_CreateInt(animator.uvCoordOffset.x)
+  );
+
+  cJSON_AddItemToObject(
+    spritesheetJson, "uv-offset-y", cJSON_CreateInt(animator.uvCoordOffset.y)
   );
 
   cJSON_AddItemToObject(
@@ -1017,6 +1028,11 @@ void LoadAnimation(
       std::string{
         cJSON_GetObjectItemCaseSensitive(sheetJson, "label")->valuestring
       };
+
+    animator->uvCoordOffset = {
+      cJSON_GetObjectItemCaseSensitive(sheetJson, "uv-offset-x")->valueint
+    , cJSON_GetObjectItemCaseSensitive(sheetJson, "uv-offset-y")->valueint
+    };
 
     spdlog::debug("loading animation spritesheet '{}'", animator->label);
     // store animator
@@ -1613,6 +1629,8 @@ PUL_PLUGIN_DECL void Animation_UiRender(
     pul::imgui::Text("animator '{}'", animator.label);
 
     ImGui::Separator();
+
+    pul::imgui::InputInt2("uv offset", &animator.uvCoordOffset.x);
 
     ImGui::Text("pieces");
     ImGui::Separator();

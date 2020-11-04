@@ -9,7 +9,7 @@
 
 namespace pul::core {
   struct ComponentPlayer {
-    glm::vec2 origin = {902.0f, 1120.0f};
+    glm::vec2 origin = {470.0f, 1504.0f};
     glm::vec2 velocity = {};
     glm::vec2 storedVelocity = {};
 

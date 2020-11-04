@@ -55,7 +55,7 @@ namespace pul::core {
     > info {};
 
     bool pickedUp = false;
-    int16_t cooldown = 0;
+    float cooldown = 0;
     uint16_t ammunition = 0;
   };
 
