@@ -269,7 +269,7 @@ void plugin::entity::PlayerFireGrannibal(
     if (grannibalInfo.primaryMuzzleTrailTimer <= 0.0f) {
       ::GrannibalMuzzleTrail(plugin, scene, origin, flip, matrix);
       -- grannibalInfo.primaryMuzzleTrailLeft;
-      grannibalInfo.primaryMuzzleTrailTimer = 50.0f;
+      grannibalInfo.primaryMuzzleTrailTimer = 70.0f;
     }
     grannibalInfo.primaryMuzzleTrailTimer -= pul::util::MsPerFrame;
   }
@@ -282,6 +282,13 @@ void plugin::entity::PlayerFireGrannibal(
   if (primary) {
     grannibalInfo.dischargingTimer = 1000.0f;
     plugin::entity::FireGrannibalPrimary(
+      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    );
+  }
+
+  if (secondary) {
+    grannibalInfo.dischargingTimer = 1000.0f;
+    plugin::entity::FireGrannibalSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     );
   }
@@ -298,8 +305,8 @@ void plugin::entity::FireGrannibalPrimary(
   auto & grannibalInfo =
     std::get<pul::core::WeaponInfo::WiGrannibal>(weaponInfo.info);
 
-  grannibalInfo.primaryMuzzleTrailLeft = 8;
-  grannibalInfo.primaryMuzzleTrailTimer = 50.0f;
+  grannibalInfo.primaryMuzzleTrailLeft = 4;
+  grannibalInfo.primaryMuzzleTrailTimer = 70.0f;
 
   ::GrannibalMuzzleTrail(plugin, scene, origin, flip, matrix);
 
@@ -314,7 +321,31 @@ void plugin::entity::FireGrannibalPrimary(
     state.angle = angle;
     state.flip = flip;
 
-    instance.origin = origin - glm::vec2(0.0f, 8.0f);
+    instance.origin = origin - glm::vec2(-30.0f, -30.0f)*direction;
+
+    { // emitter
+      pul::core::ComponentParticleEmitter emitter;
+
+      // -- animation
+      plugin.animation.ConstructInstance(
+        scene, emitter.animationInstance, scene.AnimationSystem()
+      , "grannibal-primary-projectile-trail"
+      );
+
+      emitter
+        .animationInstance
+        .pieceToState["particle"]
+        .Apply("grannibal-primary-projectile-trail", true);
+
+      // -- timer
+      emitter.velocity = glm::vec2();
+      emitter.originDist = 11.0f;
+      emitter.prevOrigin = instance.origin;
+
+      registry.emplace<pul::core::ComponentParticleEmitter>(
+        grannibalProjectileEntity, std::move(emitter)
+      );
+    }
 
     registry.emplace<pul::animation::ComponentInstance>(
       grannibalProjectileEntity, std::move(instance)
@@ -322,7 +353,7 @@ void plugin::entity::FireGrannibalPrimary(
 
     registry.emplace<pul::core::ComponentParticle>(
       grannibalProjectileEntity
-    , instance.origin, direction*5.0f
+    , instance.origin, direction*10.0f, false, true
     );
 
     pul::core::ComponentParticleExploder exploder;
@@ -345,12 +376,75 @@ void plugin::entity::FireGrannibalPrimary(
 }
 
 void plugin::entity::FireGrannibalSecondary(
-  [[maybe_unused]] uint8_t shots, [[maybe_unused]] uint8_t shotSet
-, [[maybe_unused]] pul::plugin::Info const & plugin
-, [[maybe_unused]] pul::core::SceneBundle & scene
-, [[maybe_unused]] glm::vec2 const & origin
-, [[maybe_unused]] float const angle
-, [[maybe_unused]] bool const flip
-, [[maybe_unused]] glm::mat3 const & matrix
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::WeaponInfo & weaponInfo
+, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, bool const flip, glm::mat3 const &
 ) {
+  auto & registry = scene.EnttRegistry();
+
+  [[maybe_unused]]
+  auto & grannibalInfo =
+    std::get<pul::core::WeaponInfo::WiGrannibal>(weaponInfo.info);
+
+  {
+    auto grannibalProjectileEntity = registry.create();
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "grannibal-secondary-projectile"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("grannibal-secondary-projectile", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin - glm::vec2(-30.0f, -30.0f)*direction;
+
+    { // emitter
+      pul::core::ComponentParticleEmitter emitter;
+
+      // -- animation
+      plugin.animation.ConstructInstance(
+        scene, emitter.animationInstance, scene.AnimationSystem()
+      , "grannibal-secondary-projectile-trail"
+      );
+
+      emitter
+        .animationInstance
+        .pieceToState["particle"]
+        .Apply("grannibal-secondary-projectile-trail", true);
+
+      // -- timer
+      emitter.velocity = glm::vec2();
+      emitter.originDist = 11.0f;
+      emitter.prevOrigin = instance.origin;
+
+      registry.emplace<pul::core::ComponentParticleEmitter>(
+        grannibalProjectileEntity, std::move(emitter)
+      );
+    }
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      grannibalProjectileEntity, std::move(instance)
+    );
+
+    pul::core::ComponentParticleGrenade particle;
+
+    plugin.animation.ConstructInstance(
+      scene, particle.animationInstance, scene.AnimationSystem()
+    , "grannibal-hit"
+    );
+
+    particle
+      .animationInstance
+      .pieceToState["particle"].Apply("grannibal-hit", true);
+
+    particle.origin = instance.origin;
+    particle.velocity = direction*5.0f;
+    particle.bounces = 2u;
+
+    registry.emplace<pul::core::ComponentParticleGrenade>(
+      grannibalProjectileEntity, std::move(particle)
+    );
+  }
 }

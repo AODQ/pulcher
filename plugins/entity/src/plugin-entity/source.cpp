@@ -201,6 +201,68 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
     }
   }
 
+  { // -- particle grenades
+    auto view =
+      registry.view<
+        pul::core::ComponentParticleGrenade
+      , pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+      auto & particle = view.get<pul::core::ComponentParticleGrenade>(entity);
+
+      bool destroyInstance =
+        animation.instance.pieceToState["particle"].animationFinished
+      ;
+
+      if (particle.velocity != glm::vec2()) {
+        particle.velocity.y += 0.15f;
+
+        auto ray =
+          pul::physics::IntersectorRay::Construct(
+            animation.instance.origin,
+            animation.instance.origin + particle.velocity
+          );
+
+        if (
+          pul::physics::IntersectionResults results;
+          plugin.physics.IntersectionRaycast(scene, ray, results)
+        ) {
+          // TODO have to detect normal of wall...
+          particle.velocity *= -0.5f;
+
+          if (particle.bounces == 0) {
+            destroyInstance = true;
+          }
+          -- particle.bounces;
+        }
+
+        // TODO fix this
+        particle.origin += particle.velocity;
+        animation.instance.origin += particle.velocity;
+      }
+
+      animation.instance.pieceToState["particle"].angle =
+        std::atan2(particle.velocity.x, particle.velocity.y);
+
+      if (destroyInstance) {
+
+        auto finAnimation = registry.create();
+        particle.animationInstance.origin = animation.instance.origin;
+        registry.emplace<pul::animation::ComponentInstance>(
+          finAnimation, std::move(particle.animationInstance)
+        );
+        registry.emplace<pul::core::ComponentParticle>(
+          finAnimation, animation.instance.origin
+        );
+
+        animation.instance = {};
+        registry.destroy(entity);
+      }
+    }
+  }
+
   { // -- particles
     auto view =
       registry.view<
@@ -213,9 +275,19 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       auto & particle = view.get<pul::core::ComponentParticle>(entity);
 
       if (particle.velocity != glm::vec2()) {
+        if (particle.gravityAffected) {
+          if (particle.velocity.y < 8.0f) {
+            particle.velocity.y += 0.05f;
+          }
+        }
+
+        // TODO fix this
         particle.origin += particle.velocity;
         animation.instance.origin += particle.velocity;
       }
+
+      animation.instance.pieceToState["particle"].angle =
+        std::atan2(particle.velocity.x, particle.velocity.y);
 
       if (animation.instance.pieceToState["particle"].animationFinished) {
         animation.instance = {};
@@ -339,6 +411,49 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
       // center camera on this
       scene.cameraOrigin = glm::i32vec2(player.origin);
+    }
+  }
+
+  { // -- particle emitter
+    auto view =
+      registry.view<
+        pul::animation::ComponentInstance
+      , pul::core::ComponentParticleEmitter
+      >();
+
+    for (auto entity : view) {
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+      auto & emitter = view.get<pul::core::ComponentParticleEmitter>(entity);
+
+      if (
+          glm::length(animation.instance.origin - emitter.prevOrigin)
+        >= emitter.originDist
+      ) {
+        emitter.prevOrigin = animation.instance.origin;
+
+        pul::animation::Instance animationInstance;
+        plugin.animation.ConstructInstance(
+          scene, animationInstance, scene.AnimationSystem()
+        , emitter.animationInstance.animator->label.c_str()
+        );
+
+        animationInstance
+          .pieceToState["particle"]
+          .Apply(emitter.animationInstance.animator->label.c_str(), true);
+
+        animationInstance.origin = animation.instance.origin;
+
+        auto particleEntity = registry.create();
+
+        registry.emplace<pul::animation::ComponentInstance>(
+          particleEntity, std::move(animationInstance)
+        );
+        registry.emplace<pul::core::ComponentParticle>(
+          particleEntity
+        , animationInstance.origin
+        , emitter.velocity
+        );
+      }
     }
   }
 }
