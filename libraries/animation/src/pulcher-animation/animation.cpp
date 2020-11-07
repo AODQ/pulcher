@@ -66,11 +66,6 @@ void pul::animation::Instance::StateInfo::Apply(
 
   auto const & state = animator->pieces[pieceLabel].states[label];
 
-  spdlog::debug("piece label {}", pieceLabel);
-  if (pieceLabel == "particle") {
-    spdlog::debug("variation type {}", state.variationType);
-  }
-
   switch (state.variationType) {
     default: spdlog::error("variation type default"); break;
     case pul::animation::VariationType::Normal: break;

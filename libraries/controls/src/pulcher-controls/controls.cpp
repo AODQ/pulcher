@@ -19,11 +19,11 @@ void pul::controls::UpdateControls(
   { // update looking position
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
-    current.lookDirection = {
+    current.lookOffset = {
       (static_cast<float>(xpos) - playerCenterX)
     , (static_cast<float>(ypos) - playerCenterY)
     };
-    current.lookDirection = glm::normalize(current.lookDirection);
+    current.lookDirection = glm::normalize(current.lookOffset);
     current.lookAngle =
       std::atan2(current.lookDirection.x, current.lookDirection.y);
   }

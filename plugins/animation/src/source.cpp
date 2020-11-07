@@ -246,9 +246,21 @@ void ComputeVertices(
   // update origins & UV coords
   for (size_t it = 0ul; it < 6; ++ it, ++ indexOffset) {
     auto v = pul::util::TriangleVertexArray()[it];
+    auto uv = v;
+
+    auto uvCoordWrap = stateInfo.uvCoordWrap;
+    /* if (state.flipXAxis) { uvCoordWrap = 1.0f - uvCoordWrap; } */
+    /* if (skeletalFlip)    { uvCoordWrap = 1.0f - uvCoordWrap; } */
+
+    // apply uv clipping/wrapping if requested (non 1.0 value)
+    uv *= uvCoordWrap;
+    v  *= stateInfo.vertWrap;
+
+    if (stateInfo.flipVertWrap) {
+      v = glm::vec2(1.0f) - v;
+    }
 
     // flip uv coords if requested
-    auto uv = v;
     if (skeletalFlip) { uv.x = 1.0f - uv.x; }
 
     if (state.flipXAxis) { uv.x = 1.0f - uv.x; }
@@ -547,6 +559,8 @@ void ImGuiRenderSpritesheetTile(
   ;
 
   ImVec2 dimensions = ImVec2(piece.dimensions.x, piece.dimensions.y);
+  if (dimensions.x > 100)
+    dimensions.x = 100;
 
   if (animShowZoom) {
     dimensions.x *= 5.0f;
@@ -589,7 +603,7 @@ void DisplayImGuiComponent(
   if (!::animShowZoom) {
     ImGui::Columns(2, nullptr, false);
 
-    ImGui::SetColumnWidth(0, piece.dimensions.x + 16);
+    ImGui::SetColumnWidth(0, glm::min(100u, piece.dimensions.x + 16u));
   }
 
   // display current image on left side of column, use transparency
@@ -627,14 +641,14 @@ void DisplayImGuiComponent(
     if (ImGui::Button("+x")) {
       components
         .emplace(components.begin() + componentIt + 1, component);
-      components.back().tile.x += 1;
+      components[componentIt+1].tile.x += 1;
     }
 
     ImGui::SameLine();
     if (ImGui::Button("+y")) {
       components
         .emplace(components.begin() + componentIt + 1, component);
-      components.back().tile.y += 1;
+      components[componentIt+1].tile.y += 1;
     }
 
     if (componentIt > 0ul) {
@@ -1535,6 +1549,7 @@ PUL_PLUGIN_DECL void Animation_UiRender(
           pul::imgui::Text("\tflip {}", stateInfo.flip);
           pul::imgui::Text("\tangle {}", stateInfo.angle);
           pul::imgui::Text("\tvisible {}", stateInfo.visible);
+          pul::imgui::Text("\tuvCoordWrap '{}'", stateInfo.uvCoordWrap);
 
           auto & mat = stateInfo.cachedLocalSkeletalMatrix;
           pul::imgui::Text(

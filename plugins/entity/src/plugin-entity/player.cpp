@@ -396,7 +396,7 @@ void UpdatePlayerPhysics(
       player.origin.y = results.origin.y;
     } else if (ray.beginOrigin.y > ray.endOrigin.y) {
       // the groundedFloorOrigin is -(0, 2), so we need to account for that
-      player.origin.y = results.origin.y + 3.0f;
+      player.origin.y = results.origin.y + 2.0f;
     }
 
     // then check how the velocity should be redirected
@@ -422,8 +422,8 @@ void UpdatePlayerPhysics(
 
     auto rayX =
       pul::physics::IntersectorRay::Construct(
-        player.origin + glm::vec2(+2.0f, 0.0)
-      , player.origin + glm::vec2(-2.0f, 0.0f)
+        glm::round(player.origin + glm::vec2(+2.0f, -2.0))
+      , glm::round(player.origin + glm::vec2(-2.0f, -2.0f))
       );
     if (
       pul::physics::IntersectionResults resultsX;
@@ -431,12 +431,14 @@ void UpdatePlayerPhysics(
       && plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
     ) {
       // if there is an intersection check
-      if (player.origin.x < resultsX.origin.x) {
-        player.velocity.x = glm::min(0.0f, player.velocity.x);
-      } else if (player.origin.x > resultsX.origin.x) {
-        player.velocity.x = glm::max(0.0f, player.velocity.x);
-      } else {
+      if (glm::round(player.origin.x) < resultsX.origin.x) {
+        player.origin.x = resultsX.origin.x-2;
         player.velocity.x = 0.0f;
+      } else if (glm::round(player.origin.x) > resultsX.origin.x) {
+        player.origin.x = resultsX.origin.x+2;
+        player.velocity.x = 0.0f;
+      } else {
+        /* player.velocity.x = 0.0f; */
       }
     }
   }
@@ -517,6 +519,74 @@ void UpdatePlayerWeapon(
       , plugin, scene, playerOrigin
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
+      );
+    } break;
+    case pul::core::WeaponType::Manshredder: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFireManshredder(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      );
+    } break;
+    case pul::core::WeaponType::Wallbanger: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFireWallbanger(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      );
+    } break;
+    case pul::core::WeaponType::Unarmed: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFireUnarmed(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      );
+    } break;
+    case pul::core::WeaponType::PMF: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFirePMF(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      );
+    } break;
+    case pul::core::WeaponType::BadFetus: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFireBadFetus(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      , player, playerAnim.instance
+      );
+    } break;
+    case pul::core::WeaponType::ZeusStinger: {
+      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      plugin::entity::PlayerFireZeusStinger(
+        controller.shootPrimary, controller.shootSecondary
+      , player.velocity
+      , weapon
+      , plugin, scene, playerOrigin
+      , controller.lookDirection, controller.lookAngle
+      , weaponFlip, weaponMatrix
+      , player, playerAnim.instance
       );
     } break;
     case pul::core::WeaponType::Grannibal: {
@@ -879,7 +949,7 @@ void plugin::entity::UpdatePlayer(
         inputAccel == 0.0f && player.grounded
      && glm::abs(player.velocity.x) < ::horizontalGroundedVelocityStop
     ) {
-      player.velocity.x = 0.0f;
+      /* player.velocity.x = 0.0f; */
     }
 
     // -- process dashing
@@ -1124,6 +1194,7 @@ void plugin::entity::UpdatePlayer(
 
     float const angle =
       std::atan2(controller.lookDirection.x, controller.lookDirection.y);
+    player.lookAtAngle = angle;
 
     playerAnim.instance.pieceToState["arm-back"].angle
       = playerAnim.instance.pieceToState["arm-front"].angle

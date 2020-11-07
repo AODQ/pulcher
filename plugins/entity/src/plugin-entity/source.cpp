@@ -160,7 +160,8 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       auto & particle = view.get<pul::core::ComponentParticle>(entity);
 
       bool explode =
-        animation.instance.pieceToState["particle"].animationFinished
+          exploder.explodeOnDelete
+       && animation.instance.pieceToState["particle"].animationFinished
       ;
 
       glm::vec2 explodeOrigin = particle.origin;
@@ -178,9 +179,24 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           plugin.physics.IntersectionRaycast(scene, ray, results)
         ) {
           explodeOrigin = results.origin;
-          explode = true;
+          explode |= exploder.explodeOnCollide;
         }
       }
+
+      // check for player
+      // TODO
+      /* auto playerView = */
+      /*   registry.view< */
+      /*     pul::core::ComponentPlayer */
+      /*   >(); */
+
+      /* for (auto playerEntity : playerView) { */
+      /*   auto & player = registry.get<pul::core::ComponentPlayer>(playerEntity); */
+      /*   auto origin = player.origin - glm::vec2(0.0f, 32.0f); */
+      /*   if (glm::length(origin - animation.instance.origin) < 8.0f) { */
+      /*     explode = true; */
+      /*   } */
+      /* } */
 
       if (explode) {
         PUL_ASSERT(exploder.animationInstance.animator , continue;);
@@ -216,8 +232,18 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         animation.instance.pieceToState["particle"].animationFinished
       ;
 
+      // negate before comparison so that physics are ran on frame of
+      // destruction
+      particle.timer -= pul::util::MsPerFrame;
+      if (particle.timer <= 0.0f) {
+        destroyInstance = true;
+      }
+
+      // check physics bounce
       if (particle.velocity != glm::vec2()) {
-        particle.velocity.y += 0.15f;
+
+        if (particle.gravityAffected)
+          { particle.velocity.y += 0.15f; }
 
         auto ray =
           pul::physics::IntersectorRay::Construct(
@@ -229,12 +255,75 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           pul::physics::IntersectionResults results;
           plugin.physics.IntersectionRaycast(scene, ray, results)
         ) {
-          // TODO have to detect normal of wall...
-          particle.velocity *= -0.5f;
+          // calculate normal (TODO this should be precomputed)
+          glm::vec2 normal = glm::vec2(0.0f);
 
-          if (particle.bounces == 0) {
+          for (auto point : std::vector<glm::vec2>{
+            { -1.0f, -1.0f }, { +0.0f, -1.0f }, { +1.0f, -1.0f }
+          , { -1.0f, +0.0f },                   { +1.0f, +0.0f }
+          , { -1.0f, +1.0f }, { +0.0f, +1.0f }, { +1.0f, +1.0f }
+          }) {
+            auto pointInt =
+              pul::physics::IntersectorPoint{
+                glm::i32vec2(glm::vec2(results.origin) + point)
+              };
+            if (
+              pul::physics::IntersectionResults pointResult;
+              plugin.physics.IntersectionPoint(scene, pointInt, pointResult)
+            ) {
+              normal += point;
+            }
+          }
+          normal = glm::normalize(normal);
+
+          // TODO have to detect normal of wall...
+          animation.instance.origin = results.origin;
+          particle.origin = results.origin;
+          // reflect velocity
+          glm::vec2 const targetDirection =
+            glm::reflect(glm::normalize(particle.velocity), -normal);
+          particle.velocity =
+              glm::length(particle.velocity)
+            * targetDirection
+            * particle.velocityFriction
+          ;
+
+          if (particle.useBounces && particle.bounces == 0) {
+            particle.velocity = {};
             destroyInstance = true;
           }
+
+          if (
+              (!particle.useBounces || particle.bounces != 0)
+           && particle.bounceAnimation != ""
+          ) {
+
+            pul::animation::Instance bounceAnimation;
+            plugin.animation.ConstructInstance(
+              scene, bounceAnimation, scene.AnimationSystem()
+            , particle.bounceAnimation.c_str()
+            );
+
+            bounceAnimation
+              .pieceToState["particle"]
+              .Apply(particle.bounceAnimation, true);
+
+            bounceAnimation.pieceToState["particle"].angle
+              = animation.instance.pieceToState["particle"].angle;
+
+            bounceAnimation.origin = animation.instance.origin;
+
+            auto bounceAnimationEntity = registry.create();
+
+            registry.emplace<pul::animation::ComponentInstance>(
+              bounceAnimationEntity, std::move(bounceAnimation)
+            );
+
+            registry.emplace<pul::core::ComponentParticle>(
+              bounceAnimationEntity, bounceAnimation.origin
+            );
+          }
+
           -- particle.bounces;
         }
 
@@ -287,10 +376,10 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         // TODO fix this
         particle.origin += particle.velocity;
         animation.instance.origin += particle.velocity;
-      }
 
-      animation.instance.pieceToState["particle"].angle =
-        std::atan2(particle.velocity.x, particle.velocity.y);
+        animation.instance.pieceToState["particle"].angle =
+          std::atan2(particle.velocity.x, particle.velocity.y);
+      }
 
       if (animation.instance.pieceToState["particle"].animationFinished) {
         animation.instance = {};
@@ -417,23 +506,52 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
     }
   }
 
-  { // -- particle emitter
+  { // -- beams
     auto view =
       registry.view<
         pul::animation::ComponentInstance
-      , pul::core::ComponentParticleEmitter
+      , pul::core::ComponentParticleBeam
       >();
 
     for (auto entity : view) {
       auto & animation = view.get<pul::animation::ComponentInstance>(entity);
-      auto & emitter = view.get<pul::core::ComponentParticleEmitter>(entity);
+      auto & beam = view.get<pul::core::ComponentParticleBeam>(entity);
 
-      if (
-          glm::length(animation.instance.origin - emitter.prevOrigin)
-        >= emitter.originDist
-      ) {
-        emitter.prevOrigin = animation.instance.origin;
+      bool destroy = false;
 
+      if (beam.update) {
+        destroy |= beam.update(animation.instance);
+      }
+
+      if (destroy) {
+        registry.destroy(entity);
+      }
+    }
+  }
+
+  { // -- distance particle emitter
+    auto view =
+      registry.view<
+        pul::animation::ComponentInstance
+      , pul::core::ComponentDistanceParticleEmitter
+      >();
+
+    for (auto entity : view) {
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+      auto & emitter =
+        view.get<pul::core::ComponentDistanceParticleEmitter>(entity);
+
+      // emit a particle over a given distance; the delta of distance must be
+      // calculated every frame in case the particle is moving a non-constant
+      // speed (for example, if it is affected by gravity)
+
+      emitter.distanceTravelled += 
+        glm::ceil(glm::length(animation.instance.origin - emitter.prevOrigin))
+      ;
+      emitter.prevOrigin = animation.instance.origin;
+
+      if (glm::ceil(emitter.distanceTravelled) >= emitter.originDist) {
+        emitter.distanceTravelled -= emitter.originDist;
         pul::animation::Instance animationInstance;
         plugin.animation.ConstructInstance(
           scene, animationInstance, scene.AnimationSystem()

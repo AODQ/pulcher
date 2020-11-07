@@ -48,8 +48,8 @@ pul::gfx::Spritesheet pul::gfx::Spritesheet::Construct(
   desc.sample_count = 0;
   desc.min_filter = SG_FILTER_NEAREST;
   desc.mag_filter = SG_FILTER_NEAREST;
-  desc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
-  desc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
+  desc.wrap_u = SG_WRAP_REPEAT; // TODO temporary while beams need
+  desc.wrap_v = SG_WRAP_REPEAT; // to wrap image
   desc.max_anisotropy = 0;
   desc.min_lod = 0.0f;
   desc.max_lod = 0.0f;

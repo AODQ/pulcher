@@ -12,6 +12,7 @@ namespace pul::core {
     glm::vec2 origin = {470.0f, 1504.0f};
     glm::vec2 velocity = {};
     glm::vec2 storedVelocity = {};
+    float lookAtAngle = 0.0f;
 
     float prevAirVelocity = 0.0f;
 

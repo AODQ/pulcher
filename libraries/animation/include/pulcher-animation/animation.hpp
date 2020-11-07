@@ -156,6 +156,10 @@ namespace pul::animation {
       bool visible = true;
       bool animationFinished = false;
 
+      glm::vec2 uvCoordWrap = glm::vec2(1.0f);
+      glm::vec2 vertWrap = glm::vec2(1.0f);
+      bool flipVertWrap = false;
+
       std::shared_ptr<Animator> animator;
       std::string pieceLabel;
 

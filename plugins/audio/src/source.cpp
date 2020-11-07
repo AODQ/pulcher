@@ -38,6 +38,13 @@ void InitializeSystem() {
 
   FMOD_ASSERT(FMOD_System_Create(&fmodSystem), return;);
   FMOD_ASSERT(FMOD_System_Init(fmodSystem, 512, FMOD_INIT_NORMAL, 0), return;);
+
+  FMOD_SOUNDGROUP * soundGroup;
+  FMOD_ASSERT(
+    FMOD_System_GetMasterSoundGroup(fmodSystem, &soundGroup), return;
+  );
+
+  FMOD_SoundGroup_SetVolume(soundGroup, 0.2f);
 }
 
 }

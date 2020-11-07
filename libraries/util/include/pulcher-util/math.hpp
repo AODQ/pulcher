@@ -26,6 +26,8 @@ namespace pul::physics {
       steep = true;
     }
 
+
+    uint32_t maxSteps = 1'000u;
     if (f0.x > f1.x) {
       int32_t
         dx = f0.x-f1.x
@@ -36,6 +38,7 @@ namespace pul::physics {
       ;
 
       for (glm::ivec2 f = f0; f.x >= f1.x; -- f.x) {
+        if (--maxSteps == 0u) { break; }
         if (steep) { fn(f.y, f.x); } else { fn(f.x, f.y); }
         error += derror;
         if (error > dx) {
@@ -53,6 +56,7 @@ namespace pul::physics {
       ;
 
       for (glm::ivec2 f = f0; f.x <= f1.x; ++ f.x) {
+        if (--maxSteps == 0u) { break; }
         if (steep) { fn(f.y, f.x); } else { fn(f.x, f.y); }
         error += derror;
         if (error > dx) {

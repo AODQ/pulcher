@@ -29,7 +29,10 @@ namespace pul::core {
   struct WeaponInfo {
     WeaponType type;
 
-    struct WiBadFetus { };
+    struct WiBadFetus {
+      float dischargingTimer = 0.0f;
+      bool primaryActive = false;
+    };
     struct WiDopplerBeam {
       float dischargingTimer = 0.0f;
     };
@@ -38,14 +41,20 @@ namespace pul::core {
       float primaryMuzzleTrailTimer = 0.0f;
       uint8_t primaryMuzzleTrailLeft = 0u;
     };
-    struct WiManshredder { };
+    struct WiManshredder {
+      float dischargingTimer = 0.0f;
+    };
     struct WiPericaliya {
       float dischargingTimer = 0.0f;
-      bool isPrimaryActive;
-      bool isSecondaryActive;
+      bool isPrimaryActive = false;
+      bool isSecondaryActive = false;
     };
-    struct WiPMF { };
-    struct WiUnarmed { };
+    struct WiPMF {
+      float dischargingTimer = 0.0f;
+    };
+    struct WiUnarmed {
+      float dischargingTimer = 0.0f;
+    };
     struct WiVolnias {
       float primaryChargeupTimer = 0.0f;
       uint8_t secondaryChargedShots = 0;
@@ -55,14 +64,18 @@ namespace pul::core {
       bool dischargingSecondary = false;
       float dischargingTimer = 0.0f;
     };
-    struct WiWallbanger { };
-    struct WiZeusStinger { };
+    struct WiWallbanger {
+      float dischargingTimer = 0.0f;
+    };
+    struct WiZeusStinger {
+      float dischargingTimer = 0.0f;
+    };
 
     std::variant<
       WiBadFetus, WiDopplerBeam, WiGrannibal, WiManshredder
     , WiPericaliya, WiPMF, WiUnarmed, WiVolnias, WiWallbanger
     , WiZeusStinger
-    > info {};
+    > info { WiUnarmed{} };
 
     bool pickedUp = false;
     float cooldown = 0;

@@ -1,5 +1,6 @@
 #pragma once
 
+namespace pul::animation { struct Instance; }
 namespace pul::core { struct ComponentPlayer; }
 namespace pul::core { struct SceneBundle; }
 namespace pul::core { struct WeaponInfo; }
@@ -83,6 +84,140 @@ namespace plugin::entity {
   , bool const flip, glm::mat3 const & matrix
   );
   void FirePericaliyaSecondary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+
+  void PlayerFireZeusStinger(
+    bool const primary, bool const secondary
+  , glm::vec2 & velocity
+  , pul::core::WeaponInfo & weaponInfo
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  , pul::core::ComponentPlayer & player
+  , pul::animation::Instance & playerAnim
+  );
+  void FireZeusStingerPrimary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  , pul::core::ComponentPlayer & player
+  , pul::animation::Instance & playerAnim
+  );
+  void FireZeusStingerSecondary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+
+  void PlayerFireBadFetus(
+    bool const primary, bool const secondary
+  , glm::vec2 & velocity
+  , pul::core::WeaponInfo & weaponInfo
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  , pul::core::ComponentPlayer & player
+  , pul::animation::Instance & playerAnim
+  );
+  void FireBadFetusPrimary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  , pul::core::ComponentPlayer & player
+  , pul::animation::Instance & playerAnim
+  );
+  void FireBadFetusSecondary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+
+  void PlayerFirePMF(
+    bool const primary, bool const secondary
+  , glm::vec2 & velocity
+  , pul::core::WeaponInfo & weaponInfo
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FirePMFPrimary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FirePMFSecondary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+
+  void PlayerFireUnarmed(
+    bool const primary, bool const secondary
+  , glm::vec2 & velocity
+  , pul::core::WeaponInfo & weaponInfo
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FireUnarmedPrimary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FireUnarmedSecondary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+
+  void PlayerFireManshredder(
+    bool const primary, bool const secondary
+  , glm::vec2 & velocity
+  , pul::core::WeaponInfo & weaponInfo
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FireManshredderPrimary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FireManshredderSecondary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+
+  void PlayerFireWallbanger(
+    bool const primary, bool const secondary
+  , glm::vec2 & velocity
+  , pul::core::WeaponInfo & weaponInfo
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FireWallbangerPrimary(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , pul::core::WeaponInfo & weaponInfo
+  , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+  , bool const flip, glm::mat3 const & matrix
+  );
+  void FireWallbangerSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
