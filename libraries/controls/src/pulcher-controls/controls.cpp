@@ -1,5 +1,7 @@
 #include <pulcher-controls/controls.hpp>
 
+#include <pulcher-util/log.hpp>
+
 #include <GLFW/glfw3.h>
 
 void pul::controls::UpdateControls(
@@ -14,8 +16,19 @@ void pul::controls::UpdateControls(
 
   auto & current = controller.current;
 
-  current = {};
+  { // clear current control buffer
 
+    // save previous looking position, if mouse goes out of screen
+    auto lo = current.lookOffset;
+    auto ld = current.lookDirection;
+    auto la = current.lookAngle;
+    current.movementHorizontal = {};
+    current.lookOffset = lo;
+    current.lookDirection = ld;
+    current.lookAngle = la;
+  }
+
+  if (!wantCaptureMouse)
   { // update looking position
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);

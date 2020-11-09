@@ -155,6 +155,10 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
       ctx.LoadFunction(unit.ClearMapGeometry,    "Physics_ClearMapGeometry");
       ctx.LoadFunction(unit.LoadMapGeometry,     "Physics_LoadMapGeometry");
       ctx.LoadFunction(unit.IntersectionRaycast, "Physics_IntersectionRaycast");
+      ctx.LoadFunction(
+        unit.InverseSceneIntersectionRaycast
+      , "Physics_InverseSceneIntersectionRaycast"
+      );
       ctx.LoadFunction(unit.IntersectionPoint,   "Physics_IntersectionPoint");
       ctx.LoadFunction(unit.RenderDebug,         "Physics_RenderDebug");
       ctx.LoadFunction(unit.UiRender,            "Physics_UiRender");

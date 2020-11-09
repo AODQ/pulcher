@@ -118,7 +118,7 @@ namespace pul::animation {
       std::map<std::string, pul::animation::Animator::State> states = {};
       glm::u32vec2 dimensions = {};
       glm::i32vec2 origin = {};
-      uint8_t renderDepth = 0; // valid from 0 .. 100
+      int16_t renderDepth = 0; // valid from -127 .. 128
     };
 
     struct SkeletalPiece {

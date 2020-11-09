@@ -1081,13 +1081,13 @@ void LoadAnimation(
       {
         auto depth =
           cJSON_GetObjectItemCaseSensitive(pieceJson, "render-order")->valueint;
-        if (depth < 0u || depth >= 100u) {
+        if (depth < -127 || depth >= 127) {
           spdlog::error(
             "render-depth for '{}' of '{}' is OOB ({}); "
-            "range must be from 0 to 100"
+            "range must be from -127 to 127"
           , pieceLabel, animator->label, depth
           );
-          depth = 99u;
+          depth = 0;
         }
         piece.renderDepth = depth;
       }
@@ -1391,15 +1391,10 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     // bind pipeline & global uniforms
     sg_apply_pipeline(scene.AnimationSystem().sgPipeline);
 
-    std::array<float, 2> windowResolution {{
-      static_cast<float>(scene.config.framebufferWidth)
-    , static_cast<float>(scene.config.framebufferHeight)
-    }};
-
     sg_apply_uniforms(
       SG_SHADERSTAGE_VS
     , 1
-    , windowResolution.data()
+    , &scene.config.framebufferDimFloat.x
     , sizeof(float) * 2ul
     );
 

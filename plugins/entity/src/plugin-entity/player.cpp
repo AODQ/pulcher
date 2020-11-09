@@ -342,6 +342,7 @@ void UpdatePlayerPhysics(
       ) {
         player.origin.x += player.velocity.x;
         player.origin.y = stepResults.origin.y;
+        player.velocity.y = 0.0f;
         player.grounded = true;
         return;
       }
@@ -379,6 +380,7 @@ void UpdatePlayerPhysics(
           // store velocity
           player.origin.x += player.velocity.x;
 
+          player.velocity.y = 0.0f;
           player.grounded = true;
           return;
         }

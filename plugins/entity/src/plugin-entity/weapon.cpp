@@ -1326,7 +1326,7 @@ void plugin::entity::FireZeusStingerPrimary(
       endOrigin =
           animInstance.origin
         + glm::vec2(
-              matrix * glm::vec3(flip ? 5000.0f : -5000.0f, 0.0f, 1.0f)
+              matrix * glm::vec3(flip ? 15000.0f : -15000.0f, 0.0f, 1.0f)
           )
       ;
 
@@ -1357,7 +1357,7 @@ void plugin::entity::FireZeusStingerPrimary(
       , ::ComponentZeusStingerSecondary
       >();
     entt::entity nearestEntity;
-    float nearestDist = 5000.0f;
+    float nearestDist = 50000.0f;
     for (auto entity : view) {
       auto & animation = view.get<pul::animation::ComponentInstance>(entity);
 
@@ -2234,6 +2234,170 @@ void plugin::entity::FireWallbangerSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
-) {}
+) {
+  auto & registry = scene.EnttRegistry();
+
+  auto wallbangerMuzzleEntity = registry.create();
+  { // muzzle
+    pul::animation::Instance animInstance;
+    plugin.animation.ConstructInstance(
+      scene, animInstance, scene.AnimationSystem()
+    , "wallbanger-secondary-muzzle"
+    );
+    auto & animState = animInstance.pieceToState["particle"];
+    animState.Apply("wallbanger-secondary-muzzle", true);
+    animState.flip = flip;
+    animInstance.origin = origin + glm::vec2(0.0f, 32.0f);
+    animInstance.automaticCachedMatrixCalculation = false;
+
+    plugin.animation.UpdateCacheWithPrecalculatedMatrix(animInstance, matrix);
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      wallbangerMuzzleEntity, std::move(animInstance)
+    );
+
+    registry.emplace<pul::core::ComponentParticle>(
+      wallbangerMuzzleEntity
+    , animInstance.origin, glm::vec2{}, false, false
+    );
+  }
+
+  // keep track of begin/end origin for collision detection
+  glm::vec2 beginOrigin, endOrigin;
+
+  // end origin before being corrected by secondary hit origin, thus allowing
+  // us to determine which side of the projectile was hit
+  glm::vec2 originalEndOrigin;
+
+  auto wallbangerBeamEntity = registry.create();
+
+  // -- find wall intersection
+  beginOrigin =
+      origin + glm::vec2(0.0f, 32.0f)
+    + glm::vec2(
+          matrix
+        * glm::vec3(0.0f, 0.0f, 1.0f)
+      )
+  ;
+
+
+  // -- intersect wall
+  // intersect wall then air/non-wall, but if the gap is not large then skip it
+  for (size_t i = 0; i < 3u; ++ i) {
+    endOrigin = beginOrigin + direction*5000.0f;
+    auto beamRay =
+      pul::physics::IntersectorRay::Construct(beginOrigin, endOrigin);
+    if (
+      pul::physics::IntersectionResults resultsBeam;
+      !plugin.physics.IntersectionRaycast(scene, beamRay, resultsBeam)
+    ) {
+      return;
+    } else {
+      beginOrigin = glm::vec2(resultsBeam.origin) + direction;
+    }
+
+    endOrigin = beginOrigin + direction*5000.0f;
+
+    // -- intersect air/non-wall
+    beamRay = pul::physics::IntersectorRay::Construct(beginOrigin, endOrigin);
+    if (
+      pul::physics::IntersectionResults resultsBeam;
+      plugin.physics.InverseSceneIntersectionRaycast(scene, beamRay, resultsBeam)
+    ) {
+      endOrigin = glm::vec2(resultsBeam.origin);
+    }
+
+    if (glm::length(beginOrigin - endOrigin) > 8.0f) { break; }
+
+    beginOrigin = endOrigin + direction;
+  }
+
+  { // projectile
+    { // animation
+      pul::animation::Instance animInstance;
+      plugin.animation.ConstructInstance(
+        scene, animInstance, scene.AnimationSystem()
+      , "wallbanger-secondary-wall-beam"
+      );
+      auto & animState = animInstance.pieceToState["particle"];
+      animState.Apply("wallbanger-secondary-wall-beam", true);
+
+      // -- update animation origin/direction
+      animState.flip = flip;
+      animInstance.origin = beginOrigin;
+      animState.angle = angle;
+      animInstance.automaticCachedMatrixCalculation = true;
+
+      registry.emplace<pul::animation::ComponentInstance>(
+        wallbangerBeamEntity, std::move(animInstance)
+      );
+
+      registry.emplace<pul::core::ComponentParticle>(
+        wallbangerBeamEntity
+      , animInstance.origin, glm::vec2{}, false, false
+      );
+    }
+
+    { // particle beam
+      pul::core::ComponentParticleBeam particle;
+
+      // can't use the instance used to create animation above since its
+      // memory has been moved to the entity
+      auto & animInstance =
+        registry.get<
+          pul::animation::ComponentInstance
+        >(wallbangerBeamEntity).instance
+      ;
+
+      registry.emplace<pul::core::ComponentParticleBeam>(
+        wallbangerBeamEntity, std::move(particle)
+      );
+    }
+  }
+
+  // apply clipping if required by intersection; make sure all intersection
+  // tests happen before this
+  auto & animInstance =
+    registry.get<
+      pul::animation::ComponentInstance
+    >(wallbangerBeamEntity).instance
+  ;
+  auto & animState = animInstance.pieceToState["particle"];
+
+  // -- apply clipping
+  float clipLength =
+      glm::length(glm::vec2(beginOrigin) - glm::vec2(endOrigin));
+
+  // TODO don't hardcode
+  animState.uvCoordWrap.x = glm::max(0.0f, clipLength / 168.0f);
+  animState.vertWrap.x = animState.uvCoordWrap.x;
+  if (!flip) {
+    animState.flipVertWrap = true;
+  }
+
+  { // explosion
+    auto wallbangerExplosionEntity = registry.create();
+    registry.emplace<pul::core::ComponentParticle>(
+      wallbangerExplosionEntity, endOrigin
+    );
+
+    auto const explosionStr = "wallbanger-secondary-explosion";
+
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), explosionStr
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply(explosionStr, true);
+    state.angle = 0.0f;
+    state.flip = flip;
+
+    instance.origin = endOrigin;
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      wallbangerExplosionEntity, std::move(instance)
+    );
+  }
+}
 
 #pragma GCC diagnostic pop

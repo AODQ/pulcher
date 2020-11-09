@@ -112,6 +112,11 @@ namespace pul::plugin {
     , pul::physics::IntersectorRay const & ray
     , pul::physics::IntersectionResults & intersectionResults
     ) = nullptr;
+    bool (*InverseSceneIntersectionRaycast)(
+      pul::core::SceneBundle & scene
+    , pul::physics::IntersectorRay const & ray
+    , pul::physics::IntersectionResults & intersectionResults
+    ) = nullptr;
     bool (*IntersectionPoint)(
       pul::core::SceneBundle & scene
     , pul::physics::IntersectorPoint const & ray

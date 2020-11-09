@@ -502,7 +502,18 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       );
 
       // center camera on this
-      scene.cameraOrigin = glm::i32vec2(player.origin);
+      glm::vec2 L = scene.PlayerController().current.lookOffset;
+      if (glm::length(L) > 200.0f) {
+        L = glm::normalize(L) * 200.0f;
+      }
+      auto const offset = glm::pow(glm::length(L) / 200.0f, 0.5f) * L;
+
+      scene.cameraOrigin =
+        glm::mix(
+          scene.cameraOrigin
+        , glm::i32vec2(player.origin + offset)
+        , 0.2f
+        );
     }
   }
 
@@ -545,7 +556,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       // calculated every frame in case the particle is moving a non-constant
       // speed (for example, if it is affected by gravity)
 
-      emitter.distanceTravelled += 
+      emitter.distanceTravelled +=
         glm::ceil(glm::length(animation.instance.origin - emitter.prevOrigin))
       ;
       emitter.prevOrigin = animation.instance.origin;
@@ -739,6 +750,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
     registry.view<
       pul::core::ComponentPlayer
     , pul::animation::ComponentInstance
+    , ComponentPlayerControllable
     >();
 
   for (auto entity : view) {

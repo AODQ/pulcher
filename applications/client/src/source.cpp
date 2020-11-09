@@ -103,14 +103,15 @@ auto CreateUserConfig(argparse::ArgumentParser const & userResults)
       auto xLen = framebufferResolution.find("x");
       xLen != std::string::npos && xLen < framebufferResolution.size()-1ul
   ) {
-    config.framebufferWidth =
+    config.framebufferDim.x =
       static_cast<uint16_t>(std::stoi(framebufferResolution.substr(0ul, xLen)));
-    config.framebufferHeight =
+    config.framebufferDim.y =
       static_cast<uint16_t>(
         std::stoi(
           framebufferResolution.substr(xLen+1ul, framebufferResolution.size())
         )
       );
+    config.framebufferDimFloat = glm::vec2(config.framebufferDim);
   } else {
     spdlog::error("framebuffer resolution incorrect format, must use WxH");
   }
@@ -122,10 +123,7 @@ void PrintUserConfig(pul::core::Config const & config) {
   spdlog::info(
     "window dimensions {}x{}", config.windowWidth, config.windowHeight
   );
-  spdlog::info(
-    "framebuffer dimensions {}x{}"
-  , config.framebufferWidth, config.framebufferHeight
-  );
+  spdlog::info("framebuffer dimensions {}" , config.framebufferDim);
 }
 
 static void ImGuiApplyStyling()
@@ -445,15 +443,15 @@ void ProcessRendering(
 
       { // set screen center
         ImVec2 imageCenter = ImGui::GetCursorScreenPos();
-        imageCenter.x += scene.config.framebufferWidth*0.5f;
-        imageCenter.y += scene.config.framebufferHeight*0.5f;
+        imageCenter.x += scene.config.framebufferDim.x*0.5f;
+        imageCenter.y += scene.config.framebufferDim.y*0.5f;
         imageCenter.y -= 32.0f; // player center
         scene.playerCenter = glm::u32vec2(imageCenter.x, imageCenter.y);
       }
 
       ImGui::Image(
         reinterpret_cast<void *>(pul::gfx::SceneImageColor().id)
-      , ImVec2(scene.config.framebufferWidth, scene.config.framebufferHeight)
+      , ImVec2(scene.config.framebufferDim.x, scene.config.framebufferDim.y)
       , ImVec2(0, 1)
       , ImVec2(1, 0)
       , ImVec4(1, 1, 1, 1)
@@ -484,8 +482,8 @@ void ProcessRendering(
         ;
 
         float const
-          texW = scene.config.framebufferWidth
-        , texH = scene.config.framebufferHeight
+          texW = scene.config.framebufferDim.x
+        , texH = scene.config.framebufferDim.y
         ;
 
         regionX = glm::clamp(regionX, 0.0f, texW - regionSize);

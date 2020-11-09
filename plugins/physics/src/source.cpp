@@ -427,6 +427,51 @@ PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
   ::LoadSokolInfo();
 }
 
+PUL_PLUGIN_DECL bool Physics_InverseSceneIntersectionRaycast(
+  pul::core::SceneBundle & scene
+, pul::physics::IntersectorRay const & ray
+, pul::physics::IntersectionResults & intersectionResults
+) {
+  intersectionResults = {};
+  // TODO this is slow and can be optimized by using SDFs
+  pul::physics::BresenhamLine(
+    ray.beginOrigin, ray.endOrigin
+  , [&](int32_t x, int32_t y) {
+      if (intersectionResults.collision) { return; }
+      auto origin = glm::i32vec2(x, y);
+      // -- get physics tile from acceleration structure
+
+      // calculate tile indices, not for the spritesheet but for the tile in
+      // the physx map
+      size_t tileIdx;
+      glm::u32vec2 texelOrigin;
+      if (
+        !pul::util::CalculateTileIndices(
+          tileIdx, texelOrigin, origin
+        , ::tilemapLayer.width, ::tilemapLayer.tileInfo.size()
+        )
+      ) {
+        return;
+      }
+
+      PUL_ASSERT_CMP(::tilemapLayer.tileInfo.size(), >, tileIdx, return;);
+      auto const & tileInfo = ::tilemapLayer.tileInfo[tileIdx];
+
+      if (::CalculateSdfDistance(tileInfo, texelOrigin) == 0.0f) {
+        intersectionResults =
+          pul::physics::IntersectionResults {
+            true, origin, tileInfo.imageTileIdx, tileInfo.tilesetIdx
+          };
+      }
+    }
+  );
+
+  auto & queries = scene.PhysicsDebugQueries();
+  queries.Add(ray, intersectionResults);
+
+  return intersectionResults.collision;
+}
+
 PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
   pul::core::SceneBundle & scene
 , pul::physics::IntersectorRay const & ray
@@ -549,15 +594,10 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
     , sizeof(float) * 2ul
     );
 
-    std::array<float, 2> windowResolution {{
-      static_cast<float>(scene.config.framebufferWidth)
-    , static_cast<float>(scene.config.framebufferHeight)
-    }};
-
     sg_apply_uniforms(
       SG_SHADERSTAGE_VS
     , 1
-    , windowResolution.data()
+    , &scene.config.framebufferDimFloat.x
     , sizeof(float) * 2ul
     );
 
@@ -604,15 +644,10 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
     , sizeof(float) * 2ul
     );
 
-    std::array<float, 2> windowResolution {{
-      static_cast<float>(scene.config.framebufferWidth)
-    , static_cast<float>(scene.config.framebufferHeight)
-    }};
-
     sg_apply_uniforms(
       SG_SHADERSTAGE_VS
     , 1
-    , windowResolution.data()
+    , &scene.config.framebufferDimFloat.x
     , sizeof(float) * 2ul
     );
 

@@ -709,15 +709,10 @@ PUL_PLUGIN_DECL void Map_Render(pul::core::SceneBundle & scene) {
   , sizeof(float) * 2ul
   );
 
-  std::array<float, 2> windowResolution {{
-    static_cast<float>(scene.config.framebufferWidth)
-  , static_cast<float>(scene.config.framebufferHeight)
-  }};
-
   sg_apply_uniforms(
     SG_SHADERSTAGE_VS
   , 2
-  , windowResolution.data()
+  , &scene.config.framebufferDimFloat.x
   , sizeof(float) * 2ul
   );
 

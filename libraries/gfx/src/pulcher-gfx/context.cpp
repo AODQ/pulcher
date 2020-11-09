@@ -121,8 +121,8 @@ bool pul::gfx::InitializeContext(pul::core::Config & config) {
   {
     sg_image_desc desc = {};
     desc.render_target = true;
-    desc.width = config.framebufferWidth;
-    desc.height = config.framebufferHeight;
+    desc.width = config.framebufferDim.x;
+    desc.height = config.framebufferDim.y;
     desc.num_mipmaps = 1;
     desc.usage = SG_USAGE_IMMUTABLE;
     /* desc.pixel_format = SG_PIXELFORMAT_BGRA8; */
@@ -144,8 +144,8 @@ bool pul::gfx::InitializeContext(pul::core::Config & config) {
   {
     sg_image_desc desc = {};
     desc.render_target = true;
-    desc.width = config.framebufferWidth;
-    desc.height = config.framebufferHeight;
+    desc.width = config.framebufferDim.x;
+    desc.height = config.framebufferDim.y;
     desc.num_mipmaps = 1;
     desc.usage = SG_USAGE_IMMUTABLE;
     desc.pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL;
