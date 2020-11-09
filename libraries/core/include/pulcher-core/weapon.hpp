@@ -43,6 +43,7 @@ namespace pul::core {
     };
     struct WiManshredder {
       float dischargingTimer = 0.0f;
+      bool isPrimaryActive = false;
     };
     struct WiPericaliya {
       float dischargingTimer = 0.0f;

@@ -2,6 +2,8 @@
 
 #include <pulcher-animation/animation.hpp>
 
+#include <entt/entt.hpp>
+
 #include <functional>
 #include <string>
 
@@ -14,7 +16,12 @@ namespace pul::core {
     bool gravityAffected = false;
 
     std::function<void(glm::vec2 & velocity)> velocityModifierFn = {};
-    std::function<void()> destroyerFn = {};
+  };
+
+  struct ComponentHitscanProjectile {
+    pul::animation::Instance * playerAnimation = nullptr;
+
+    std::function<bool(ComponentHitscanProjectile &)> update = {};
   };
 
   struct ComponentParticleGrenade {

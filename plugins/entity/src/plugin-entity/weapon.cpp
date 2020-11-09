@@ -2010,24 +2010,36 @@ void plugin::entity::PlayerFireManshredder(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, pul::core::ComponentPlayer & player
+, pul::animation::Instance & playerAnim
 ) {
-  auto & mansredderInfo =
+  auto & manshredderInfo =
     std::get<pul::core::WeaponInfo::WiManshredder>(weaponInfo.info);
 
-  if (mansredderInfo.dischargingTimer > 0.0f) {
-    mansredderInfo.dischargingTimer -= pul::util::MsPerFrame;
+  if (manshredderInfo.dischargingTimer > 0.0f) {
+    manshredderInfo.dischargingTimer -= pul::util::MsPerFrame;
+    return;
+  }
+
+  if (manshredderInfo.isPrimaryActive) {
+    if (!primary) {
+      manshredderInfo.isPrimaryActive = false;
+      manshredderInfo.dischargingTimer = 50.0f;
+    }
     return;
   }
 
   if (primary) {
-    mansredderInfo.dischargingTimer = 150.0f;
+    manshredderInfo.isPrimaryActive = true;
+    manshredderInfo.dischargingTimer = 150.0f;
     plugin::entity::FireManshredderPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , player, playerAnim
     );
   }
 
   if (secondary) {
-    mansredderInfo.dischargingTimer = 1000.0f;
+    manshredderInfo.dischargingTimer = 1000.0f;
     plugin::entity::FireManshredderSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     );
@@ -2039,7 +2051,90 @@ void plugin::entity::FireManshredderPrimary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, pul::core::ComponentPlayer & player
+, pul::animation::Instance & playerAnim
 ) {
+  auto & registry = scene.EnttRegistry();
+
+  auto & manshredderInfo =
+    std::get<pul::core::WeaponInfo::WiManshredder>(weaponInfo.info);
+
+  {
+    auto manshredderProjectileEntity = registry.create();
+
+    { // animation
+      pul::animation::Instance instance;
+      plugin.animation.ConstructInstance(
+        scene, instance, scene.AnimationSystem(), "manshredder-primary-fire"
+      );
+      auto & state = instance.pieceToState["particle"];
+      state.Apply("manshredder-primary-fire", true);
+      state.angle = angle;
+      state.flip = flip;
+
+      instance.origin = origin - glm::vec2(-20.0f, -20.0f)*direction;
+
+      registry.emplace<pul::animation::ComponentInstance>(
+        manshredderProjectileEntity, std::move(instance)
+      );
+    }
+
+    // TODO this should probably be its own component
+    registry.emplace<pul::core::ComponentHitscanProjectile>(
+      manshredderProjectileEntity
+    , &playerAnim
+    , [
+        &plugin, &scene, manshredderProjectileEntity, &registry
+      , &manshredderInfo, &player
+      ]
+        (pul::core::ComponentHitscanProjectile & projectile) -> bool
+      {
+        if (!manshredderInfo.isPrimaryActive) { return true; }
+
+        glm::vec2 origin;
+        glm::vec2 direction;
+
+        auto & animation =
+          registry.get<pul::animation::ComponentInstance>(
+            manshredderProjectileEntity
+          ).instance;
+        auto & state = animation.pieceToState.at("particle");
+
+        { // update origin/animation
+          animation.origin = player.origin;
+          state.flip = player.flip;
+
+          origin = player.origin - glm::vec2(0.0f, 44.0f);
+          direction =
+            glm::vec2(
+              glm::sin(player.lookAtAngle), glm::cos(player.lookAtAngle)
+            );
+        }
+
+        if (state.label != "manshredder-primary-hit")
+        { // update hit
+          auto ray =
+            pul::physics::IntersectorRay::Construct(
+              origin, origin+direction*32.0f
+            );
+          if (
+            pul::physics::IntersectionResults results;
+            plugin.physics.IntersectionRaycast(scene, ray, results)
+          ) {
+            state.Apply("manshredder-primary-hit");
+          } else {
+            state.Apply("manshredder-primary-fire");
+          }
+        } else {
+          if (state.animationFinished) {
+            state.Apply("manshredder-primary-fire");
+          }
+        }
+
+        return false;
+      }
+    );
+  }
 }
 
 void plugin::entity::FireManshredderSecondary(
@@ -2103,7 +2198,7 @@ void plugin::entity::FireManshredderSecondary(
     exploder.explodeOnCollide = true;
 
     plugin.animation.ConstructInstance(
-      scene, exploder.animationInstance, scene.AnimationSystem()
+     scene, exploder.animationInstance, scene.AnimationSystem()
     , "manshredder-secondary-hit"
     );
 
@@ -2237,37 +2332,60 @@ void plugin::entity::FireWallbangerSecondary(
 ) {
   auto & registry = scene.EnttRegistry();
 
-  auto wallbangerMuzzleEntity = registry.create();
-  { // muzzle
-    pul::animation::Instance animInstance;
-    plugin.animation.ConstructInstance(
-      scene, animInstance, scene.AnimationSystem()
-    , "wallbanger-secondary-muzzle"
+  { // big muzzle
+    auto wallbangerMuzzleEntity = registry.create();
+    registry.emplace<pul::core::ComponentParticle>(
+      wallbangerMuzzleEntity, origin, direction*3.0f
     );
-    auto & animState = animInstance.pieceToState["particle"];
-    animState.Apply("wallbanger-secondary-muzzle", true);
-    animState.flip = flip;
-    animInstance.origin = origin + glm::vec2(0.0f, 32.0f);
-    animInstance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(animInstance, matrix);
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem()
+    , "wallbanger-secondary-muzzle-big"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("wallbanger-secondary-muzzle-big", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin + glm::vec2(0.0f, 32.0f);
+    instance.automaticCachedMatrixCalculation = false;
+
+    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
-      wallbangerMuzzleEntity, std::move(animInstance)
+      wallbangerMuzzleEntity, std::move(instance)
+    );
+  }
+
+  { // small muzzle
+    auto wallbangerMuzzleEntity = registry.create();
+    registry.emplace<pul::core::ComponentParticle>(
+      wallbangerMuzzleEntity, origin, direction
     );
 
-    registry.emplace<pul::core::ComponentParticle>(
-      wallbangerMuzzleEntity
-    , animInstance.origin, glm::vec2{}, false, false
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem()
+    , "wallbanger-secondary-muzzle-small"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("wallbanger-secondary-muzzle-small", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = origin + glm::vec2(0.0f, 32.0f);
+    instance.automaticCachedMatrixCalculation = false;
+
+    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      wallbangerMuzzleEntity, std::move(instance)
     );
   }
 
   // keep track of begin/end origin for collision detection
   glm::vec2 beginOrigin, endOrigin;
-
-  // end origin before being corrected by secondary hit origin, thus allowing
-  // us to determine which side of the projectile was hit
-  glm::vec2 originalEndOrigin;
 
   auto wallbangerBeamEntity = registry.create();
 
@@ -2279,7 +2397,6 @@ void plugin::entity::FireWallbangerSecondary(
         * glm::vec3(0.0f, 0.0f, 1.0f)
       )
   ;
-
 
   // -- intersect wall
   // intersect wall then air/non-wall, but if the gap is not large then skip it
@@ -2312,6 +2429,28 @@ void plugin::entity::FireWallbangerSecondary(
     beginOrigin = endOrigin + direction;
   }
 
+  { // wall muzzle
+    auto wallbangerMuzzleEntity = registry.create();
+    registry.emplace<pul::core::ComponentParticle>(
+      wallbangerMuzzleEntity, beginOrigin
+    );
+
+    pul::animation::Instance instance;
+    plugin.animation.ConstructInstance(
+      scene, instance, scene.AnimationSystem(), "wallbanger-wall-muzzle"
+    );
+    auto & state = instance.pieceToState["particle"];
+    state.Apply("wallbanger-wall-muzzle", true);
+    state.angle = angle;
+    state.flip = flip;
+
+    instance.origin = beginOrigin + direction*4.0f;
+
+    registry.emplace<pul::animation::ComponentInstance>(
+      wallbangerMuzzleEntity, std::move(instance)
+    );
+  }
+
   { // projectile
     { // animation
       pul::animation::Instance animInstance;
@@ -2340,14 +2479,6 @@ void plugin::entity::FireWallbangerSecondary(
 
     { // particle beam
       pul::core::ComponentParticleBeam particle;
-
-      // can't use the instance used to create animation above since its
-      // memory has been moved to the entity
-      auto & animInstance =
-        registry.get<
-          pul::animation::ComponentInstance
-        >(wallbangerBeamEntity).instance
-      ;
 
       registry.emplace<pul::core::ComponentParticleBeam>(
         wallbangerBeamEntity, std::move(particle)

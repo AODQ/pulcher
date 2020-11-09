@@ -532,6 +532,7 @@ void UpdatePlayerWeapon(
       , plugin, scene, playerOrigin
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
+      , player, playerAnim.instance
       );
     } break;
     case pul::core::WeaponType::Wallbanger: {
@@ -1197,6 +1198,7 @@ void plugin::entity::UpdatePlayer(
     float const angle =
       std::atan2(controller.lookDirection.x, controller.lookDirection.y);
     player.lookAtAngle = angle;
+    player.flip = playerDirFlip;
 
     playerAnim.instance.pieceToState["arm-back"].angle
       = playerAnim.instance.pieceToState["arm-front"].angle

@@ -506,7 +506,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       if (glm::length(L) > 200.0f) {
         L = glm::normalize(L) * 200.0f;
       }
-      auto const offset = glm::pow(glm::length(L) / 200.0f, 0.5f) * L;
+      auto const offset = L;
 
       scene.cameraOrigin =
         glm::mix(
@@ -516,6 +516,35 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         );
     }
   }
+
+  { // -- hitscan projectile
+    auto view =
+      registry.view<
+        pul::core::ComponentHitscanProjectile
+      , pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+      auto & projectile =
+        view.get<pul::core::ComponentHitscanProjectile>(entity);
+
+      if (projectile.update && projectile.update(projectile)) {
+        registry.destroy(entity);
+        continue;
+      }
+
+      auto const & playerAnim = *projectile.playerAnimation;
+      auto const & weaponState =
+        playerAnim.pieceToState.at("weapon-placeholder");
+      auto const & weaponMatrix = weaponState.cachedLocalSkeletalMatrix;
+
+      plugin
+        .animation
+        .UpdateCacheWithPrecalculatedMatrix(animation.instance, weaponMatrix);
+    }
+  }
+
 
   { // -- beams
     auto view =
