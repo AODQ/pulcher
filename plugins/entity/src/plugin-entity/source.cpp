@@ -1,3 +1,6 @@
+// entity plugin
+
+#include <plugin-entity/cursor.hpp>
 #include <plugin-entity/player.hpp>
 
 #include <pulcher-animation/animation.hpp>
@@ -49,6 +52,9 @@ extern "C" {
 PUL_PLUGIN_DECL void Entity_StartScene(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 ) {
+
+  plugin::entity::ConstructCursor(plugin, scene);
+
   auto & registry = scene.EnttRegistry();
 
   // player
@@ -139,6 +145,12 @@ PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
 
   // delete registry
   registry = {};
+}
+
+PUL_PLUGIN_DECL void Entity_EntityRender(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+) {
+  plugin::entity::RenderCursor(plugin, scene);
 }
 
 PUL_PLUGIN_DECL void Entity_EntityUpdate(
@@ -501,18 +513,20 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       , view.get<pul::animation::ComponentInstance>(entity)
       );
 
+      // -- tracking camera
       // center camera on this
       glm::vec2 L = scene.PlayerController().current.lookOffset;
-      if (glm::length(L) > 200.0f) {
-        L = glm::normalize(L) * 200.0f;
+      if (glm::length(L) > 500.0f) {
+        L = glm::normalize(L) * 500.0f;
       }
-      auto const offset = L;
+      auto const offset = glm::pow(glm::length(L) / 500.0f, 0.7f) * L * 0.5f;
 
+      scene.playerOrigin = player.origin - glm::vec2(0.0f, 40.0f);
       scene.cameraOrigin =
         glm::mix(
           scene.cameraOrigin
-        , glm::i32vec2(player.origin + offset)
-        , 0.2f
+        , glm::i32vec2(scene.playerOrigin + offset)
+        , 0.5f
         );
     }
   }

@@ -254,6 +254,7 @@ void ProcessRendering(
     passAction.colors[0].val[0] = screenClearColor.r;
     passAction.colors[0].val[1] = screenClearColor.g;
     passAction.colors[0].val[2] = screenClearColor.b;
+    passAction.colors[0].val[3] = 0.0f;
     passAction.depth.action = SG_ACTION_CLEAR;
     passAction.depth.val = 1.0f;
 
@@ -262,6 +263,18 @@ void ProcessRendering(
     plugin.map.Render(scene);
     plugin.animation.RenderAnimations(plugin, scene);
     plugin.physics.RenderDebug(scene);
+
+    sg_end_pass();
+  }
+
+  { // -- postproc
+    sg_pass_action passAction = {};
+    passAction.colors[0].action = SG_ACTION_LOAD;
+    passAction.depth.action = SG_ACTION_LOAD;
+
+    sg_begin_pass(pul::gfx::ScenePass(), &passAction);
+
+    plugin.entity.EntityRender(plugin, scene);
 
     sg_end_pass();
   }

@@ -133,9 +133,10 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
     } break;
     case pul::plugin::Type::Entity: {
       auto & unit = plugin.entity;
-      ctx.LoadFunction(unit.StartScene,   "Entity_StartScene");
-      ctx.LoadFunction(unit.Shutdown,     "Entity_Shutdown");
+      ctx.LoadFunction(unit.EntityRender, "Entity_EntityRender");
       ctx.LoadFunction(unit.EntityUpdate, "Entity_EntityUpdate");
+      ctx.LoadFunction(unit.Shutdown,     "Entity_Shutdown");
+      ctx.LoadFunction(unit.StartScene,   "Entity_StartScene");
       ctx.LoadFunction(unit.UiRender,     "Entity_UiRender");
     } break;
     case pul::plugin::Type::UserInterface: {

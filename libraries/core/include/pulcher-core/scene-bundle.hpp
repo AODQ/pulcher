@@ -17,6 +17,7 @@ namespace pul::physics { struct DebugQueries; }
 
 namespace pul::core {
   struct SceneBundle {
+    glm::vec2 playerOrigin = {};
     glm::i32vec2 cameraOrigin = {};
 
     float calculatedMsPerFrame = pul::util::MsPerFrame;

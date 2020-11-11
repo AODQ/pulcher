@@ -11,6 +11,19 @@ void pul::controls::UpdateControls(
 , bool wantCaptureKeyboard, bool wantCaptureMouse
 ) {
 
+  static bool hidden = false;
+
+  static bool prevF = false;
+
+  if (!prevF && glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+    hidden ^= 1;
+    glfwSetInputMode(
+      window, GLFW_CURSOR, hidden ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
+    );
+  }
+
+  prevF = glfwGetKey(window, GLFW_KEY_F);
+
   // move current to previous
   controller.previous = std::move(controller.current);
 
@@ -28,7 +41,6 @@ void pul::controls::UpdateControls(
     current.lookAngle = la;
   }
 
-  if (!wantCaptureMouse)
   { // update looking position
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
@@ -39,6 +51,18 @@ void pul::controls::UpdateControls(
     current.lookDirection = glm::normalize(current.lookOffset);
     current.lookAngle =
       std::atan2(current.lookDirection.x, current.lookDirection.y);
+    // circle is capped to a radius
+    float length = glm::min(glm::length(current.lookOffset), 400.0f);
+    current.lookOffset = current.lookDirection * length;
+
+    // make sure mouse stays in radius
+    if (length == 400.0f && hidden) {
+      glfwSetCursorPos(
+        window,
+        static_cast<double>(current.lookOffset.x + playerCenterX),
+        static_cast<double>(current.lookOffset.y + playerCenterY)
+      );
+    }
   }
 
   if (!wantCaptureKeyboard) {

@@ -1214,7 +1214,7 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
       filenameJson
     , cJSON_GetObjectItemCaseSensitive(spritesheetDataJson, "files")
     ) {
-      spdlog::debug("Loading '{}'", filenameJson->valuestring);
+      spdlog::debug("loading json file '{}'", filenameJson->valuestring);
       ::LoadAnimation(
         std::string{filenameJson->valuestring}
       , animationSystem.animators
@@ -1222,12 +1222,6 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
     }
 
     cJSON_Delete(spritesheetDataJson);
-  }
-
-  for (auto const & anim : animationSystem.animators) {
-    spdlog::debug(
-      "successfully loaded anim '{}'/'{}'", anim.first, anim.second->label
-    );
   }
 
   { // -- sokol animation program
@@ -1398,7 +1392,7 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     , sizeof(float) * 2ul
     );
 
-    glm::vec2 cameraOrigin = scene.cameraOrigin;
+    auto cameraOrigin = glm::vec2(scene.cameraOrigin);
 
     sg_apply_uniforms(
       SG_SHADERSTAGE_VS

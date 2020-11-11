@@ -1166,6 +1166,9 @@ void plugin::entity::UpdatePlayer(
             playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
             playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
           }
+        } else {
+          playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
+          playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
         }
       break;
       case 1:

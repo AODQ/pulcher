@@ -76,7 +76,10 @@ namespace pul::plugin {
     void (*StartScene)(
       pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
-    void (*Shutdown)(pul::core::SceneBundle &);
+    void (*Shutdown)(pul::core::SceneBundle &) = nullptr;
+    void (*EntityRender)(
+      pul::plugin::Info const &, pul::core::SceneBundle &
+    ) = nullptr;
     void (*EntityUpdate)(
       pul::plugin::Info const &, pul::core::SceneBundle &
     ) = nullptr;
