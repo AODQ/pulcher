@@ -1,6 +1,7 @@
 #include <plugin-entity/cursor.hpp>
 
 #include <pulcher-controls/controls.hpp>
+#include <pulcher-core/hud.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/sokol.hpp>
@@ -37,19 +38,23 @@ void ConstructComponentCursor(ComponentCursor & self) {
     desc.vs.uniform_blocks[2].uniforms[0].name = "cameraOrigin";
     desc.vs.uniform_blocks[2].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
-    desc.vs.uniform_blocks[3].size = sizeof(float) * 2;
+    desc.vs.uniform_blocks[3].size = sizeof(float) * 4;
     desc.vs.uniform_blocks[3].uniforms[0].name = "cursorOrigin";
     desc.vs.uniform_blocks[3].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+    desc.vs.uniform_blocks[3].uniforms[1].name = "hudHealthArmor";
+    desc.vs.uniform_blocks[3].uniforms[1].type = SG_UNIFORMTYPE_FLOAT2;
 
     desc.vs.source = PUL_SHADER(
       out vec2 uvCoord;
       out float playerCursorLength;
       flat out int primitiveId;
+      flat out vec2 healthArmor;
 
       uniform vec2 originOffset;
       uniform vec2 framebufferResolution;
       uniform vec2 cameraOrigin;
       uniform vec2 cursorOrigin;
+      uniform vec2 hudHealthArmor;
 
       const vec2 vertexArray[6] = vec2[](
         vec2(0.0f,  0.0f)
@@ -87,18 +92,19 @@ void ConstructComponentCursor(ComponentCursor & self) {
 
           // solid end-point shading for the rest
           if (gl_VertexID >= 6)
-            o = vec2(1.0f);
+            { o = vec2(1.0f); }
 
           o.x *= length(cursorOrigin - originOffset) - 16.0f;
           playerCursorLength = clamp(o.x / 400.0f, 0.0f, 1.0f);
 
+          // crosshair appears a little brighter than line
           if (gl_VertexID >= 6)
-            playerCursorLength *= 2.5f;
+            { playerCursorLength *= 2.5f; }
         }
 
         if (gl_VertexID < 6) {
           vec2 direction = normalize(cursorOrigin - originOffset);
-          origin.x *= length(cursorOrigin - originOffset) - 16.0f;
+          origin.x *= length(cursorOrigin - originOffset);
           pR(origin, atan(-direction.y, direction.x));
         } else if (gl_VertexID < 12) {
           uvCoord = vec2(origin.x, 1.0f-origin.y);
@@ -125,6 +131,7 @@ void ConstructComponentCursor(ComponentCursor & self) {
         ;
         gl_Position = vec4(vertexOrigin, 0.3f, 1.0f);
         primitiveId = int(gl_VertexID);
+        healthArmor = hudHealthArmor;
       }
     );
 
@@ -132,14 +139,36 @@ void ConstructComponentCursor(ComponentCursor & self) {
       in vec2 uvCoord;
       in float playerCursorLength;
       flat in int primitiveId;
+      flat in vec2 healthArmor;
 
       out vec4 outColor;
 
       void main() {
         outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f-exp(-playerCursorLength*2.5f));
         if (primitiveId >= 6 && primitiveId < 12) {
-          if (length(uvCoord - vec2(0.5f)) > 0.45f) { discard; }
-          if (length(uvCoord - vec2(0.5f)) < 0.40f) { discard; }
+          float len = length(uvCoord - vec2(0.5f));
+
+          if (len > 0.45f) { discard; }
+          if (len < 0.4f) { discard; }
+
+          if (len >= 0.4f) {
+            outColor.b = 0.0f;
+            // health
+            outColor.r =
+                step(uvCoord.x, 0.5f)
+              * step(uvCoord.y, healthArmor.r / 200.0f)
+              * 0.8f
+            ;
+
+            // armor
+            outColor.g =
+                step(0.5f, uvCoord.x)
+              * step(uvCoord.y, healthArmor.g / 200.0f)
+              * 0.8f
+            ;
+
+            outColor.a *= step(0.8f - (outColor.r + outColor.g), 0.0f)*0.9f;
+          }
         }
       }
     );
@@ -227,14 +256,18 @@ void plugin::entity::RenderCursor(
     , sizeof(float) * 2ul
     );
 
+    auto & hud = scene.Hud();
+    auto hudHealthArmor = glm::vec2(hud.player.health, hud.player.armor);
     auto mouseOrigin =
       playerOrigin + scene.PlayerController().current.lookOffset;
+
+    auto unif = glm::vec4(mouseOrigin, hudHealthArmor);
 
     sg_apply_uniforms(
       SG_SHADERSTAGE_VS
     , 3
-    , &mouseOrigin.x
-    , sizeof(float) * 2ul
+    , &unif.x
+    , sizeof(float) * 4ul
     );
 
     sg_draw(0, 24, 1);

@@ -5,6 +5,7 @@
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-controls/controls.hpp>
+#include <pulcher-core/hud.hpp>
 #include <pulcher-core/particle.hpp>
 #include <pulcher-core/pickup.hpp>
 #include <pulcher-core/player.hpp>
@@ -521,13 +522,18 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       }
       auto const offset = glm::pow(glm::length(L) / 500.0f, 0.7f) * L * 0.5f;
 
-      scene.playerOrigin = player.origin - glm::vec2(0.0f, 40.0f);
+      scene.playerOrigin = origin.origin - glm::vec2(0.0f, 40.0f);
       scene.cameraOrigin =
         glm::mix(
           scene.cameraOrigin
         , glm::i32vec2(scene.playerOrigin + offset)
         , 0.5f
         );
+
+      // -- hud
+      auto & hud = scene.Hud();
+      hud.player.health = damageable.health;
+      hud.player.armor = damageable.armor;
     }
   }
 

@@ -13,6 +13,7 @@ namespace pul::animation { struct System; }
 namespace pul::audio { struct System; }
 namespace pul::controls { struct Controller; }
 namespace pul::core { struct ComponentPlayer; }
+namespace pul::core { struct HudInfo; }
 namespace pul::physics { struct DebugQueries; }
 
 namespace pul::core {
@@ -33,6 +34,7 @@ namespace pul::core {
     pul::controls::Controller & PlayerController();
     pul::physics::DebugQueries & PhysicsDebugQueries();
     pul::audio::System & AudioSystem();
+    pul::core::HudInfo & Hud();
 
     // store player between reloads
     pul::core::ComponentPlayer & StoredDebugPlayerComponent();
