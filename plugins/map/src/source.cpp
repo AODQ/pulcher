@@ -395,12 +395,20 @@ void ParseLayerObject(
     object, cJSON_GetObjectItemCaseSensitive(layer, "objects")
   ) {
     size_t objectId = cJSON_GetObjectItemCaseSensitive(object, "id")->valueint;
-    size_t tileId = cJSON_GetObjectItemCaseSensitive(object, "gid")->valueint;
+    size_t tileId = -1ul;
+    if (cJSON_GetObjectItemCaseSensitive(object, "gid"))
+      { tileId = cJSON_GetObjectItemCaseSensitive(object, "gid")->valueint; }
 
-    std::string typeStr = "";
+    std::string objectTypeStr = "";
     auto objectType = cJSON_GetObjectItemCaseSensitive(object, "type");
     cJSON * jsonTile = nullptr;
-    if (!objectType || (typeStr = std::string{objectType->valuestring}) == "") {
+
+    // if the object type is empty then it has been cached & we need to locate
+    // it in the tileset
+    if (
+        !objectType
+     || (objectTypeStr = std::string{objectType->valuestring}) == ""
+    ) {
       // if type is empty then check in the tileset for type
 
       // get tile/spritesheet info
@@ -417,7 +425,7 @@ void ParseLayerObject(
         if (id == localTileId) {
 
           if (auto jsonType = cJSON_GetObjectItemCaseSensitive(tile, "type")) {
-            typeStr = jsonType->valuestring;
+            objectTypeStr = jsonType->valuestring;
             jsonTile = tile;
             foundId = true;
           }
@@ -434,39 +442,23 @@ void ParseLayerObject(
       }
     }
 
-    // just assume it's a pickup for now
-    auto & registry = scene.EnttRegistry();
-    auto pickupEntity = registry.create();
+    if (objectTypeStr == "item-pickup") {
+      auto & registry = scene.EnttRegistry();
+      auto pickupEntity = registry.create();
 
-    glm::vec2 const origin =
-      glm::vec2(
-        cJSON_GetObjectItemCaseSensitive(object, "x")->valueint
-      , cJSON_GetObjectItemCaseSensitive(object, "y")->valueint
-      );
+      glm::vec2 const origin =
+        glm::vec2(
+          cJSON_GetObjectItemCaseSensitive(object, "x")->valueint
+        , cJSON_GetObjectItemCaseSensitive(object, "y")->valueint
+        );
 
-    pul::core::PickupType pickupType;
-    pul::core::WeaponType weaponPickupType = pul::core::WeaponType::Size;
-    std::string pickupsStr = "pickups";
+      pul::core::PickupType pickupType;
+      pul::core::WeaponType weaponPickupType = pul::core::WeaponType::Size;
 
-    if (typeStr == "armor-large")
-      { pickupType = pul::core::PickupType::ArmorLarge; }
-    if (typeStr == "armor-medium")
-      { pickupType = pul::core::PickupType::ArmorMedium; }
-    if (typeStr == "armor-small")
-      { pickupType = pul::core::PickupType::ArmorSmall; }
-    if (typeStr == "health-large")
-      { pickupType = pul::core::PickupType::HealthLarge; }
-    if (typeStr == "health-medium")
-      { pickupType = pul::core::PickupType::HealthMedium; }
-    if (typeStr == "health-small")
-      { pickupType = pul::core::PickupType::HealthSmall; }
-
-    bool applyToPickupBg = false;
-    if (typeStr == "weapon-pickup" && jsonTile) {
-      pickupsStr = "pickup-weapon";
-
-      pickupType = pul::core::PickupType::Weapon;
-
+      // locate pickup type & weapon type
+      bool applyPickupBg = false;
+      std::string animationPickupStr = "";
+      std::string animationStatePickupStr = "";
       cJSON * property;
       cJSON_ArrayForEach(
         property, cJSON_GetObjectItemCaseSensitive(jsonTile, "properties")
@@ -476,53 +468,76 @@ void ParseLayerObject(
         , val = cJSON_GetObjectItemCaseSensitive(property, "value")->valuestring
         ;
 
-        if (name != "weapon") { continue; }
+        if (name == "type") {
+          animationPickupStr = "pickups";
+          if (animationStatePickupStr != "")
+            { animationStatePickupStr = val; }
 
-        typeStr = val;
-        if (val == "bad-fetus")
-          { weaponPickupType = pul::core::WeaponType::BadFetus; }
-        if (val == "doppler-beam")
-          { weaponPickupType = pul::core::WeaponType::DopplerBeam; }
-        if (val == "grannibal")
-          { weaponPickupType = pul::core::WeaponType::Grannibal; }
-        if (val == "manshredder")
-          { weaponPickupType = pul::core::WeaponType::Manshredder; }
-        if (val == "pericaliya")
-          { weaponPickupType = pul::core::WeaponType::Pericaliya; }
-        if (val == "pmf")
-          { weaponPickupType = pul::core::WeaponType::PMF; }
-        if (val == "volnias")
-          { weaponPickupType = pul::core::WeaponType::Volnias; }
-        if (val == "wallbanger")
-          { weaponPickupType = pul::core::WeaponType::Wallbanger; }
-        if (val == "zeus-stinger")
-          { weaponPickupType = pul::core::WeaponType::ZeusStinger; }
-        if (val == "all")
-          { pickupType = pul::core::PickupType::WeaponAll; }
+          if (val == "armor-large")
+            { pickupType = pul::core::PickupType::ArmorLarge; }
+          if (val == "armor-medium")
+            { pickupType = pul::core::PickupType::ArmorMedium; }
+          if (val == "armor-small")
+            { pickupType = pul::core::PickupType::ArmorSmall; }
+          if (val == "health-large")
+            { pickupType = pul::core::PickupType::HealthLarge; }
+          if (val == "health-medium")
+            { pickupType = pul::core::PickupType::HealthMedium; }
+          if (val == "health-small")
+            { pickupType = pul::core::PickupType::HealthSmall; }
+          if (val == "weapon") {
+            animationPickupStr = "pickup-weapon";
+            applyPickupBg = true;
+            pickupType = pul::core::PickupType::Weapon; 
+          }
+        } else if (name == "weapon") {
+          animationStatePickupStr = val;
 
-        break;
+          if (val == "bad-fetus")
+            { weaponPickupType = pul::core::WeaponType::BadFetus; }
+          if (val == "doppler-beam")
+            { weaponPickupType = pul::core::WeaponType::DopplerBeam; }
+          if (val == "grannibal")
+            { weaponPickupType = pul::core::WeaponType::Grannibal; }
+          if (val == "manshredder")
+            { weaponPickupType = pul::core::WeaponType::Manshredder; }
+          if (val == "pericaliya")
+            { weaponPickupType = pul::core::WeaponType::Pericaliya; }
+          if (val == "pmf")
+            { weaponPickupType = pul::core::WeaponType::PMF; }
+          if (val == "volnias")
+            { weaponPickupType = pul::core::WeaponType::Volnias; }
+          if (val == "wallbanger")
+            { weaponPickupType = pul::core::WeaponType::Wallbanger; }
+          if (val == "zeus-stinger")
+            { weaponPickupType = pul::core::WeaponType::ZeusStinger; }
+          if (val == "all")
+            { pickupType = pul::core::PickupType::WeaponAll; }
+        }
       }
-      applyToPickupBg = true;
+
+      registry.emplace<pul::core::ComponentPickup>(
+        pickupEntity, pickupType, weaponPickupType, origin, true, 0ul
+      );
+
+      pul::animation::Instance pickupAnimationInstance;
+      plugins.animation.ConstructInstance(
+        scene, pickupAnimationInstance, scene.AnimationSystem()
+      , animationPickupStr.c_str()
+      );
+
+      pickupAnimationInstance.origin = origin;
+      pickupAnimationInstance
+        .pieceToState["pickups"].Apply(animationStatePickupStr, true);
+      if (applyPickupBg) {
+        pickupAnimationInstance
+          .pieceToState["pickup-bg"].Apply(animationStatePickupStr, true);
+      }
+
+      registry.emplace<pul::animation::ComponentInstance>(
+        pickupEntity, std::move(pickupAnimationInstance)
+      );
     }
-
-    registry.emplace<pul::core::ComponentPickup>(
-      pickupEntity, pickupType, weaponPickupType, origin, true, 0ul
-    );
-
-    pul::animation::Instance pickupAnimationInstance;
-    plugins.animation.ConstructInstance(
-      scene, pickupAnimationInstance, scene.AnimationSystem()
-    , pickupsStr.c_str()
-    );
-
-    pickupAnimationInstance.origin = origin;
-    pickupAnimationInstance.pieceToState["pickups"].Apply(typeStr, true);
-    if (applyToPickupBg)
-      {pickupAnimationInstance.pieceToState["pickup-bg"].Apply(typeStr, true);}
-
-    registry.emplace<pul::animation::ComponentInstance>(
-      pickupEntity, std::move(pickupAnimationInstance)
-    );
   }
 }
 
