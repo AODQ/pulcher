@@ -6,6 +6,7 @@
 #include <entt/entt.hpp>
 
 #include <array>
+#include <vector>
 
 namespace pul::core {
 
@@ -60,4 +61,19 @@ namespace pul::core {
 
     entt::entity weaponAnimation;
   };
+
+  struct PlayerMetaInfo {
+    std::vector<glm::i32vec2> playerSpawnPoints = {};
+  };
+
+  struct ComponentLabel {
+    std::string label = {};
+  };
+
+  struct ComponentPlayerControllable { };
+  struct ComponentBotControllable { };
+
+  struct ComponentCamera {
+  };
+
 }

@@ -650,6 +650,61 @@ void UpdatePlayerWeapon(
 
 }
 
+void plugin::entity::ConstructPlayer(
+  entt::entity & entity
+, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, bool mainPlayer
+) {
+  auto & registry = scene.EnttRegistry();
+  entity = registry.create();
+  registry.emplace<pul::core::ComponentPlayer>(entity);
+  auto damageable = pul::core::ComponentDamageable { 100u, 0u };
+  registry.emplace<pul::core::ComponentDamageable>(entity, damageable);
+  registry.emplace<pul::core::ComponentOrigin>(entity);
+  registry.emplace<pul::core::ComponentHitboxAABB>(entity);
+  registry.emplace<pul::controls::ComponentController>(entity);
+  registry.emplace<pul::core::ComponentCamera>(entity);
+  registry.emplace<pul::core::ComponentLabel>(entity, "Player");
+
+  pul::animation::Instance instance;
+  plugin.animation.ConstructInstance(
+    scene, instance, scene.AnimationSystem(), "nygelstromn"
+  );
+  registry.emplace<pul::animation::ComponentInstance>(
+    entity, std::move(instance)
+  );
+
+  auto & player = registry.get<pul::core::ComponentPlayer>(entity);
+
+  // load up player weapon animation & state from previous plugin load
+  if (mainPlayer) {
+
+    // overwrite with player component for persistent reloads
+    player = scene.StoredDebugPlayerComponent();
+
+    registry.emplace<pul::core::ComponentPlayerControllable>(entity);
+  } else {
+    registry.emplace<pul::core::ComponentBotControllable>(entity);
+  }
+
+  // load weapon animation
+  pul::animation::Instance weaponInstance;
+  plugin.animation.ConstructInstance(
+    scene, weaponInstance, scene.AnimationSystem(), "weapons"
+  );
+  player.weaponAnimation = registry.create();
+
+  registry.emplace<pul::animation::ComponentInstance>(
+    player.weaponAnimation, std::move(weaponInstance)
+  );
+
+  // choose map origin
+  if (scene.PlayerMetaInfo().playerSpawnPoints.size() > 0ul) {
+    registry.get<pul::core::ComponentOrigin>(entity).origin =
+      scene.PlayerMetaInfo().playerSpawnPoints[0];
+  }
+}
+
 void plugin::entity::UpdatePlayer(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , pul::controls::Controller const & controls

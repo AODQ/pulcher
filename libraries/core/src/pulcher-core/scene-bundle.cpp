@@ -12,6 +12,7 @@
 struct pul::core::SceneBundle::Impl {
   pul::animation::System animationSystem;
   pul::audio::System audioSystem;
+  pul::core::PlayerMetaInfo playerMetaInfo;
   pul::controls::Controller playerController;
   pul::physics::DebugQueries physicsQueries;
   pul::core::ComponentPlayer storedDebugPlayerComponent;
@@ -33,6 +34,10 @@ pul::audio::System & pul::core::SceneBundle::AudioSystem() {
 
 pul::controls::Controller & pul::core::SceneBundle::PlayerController() {
   return impl->playerController;
+}
+
+pul::core::PlayerMetaInfo & pul::core::SceneBundle::PlayerMetaInfo() {
+  return impl->playerMetaInfo;
 }
 
 pul::physics::DebugQueries &

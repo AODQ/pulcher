@@ -2,6 +2,7 @@
 
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/config.hpp>
+#include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/imgui.hpp>
@@ -313,6 +314,11 @@ void ProcessRendering(
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
       ::ShutdownPluginInfo(plugin, scene);
+
+      // reload configs
+      scene.PlayerMetaInfo() = {};
+
+      // continue loading plugins
       pul::plugin::UpdatePlugins(plugin);
       ::LoadPluginInfo(plugin, scene);
     }

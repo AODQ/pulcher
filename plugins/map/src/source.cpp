@@ -2,6 +2,7 @@
 #include <pulcher-core/enum.hpp>
 #include <pulcher-core/map.hpp>
 #include <pulcher-core/pickup.hpp>
+#include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
@@ -442,6 +443,16 @@ void ParseLayerObject(
       }
     }
 
+    if (objectTypeStr == "player-spawner") {
+      glm::i32vec2 const origin =
+        glm::vec2(
+          cJSON_GetObjectItemCaseSensitive(object, "x")->valueint
+        , cJSON_GetObjectItemCaseSensitive(object, "y")->valueint
+        );
+
+      scene.PlayerMetaInfo().playerSpawnPoints.emplace_back(origin);
+    }
+
     if (objectTypeStr == "item-pickup") {
       auto & registry = scene.EnttRegistry();
       auto pickupEntity = registry.create();
@@ -470,7 +481,7 @@ void ParseLayerObject(
 
         if (name == "type") {
           animationPickupStr = "pickups";
-          if (animationStatePickupStr != "")
+          if (animationStatePickupStr == "")
             { animationStatePickupStr = val; }
 
           if (val == "armor-large")
@@ -491,7 +502,9 @@ void ParseLayerObject(
             pickupType = pul::core::PickupType::Weapon; 
           }
         } else if (name == "weapon") {
-          animationStatePickupStr = val;
+
+          if (val != "")
+            { animationStatePickupStr = val; }
 
           if (val == "bad-fetus")
             { weaponPickupType = pul::core::WeaponType::BadFetus; }

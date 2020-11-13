@@ -32,20 +32,6 @@ namespace {
 
 bool botPlays = false;
 
-struct ComponentLabel {
-  std::string label = {};
-};
-
-struct ComponentController {
-  pul::controls::Controller controller;
-};
-
-struct ComponentPlayerControllable { };
-struct ComponentBotControllable { };
-
-struct ComponentCamera {
-};
-
 } // -- namespace
 
 extern "C" {
@@ -56,84 +42,13 @@ PUL_PLUGIN_DECL void Entity_StartScene(
 
   plugin::entity::ConstructCursor(plugin, scene);
 
-  auto & registry = scene.EnttRegistry();
-
   // player
-  {
-    auto playerEntity = registry.create();
-    registry.emplace<pul::core::ComponentPlayer>(playerEntity);
-    auto damageable = pul::core::ComponentDamageable { 100u, 0u };
-    registry.emplace<pul::core::ComponentDamageable>(playerEntity, damageable);
-    registry.emplace<pul::core::ComponentOrigin>(playerEntity);
-    registry.emplace<pul::core::ComponentHitboxAABB>(playerEntity);
-    registry.emplace<::ComponentController>(playerEntity);
-    registry.emplace<::ComponentPlayerControllable>(playerEntity);
-    registry.emplace<::ComponentCamera>(playerEntity);
-    registry.emplace<::ComponentLabel>(playerEntity, "Player");
-
-    pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
-      scene, instance, scene.AnimationSystem(), "nygelstromn"
-    );
-    registry.emplace<pul::animation::ComponentInstance>(
-      playerEntity, std::move(instance)
-    );
-
-    // load up player weapon animation & state from previous plugin load
-    {
-      auto & player = registry.get<pul::core::ComponentPlayer>(playerEntity);
-
-      // overwrite with player component for persistent reloads
-      player = scene.StoredDebugPlayerComponent();
-
-      // load weapon animation
-      pul::animation::Instance weaponInstance;
-      plugin.animation.ConstructInstance(
-        scene, weaponInstance, scene.AnimationSystem(), "weapons"
-      );
-      player.weaponAnimation = registry.create();
-
-      registry.emplace<pul::animation::ComponentInstance>(
-        player.weaponAnimation, std::move(weaponInstance)
-      );
-    }
-  }
+  entt::entity playerEntity;
+  plugin::entity::ConstructPlayer(playerEntity, plugin, scene, true);
 
   // bot/AI
-  {
-    auto botEntity = registry.create();
-    registry.emplace<pul::core::ComponentPlayer>(botEntity);
-    auto damageable = pul::core::ComponentDamageable { 100u, 0u };
-    registry.emplace<pul::core::ComponentDamageable>(botEntity, damageable);
-    registry.emplace<pul::core::ComponentOrigin>(botEntity);
-    registry.emplace<pul::core::ComponentHitboxAABB>(botEntity);
-    registry.emplace<ComponentController>(botEntity);
-    registry.emplace<ComponentBotControllable>(botEntity);
-    registry.emplace<ComponentLabel>(botEntity, "Bot");
-
-    pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
-      scene, instance, scene.AnimationSystem(), "nygelstromn"
-    );
-    registry.emplace<pul::animation::ComponentInstance>(
-      botEntity, std::move(instance)
-    );
-
-    {
-      auto & bot = registry.get<pul::core::ComponentPlayer>(botEntity);
-
-      // load weapon animation
-      pul::animation::Instance weaponInstance;
-      plugin.animation.ConstructInstance(
-        scene, weaponInstance, scene.AnimationSystem(), "weapons"
-      );
-      bot.weaponAnimation = registry.create();
-
-      registry.emplace<pul::animation::ComponentInstance>(
-        bot.weaponAnimation, std::move(weaponInstance)
-      );
-    }
-  }
+  entt::entity botEntity;
+  plugin::entity::ConstructPlayer(botEntity, plugin, scene, false);
 }
 
 PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
@@ -142,8 +57,8 @@ PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
   // store player
   auto view =
     registry.view<
-      ComponentPlayerControllable, pul::core::ComponentPlayer
-    , ComponentCamera, pul::animation::ComponentInstance
+      pul::core::ComponentPlayerControllable, pul::core::ComponentPlayer
+    , pul::core::ComponentCamera, pul::animation::ComponentInstance
     >();
 
   for (auto entity : view) {
@@ -443,7 +358,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
   { // -- bot
     auto view =
       registry.view<
-        ComponentController, ComponentBotControllable
+        pul::controls::ComponentController, pul::core::ComponentBotControllable
       , pul::core::ComponentPlayer, pul::animation::ComponentInstance
       , pul::core::ComponentDamageable
       >();
@@ -451,7 +366,8 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
     for (auto entity : view) {
       auto & bot = view.get<pul::core::ComponentPlayer>(entity);
       auto & damageable = view.get<pul::core::ComponentDamageable>(entity);
-      auto & controller = view.get<ComponentController>(entity).controller;
+      auto & controller =
+        view.get<pul::controls::ComponentController>(entity).controller;
       auto & origin = registry.get<pul::core::ComponentOrigin>(entity);
       auto & hitbox = registry.get<pul::core::ComponentHitboxAABB>(entity);
 
@@ -513,8 +429,9 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
   { // -- player
     auto view =
       registry.view<
-        ComponentController, ComponentPlayerControllable
-      , pul::core::ComponentPlayer, ComponentCamera
+        pul::controls::ComponentController
+      , pul::core::ComponentPlayerControllable
+      , pul::core::ComponentPlayer,pul::core::ComponentCamera
       , pul::animation::ComponentInstance
       , pul::core::ComponentDamageable
       , pul::core::ComponentOrigin
@@ -672,8 +589,8 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
   registry.each([&](auto entity) {
 
     std::string label = fmt::format("{}", static_cast<size_t>(entity));
-    if (registry.has<ComponentLabel>(entity)) {
-      label = registry.get<ComponentLabel>(entity).label;
+    if (registry.has<pul::core::ComponentLabel>(entity)) {
+      label = registry.get<pul::core::ComponentLabel>(entity).label;
     }
 
     ImGui::PushID(static_cast<size_t>(entity));
@@ -681,7 +598,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
     // used to only show entities that exist
     bool hasStart = false;
     bool hasTreeNode = false;
-    auto treeStart = [&hasStart, &entity, &hasTreeNode, label]() -> bool {
+    auto treeStart = [&hasStart, &hasTreeNode, label]() -> bool {
       if (!hasStart) {
         hasStart = true;
         hasTreeNode = ImGui::TreeNode(label.c_str());
@@ -853,7 +770,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
     registry.view<
       pul::core::ComponentPlayer
     , pul::animation::ComponentInstance
-    , ComponentPlayerControllable
+    , pul::core::ComponentPlayerControllable
     >();
 
   for (auto entity : view) {

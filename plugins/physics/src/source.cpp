@@ -303,10 +303,10 @@ extern "C" {
 
 PUL_PLUGIN_DECL void Physics_EntityIntersectionCircle(
   pul::core::SceneBundle & scene
-, pul::physics::IntersectorCircle const & circle
-, pul::physics::IntersectionResults & intersectionResults
+, pul::physics::IntersectorCircle const & /*circle*/
+, pul::physics::IntersectionResults & /*intersectionResults*/
 ) {
-  auto & registry = scene.EnttRegistry();
+  /* auto & registry = scene.EnttRegistry(); */
 
   /* auto view = */
   /*   registry.view< */

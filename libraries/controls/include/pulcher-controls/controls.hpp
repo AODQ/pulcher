@@ -47,4 +47,7 @@ namespace pul::controls {
   , bool wantCaptureKeyboard, bool wantCaptureMouse
   );
 
+  struct ComponentController {
+    pul::controls::Controller controller;
+  };
 }

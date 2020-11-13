@@ -7,8 +7,16 @@ namespace pul::core { struct ComponentHitboxAABB; }
 namespace pul::core { struct SceneBundle; }
 namespace pul::core { struct ComponentDamageable; }
 namespace pul::plugin { struct Info; }
+namespace entt { enum class entity: uint32_t; }
 
 namespace plugin::entity {
+
+  void ConstructPlayer(
+    entt::entity & entityOut
+  , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , bool mainPlayer = false
+  );
+
   void UpdatePlayer(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::controls::Controller const & controller

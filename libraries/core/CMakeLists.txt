@@ -24,8 +24,8 @@ target_link_libraries(
     glm
     pulcher-util
     spdlog
-  PRIVATE
     EnTT
+  PRIVATE
     pulcher-animation
     pulcher-audio
     pulcher-controls
