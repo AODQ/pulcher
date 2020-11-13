@@ -62,10 +62,14 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   {
     auto playerEntity = registry.create();
     registry.emplace<pul::core::ComponentPlayer>(playerEntity);
-    registry.emplace<ComponentController>(playerEntity);
-    registry.emplace<ComponentPlayerControllable>(playerEntity);
-    registry.emplace<ComponentCamera>(playerEntity);
-    registry.emplace<ComponentLabel>(playerEntity, "Player");
+    auto damageable = pul::core::ComponentDamageable { 100u, 0u };
+    registry.emplace<pul::core::ComponentDamageable>(playerEntity, damageable);
+    registry.emplace<pul::core::ComponentOrigin>(playerEntity);
+    registry.emplace<pul::core::ComponentHitboxAABB>(playerEntity);
+    registry.emplace<::ComponentController>(playerEntity);
+    registry.emplace<::ComponentPlayerControllable>(playerEntity);
+    registry.emplace<::ComponentCamera>(playerEntity);
+    registry.emplace<::ComponentLabel>(playerEntity, "Player");
 
     pul::animation::Instance instance;
     plugin.animation.ConstructInstance(
@@ -99,6 +103,10 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   {
     auto botEntity = registry.create();
     registry.emplace<pul::core::ComponentPlayer>(botEntity);
+    auto damageable = pul::core::ComponentDamageable { 100u, 0u };
+    registry.emplace<pul::core::ComponentDamageable>(botEntity, damageable);
+    registry.emplace<pul::core::ComponentOrigin>(botEntity);
+    registry.emplace<pul::core::ComponentHitboxAABB>(botEntity);
     registry.emplace<ComponentController>(botEntity);
     registry.emplace<ComponentBotControllable>(botEntity);
     registry.emplace<ComponentLabel>(botEntity, "Bot");
@@ -437,12 +445,15 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       registry.view<
         ComponentController, ComponentBotControllable
       , pul::core::ComponentPlayer, pul::animation::ComponentInstance
+      , pul::core::ComponentDamageable
       >();
 
     for (auto entity : view) {
       auto & bot = view.get<pul::core::ComponentPlayer>(entity);
-
+      auto & damageable = view.get<pul::core::ComponentDamageable>(entity);
       auto & controller = view.get<ComponentController>(entity).controller;
+      auto & origin = registry.get<pul::core::ComponentOrigin>(entity);
+      auto & hitbox = registry.get<pul::core::ComponentHitboxAABB>(entity);
 
       static std::random_device device;
       static std::mt19937 generator(device());
@@ -492,8 +503,9 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
       plugin::entity::UpdatePlayer(
         plugin, scene
-      , controller, bot
+      , controller, bot, origin.origin, hitbox
       , view.get<pul::animation::ComponentInstance>(entity)
+      , damageable
       );
     }
   }
@@ -504,14 +516,24 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         ComponentController, ComponentPlayerControllable
       , pul::core::ComponentPlayer, ComponentCamera
       , pul::animation::ComponentInstance
+      , pul::core::ComponentDamageable
+      , pul::core::ComponentOrigin
+      , pul::core::ComponentHitboxAABB
       >();
 
     for (auto entity : view) {
       auto & player = view.get<pul::core::ComponentPlayer>(entity);
+      auto & origin = registry.get<pul::core::ComponentOrigin>(entity);
+      auto & hitbox = registry.get<pul::core::ComponentHitboxAABB>(entity);
+      auto & damageable = view.get<pul::core::ComponentDamageable>(entity);
+
       plugin::entity::UpdatePlayer(
         plugin, scene, scene.PlayerController()
       , player
+      , origin.origin
+      , hitbox
       , view.get<pul::animation::ComponentInstance>(entity)
+      , damageable
       );
 
       // -- tracking camera
@@ -648,24 +670,52 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
   ImGui::Begin("Entity");
   ImGui::Checkbox("allow bot to move around", &::botPlays);
   registry.each([&](auto entity) {
-    pul::imgui::Text("entity ID {}", static_cast<size_t>(entity));
 
-    ImGui::Separator();
-
+    std::string label = fmt::format("{}", static_cast<size_t>(entity));
     if (registry.has<ComponentLabel>(entity)) {
-      auto & label = registry.get<ComponentLabel>(entity);
-      ImGui::Text("'%s'", label.label.c_str());
+      label = registry.get<ComponentLabel>(entity).label;
     }
 
-    if (registry.has<pul::core::ComponentPlayer>(entity)) {
-      ImGui::Begin("Player");
+    ImGui::PushID(static_cast<size_t>(entity));
+
+    // used to only show entities that exist
+    bool hasStart = false;
+    bool hasTreeNode = false;
+    auto treeStart = [&hasStart, &entity, &hasTreeNode, label]() -> bool {
+      if (!hasStart) {
+        hasStart = true;
+        hasTreeNode = ImGui::TreeNode(label.c_str());
+      }
+
+      return hasTreeNode;
+    };
+
+    if (registry.has<pul::core::ComponentDamageable>(entity) && treeStart()) {
+      auto & comp = registry.get<pul::core::ComponentDamageable>(entity);
+      ImGui::Text("--- damageable ---");
+      pul::imgui::SliderInt("health", &comp.health, 0u, 200u);
+      pul::imgui::SliderInt("armor", &comp.armor, 0u, 200u);
+    }
+
+    if (registry.has<pul::core::ComponentOrigin>(entity) && treeStart()) {
+      auto & comp = registry.get<pul::core::ComponentOrigin>(entity);
+      ImGui::Text("--- origin ---");
+      ImGui::DragFloat2("origin", &comp.origin.x, 1.0f);
+    }
+
+    if (registry.has<pul::core::ComponentHitboxAABB>(entity) && treeStart()) {
+      auto & comp = registry.get<pul::core::ComponentHitboxAABB>(entity);
+      ImGui::Text("--- hitbox AABB ---");
+      ImGui::DragFloat2("dimensions", &comp.dimensions.x, 1.0f);
+    }
+
+    if (registry.has<pul::core::ComponentPlayer>(entity) && treeStart()) {
       ImGui::Text("--- player ---"); ImGui::SameLine(); ImGui::Separator();
       auto & self = registry.get<pul::core::ComponentPlayer>(entity);
       ImGui::PushID(&self);
       pul::imgui::Text(
         "weapon anim ID {}", static_cast<size_t>(self.weaponAnimation)
       );
-      ImGui::DragFloat2("origin", &self.origin.x, 16.125f);
       ImGui::DragFloat2("velocity", &self.velocity.x, 0.25f);
       ImGui::DragFloat2("stored velocity", &self.storedVelocity.x, 0.025f);
       pul::imgui::Text("midair dashes left {}", self.midairDashesLeft);
@@ -779,6 +829,8 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
 
           ImGui::PopID(); // weapon
         }
+
+        ImGui::TreePop();
       }
       pul::imgui::Text(
         "current weapon: '{}'", ToStr(self.inventory.currentWeapon)
@@ -787,11 +839,13 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
         "prev    weapon: '{}'", ToStr(self.inventory.previousWeapon)
       );
       ImGui::PopID();
-      ImGui::End();
     }
 
-    ImGui::Separator();
-    ImGui::Separator();
+    if (hasStart && hasTreeNode) {
+      ImGui::TreePop();
+    }
+
+    ImGui::PopID();
   });
   ImGui::End();
 

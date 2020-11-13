@@ -8,8 +8,23 @@
 #include <array>
 
 namespace pul::core {
+
+  struct ComponentDamageable {
+    uint16_t health = 100u; // 2^16 to avoid (200+100) overflow
+    uint16_t armor = 0u;
+  };
+
+  struct ComponentOrigin {
+    glm::vec2 origin = {};
+  };
+
+  struct ComponentHitboxAABB {
+    entt::entity entityOrigin { entt::null };
+
+    glm::vec2 dimensions;
+  };
+
   struct ComponentPlayer {
-    glm::vec2 origin = {470.0f, 1504.0f};
     glm::vec2 velocity = {};
     glm::vec2 storedVelocity = {};
     float lookAtAngle = 0.0f;
@@ -42,10 +57,6 @@ namespace pul::core {
     // consider having previous frame info too?
 
     pul::core::Inventory inventory;
-
-    glm::vec2 CalculateProjectedOrigin() {
-      return origin + velocity;
-    }
 
     entt::entity weaponAnimation;
   };

@@ -301,6 +301,22 @@ float CalculateSdfDistance(
 // -- plugin functions
 extern "C" {
 
+PUL_PLUGIN_DECL void Physics_EntityIntersectionCircle(
+  pul::core::SceneBundle & scene
+, pul::physics::IntersectorCircle const & circle
+, pul::physics::IntersectionResults & intersectionResults
+) {
+  auto & registry = scene.EnttRegistry();
+
+  /* auto view = */
+  /*   registry.view< */
+  /*     pul::animation::ComponentInstance */
+  /*   , ::ComponentZeusStingerSecondary */
+  /*   >(); */
+
+
+}
+
 PUL_PLUGIN_DECL void Physics_ProcessTileset(
   pul::physics::Tileset & tileset
 , pul::gfx::Image const & image

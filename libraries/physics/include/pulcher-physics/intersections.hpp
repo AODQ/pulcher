@@ -8,8 +8,9 @@
 namespace pul::physics {
 
   enum class IntersectorType : size_t {
-    Point = 0x10000000
-  , Ray   = 0x20000000
+    Point  = 0x10000000
+  , Ray    = 0x20000000
+  , Circle = 0x40000000
   };
 
   struct IntersectorPoint {
@@ -17,6 +18,15 @@ namespace pul::physics {
 
     // inputs
     glm::i32vec2 origin;
+  };
+
+  // this only works with bounding boxes
+  struct IntersectorCircle {
+    static IntersectorType constexpr type = IntersectorType::Circle;
+
+    // inputs
+    glm::i32vec2 origin;
+    float radius;
   };
 
   struct IntersectorRay {

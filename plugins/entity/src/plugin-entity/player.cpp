@@ -252,6 +252,9 @@ void ApplyGroundedMovement(
 void PlayerCheckPickups(
   pul::core::SceneBundle & scene
 , pul::core::ComponentPlayer & player
+, pul::core::ComponentDamageable & damageable
+, glm::vec2 & playerOrigin
+, pul::core::ComponentHitboxAABB &
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -263,7 +266,7 @@ void PlayerCheckPickups(
       pul::core::ComponentPickup, pul::animation::ComponentInstance
     >();
 
-  auto const playerOriginCenter = player.origin - glm::vec2(0, 32.0f);
+  auto const playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
 
   for (auto entity : view) {
     auto & pickup = view.get<pul::core::ComponentPickup>(entity);
@@ -287,12 +290,25 @@ void PlayerCheckPickups(
 
       switch (pickup.type) {
         default: spdlog::error("unknown pickup type {}", pickup.type); break;
-        case pul::core::PickupType::HealthLarge: break;
-        case pul::core::PickupType::HealthMedium: break;
-        case pul::core::PickupType::HealthSmall: break;
-        case pul::core::PickupType::ArmorLarge: break;
-        case pul::core::PickupType::ArmorMedium: break;
-        case pul::core::PickupType::ArmorSmall: break;
+        case pul::core::PickupType::HealthLarge:
+          damageable.health = glm::min(damageable.health+100u, 200u);
+          spdlog::info("new health {}", damageable.health);
+        break;
+        case pul::core::PickupType::HealthMedium:
+          damageable.health = glm::min(damageable.health+50u, 200u);
+        break;
+        case pul::core::PickupType::HealthSmall:
+          damageable.health = glm::min(damageable.health+10u, 200u);
+        break;
+        case pul::core::PickupType::ArmorLarge:
+          damageable.armor = glm::min(damageable.armor+200u, 200u);
+        break;
+        case pul::core::PickupType::ArmorMedium:
+          damageable.armor = glm::min(damageable.armor+100u, 200u);
+        break;
+        case pul::core::PickupType::ArmorSmall:
+          damageable.armor = glm::min(damageable.armor+10u, 200u);
+        break;
         case pul::core::PickupType::Weapon:
           player.inventory.weapons[Idx(pickup.weaponType)].pickedUp = true;
           player.inventory.weapons[Idx(pickup.weaponType)].ammunition = 100;
@@ -311,8 +327,10 @@ void PlayerCheckPickups(
 void UpdatePlayerPhysics(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , pul::core::ComponentPlayer & player
+, glm::vec2 & playerOrigin
+, pul::core::ComponentHitboxAABB &
 ) {
-  glm::vec2 groundedFloorOrigin = player.origin - glm::vec2(0, 2);
+  glm::vec2 groundedFloorOrigin = playerOrigin - glm::vec2(0, 2);
 
   auto ray =
     pul::physics::IntersectorRay::Construct(
@@ -340,15 +358,15 @@ void UpdatePlayerPhysics(
           static_cast<int32_t>(stepResults.origin.y)
        != static_cast<int32_t>(glm::round(offset.y))
       ) {
-        player.origin.x += player.velocity.x;
-        player.origin.y = stepResults.origin.y;
+        playerOrigin.x += player.velocity.x;
+        playerOrigin.y = stepResults.origin.y;
         player.velocity.y = 0.0f;
         player.grounded = true;
         return;
       }
     }
 
-    player.origin += player.velocity;
+    playerOrigin += player.velocity;
 
   } else {
 
@@ -375,10 +393,10 @@ void UpdatePlayerPhysics(
             static_cast<int32_t>(glm::round(stepResults.origin.y))
          != static_cast<int32_t>(glm::round(offset.y - slopeStepUpHeight))
         ) {
-          player.origin.y = stepResults.origin.y + 1.0f;
+          playerOrigin.y = stepResults.origin.y + 1.0f;
 
           // store velocity
-          player.origin.x += player.velocity.x;
+          playerOrigin.x += player.velocity.x;
 
           player.velocity.y = 0.0f;
           player.grounded = true;
@@ -389,23 +407,23 @@ void UpdatePlayerPhysics(
 
     // first 'clamp' the player to some bounds
     if (ray.beginOrigin.x < ray.endOrigin.x) {
-      player.origin.x = results.origin.x - 1.0f;
+      playerOrigin.x = results.origin.x - 1.0f;
     } else if (ray.beginOrigin.x > ray.endOrigin.x) {
-      player.origin.x = results.origin.x + 1.0f;
+      playerOrigin.x = results.origin.x + 1.0f;
     }
 
     if (ray.beginOrigin.y < ray.endOrigin.y) {
-      player.origin.y = results.origin.y;
+      playerOrigin.y = results.origin.y;
     } else if (ray.beginOrigin.y > ray.endOrigin.y) {
       // the groundedFloorOrigin is -(0, 2), so we need to account for that
-      player.origin.y = results.origin.y + 2.0f;
+      playerOrigin.y = results.origin.y + 2.0f;
     }
 
     // then check how the velocity should be redirected
     auto rayY =
       pul::physics::IntersectorRay::Construct(
-        player.origin + glm::vec2(0.0f, +1.0)
-      , player.origin + glm::vec2(0.0f, -3.0f)
+        playerOrigin + glm::vec2(0.0f, +1.0)
+      , playerOrigin + glm::vec2(0.0f, -3.0f)
       );
     if (
       pul::physics::IntersectionResults resultsY;
@@ -413,9 +431,9 @@ void UpdatePlayerPhysics(
     ) {
       player.prevAirVelocity = player.velocity.y;
       // if there is an intersection check
-      if (player.origin.y < resultsY.origin.y) {
+      if (playerOrigin.y < resultsY.origin.y) {
         player.velocity.y = glm::min(0.0f, player.velocity.y);
-      } else if (player.origin.y > resultsY.origin.y) {
+      } else if (playerOrigin.y > resultsY.origin.y) {
         player.velocity.y = glm::max(0.0f, player.velocity.y);
       } else {
         player.velocity.y = 0.0f;
@@ -424,8 +442,8 @@ void UpdatePlayerPhysics(
 
     auto rayX =
       pul::physics::IntersectorRay::Construct(
-        glm::round(player.origin + glm::vec2(+2.0f, -2.0))
-      , glm::round(player.origin + glm::vec2(-2.0f, -2.0f))
+        glm::round(playerOrigin + glm::vec2(+2.0f, -2.0))
+      , glm::round(playerOrigin + glm::vec2(-2.0f, -2.0f))
       );
     if (
       pul::physics::IntersectionResults resultsX;
@@ -433,11 +451,11 @@ void UpdatePlayerPhysics(
       && plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
     ) {
       // if there is an intersection check
-      if (glm::round(player.origin.x) < resultsX.origin.x) {
-        player.origin.x = resultsX.origin.x-2;
+      if (glm::round(playerOrigin.x) < resultsX.origin.x) {
+        playerOrigin.x = resultsX.origin.x-2;
         player.velocity.x = 0.0f;
-      } else if (glm::round(player.origin.x) > resultsX.origin.x) {
-        player.origin.x = resultsX.origin.x+2;
+      } else if (glm::round(playerOrigin.x) > resultsX.origin.x) {
+        playerOrigin.x = resultsX.origin.x+2;
         player.velocity.x = 0.0f;
       } else {
         /* player.velocity.x = 0.0f; */
@@ -465,6 +483,8 @@ void UpdatePlayerWeapon(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , pul::controls::Controller const & controls
 , pul::core::ComponentPlayer & player
+, glm::vec2 & playerOrigin
+, pul::core::ComponentHitboxAABB &
 , pul::animation::ComponentInstance & playerAnim
 ) {
   auto const & controller = controls.current;
@@ -513,114 +533,114 @@ void UpdatePlayerWeapon(
   switch (player.inventory.currentWeapon) {
     default: break;
     case pul::core::WeaponType::Pericaliya: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFirePericaliya(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       );
     } break;
     case pul::core::WeaponType::Manshredder: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireManshredder(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
-      , player, playerAnim.instance
+      , player, playerOrigin, playerAnim.instance
       );
     } break;
     case pul::core::WeaponType::Wallbanger: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireWallbanger(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       );
     } break;
     case pul::core::WeaponType::Unarmed: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireUnarmed(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       );
     } break;
     case pul::core::WeaponType::PMF: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFirePMF(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       );
     } break;
     case pul::core::WeaponType::BadFetus: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireBadFetus(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
-      , player, playerAnim.instance
+      , player, playerOrigin, playerAnim.instance
       );
     } break;
     case pul::core::WeaponType::ZeusStinger: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireZeusStinger(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       , player, playerAnim.instance
       );
     } break;
     case pul::core::WeaponType::Grannibal: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireGrannibal(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       );
     } break;
     case pul::core::WeaponType::DopplerBeam: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireDopplerBeam(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       );
     } break;
     case pul::core::WeaponType::Volnias: {
-      auto playerOrigin = player.origin - glm::vec2(0, 32.0f);
+      auto playerOriginCenter = playerOrigin - glm::vec2(0, 32.0f);
       plugin::entity::PlayerFireVolnias(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOrigin
+      , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       );
@@ -634,7 +654,10 @@ void plugin::entity::UpdatePlayer(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , pul::controls::Controller const & controls
 , pul::core::ComponentPlayer & player
+, glm::vec2 & playerOrigin
+, pul::core::ComponentHitboxAABB & hitbox
 , pul::animation::ComponentInstance & playerAnim
+, pul::core::ComponentDamageable & damageable
 ) {
 
   auto & registry = scene.EnttRegistry();
@@ -677,7 +700,7 @@ void plugin::entity::UpdatePlayer(
   // gravity/ground check
   {
     pul::physics::IntersectorPoint point;
-    point.origin = player.origin + glm::vec2(0.0f, 1.0f);
+    point.origin = playerOrigin + glm::vec2(0.0f, 1.0f);
     pul::physics::IntersectionResults results;
     player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
   }
@@ -687,7 +710,7 @@ void plugin::entity::UpdatePlayer(
 
   if (!player.grounded) {
     pul::physics::IntersectorPoint point;
-    point.origin = player.origin + glm::vec2(-3.0f, -4.0f);
+    point.origin = playerOrigin + glm::vec2(-3.0f, -4.0f);
     pul::physics::IntersectionResults results;
     player.wallClingLeft =
       plugin.physics.IntersectionPoint(scene, point, results);
@@ -695,7 +718,7 @@ void plugin::entity::UpdatePlayer(
 
   if (!player.grounded) {
     pul::physics::IntersectorPoint point;
-    point.origin = player.origin + glm::vec2(+3.0f, -4.0f);
+    point.origin = playerOrigin + glm::vec2(+3.0f, -4.0f);
     pul::physics::IntersectionResults results;
     player.wallClingRight =
       plugin.physics.IntersectionPoint(scene, point, results);
@@ -1030,7 +1053,7 @@ void plugin::entity::UpdatePlayer(
       }
 
       if (player.grounded) {
-        player.origin.y -= 8.0f;
+        playerOrigin.y -= 8.0f;
       }
 
       player.velocity = velocityMultiplier * glm::normalize(direction);
@@ -1043,7 +1066,7 @@ void plugin::entity::UpdatePlayer(
     }
   }
 
-  ::UpdatePlayerPhysics(plugin, scene, player);
+  ::UpdatePlayerPhysics(plugin, scene, player, playerOrigin, hitbox);
 
   const float velocityXAbs = glm::abs(player.velocity.x);
 
@@ -1210,7 +1233,7 @@ void plugin::entity::UpdatePlayer(
 
     playerAnim.instance.pieceToState["head"].angle = angle;
 
-    playerAnim.instance.origin = player.origin;
+    playerAnim.instance.origin = playerOrigin;
 
     // center weapon origin, first have to update cache for this animation to
     // get the hand position
@@ -1245,8 +1268,10 @@ void plugin::entity::UpdatePlayer(
     }
   }
 
-  ::UpdatePlayerWeapon(plugin, scene, controls, player, playerAnim);
-  ::PlayerCheckPickups(scene, player);
+  ::UpdatePlayerWeapon(
+    plugin, scene, controls, player, playerOrigin, hitbox, playerAnim
+  );
+  ::PlayerCheckPickups(scene, player, damageable, playerOrigin, hitbox);
 
   auto & audioSystem = scene.AudioSystem();
   audioSystem.playerJumped |=

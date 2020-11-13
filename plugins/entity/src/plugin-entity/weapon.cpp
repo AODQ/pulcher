@@ -24,13 +24,14 @@ struct ComponentBadFetusSecondary {};
 void CreateBadFetusLinkedBeam(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , pul::core::ComponentPlayer & player
+, glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 hitOrigin
 ) {
   auto & registry = scene.EnttRegistry();
 
-  auto origin = player.origin - glm::vec2(0, 32.0f);
+  auto origin = playerOrigin - glm::vec2(0, 32.0f);
 
   auto const & weaponState =
     playerAnim
@@ -40,7 +41,7 @@ void CreateBadFetusLinkedBeam(
   { // muzzle
     auto badFetusMuzzleEntity = registry.create();
     registry.emplace<pul::core::ComponentParticle>(
-      badFetusMuzzleEntity, player.origin
+      badFetusMuzzleEntity, playerOrigin
     );
 
     pul::animation::Instance instance;
@@ -65,7 +66,7 @@ void CreateBadFetusLinkedBeam(
   auto badFetusBallEntity = registry.create();
   { // linked secondary ball
     registry.emplace<pul::core::ComponentParticle>(
-      badFetusBallEntity, player.origin
+      badFetusBallEntity, playerOrigin
     );
 
     pul::animation::Instance instance;
@@ -96,7 +97,7 @@ void CreateBadFetusLinkedBeam(
     );
     auto & state = instance.pieceToState["particle"];
     state.Apply("bad-fetus-link-beam", true);
-    instance.origin = player.origin;
+    instance.origin = playerOrigin;
     state.flip = weaponState.flip;
 
     plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, weaponMatrix);
@@ -115,8 +116,8 @@ void CreateBadFetusLinkedBeam(
     pul::core::ComponentParticleBeam particle;
     particle.update =
       [
-        badFetusBallEntity, &registry, &scene, &plugin, &player, &playerAnim
-      , &weaponInfo
+        badFetusBallEntity, &registry, &scene, &plugin, &playerAnim
+      , &weaponInfo, &playerOrigin
       ](
         pul::animation::Instance & animInstance
       ) -> bool {
@@ -195,7 +196,7 @@ void CreateBadFetusLinkedBeam(
 
         bool const weaponFlip = playerAnim.pieceToState["legs"].flip;
 
-        animInstance.origin = player.origin;
+        animInstance.origin = playerOrigin;
 
         auto & animState = animInstance.pieceToState["particle"];
         animState.flip = weaponFlip;
@@ -242,7 +243,7 @@ void CreateBadFetusLinkedBeam(
           auto controlCurrent = scene.PlayerController().current;
 
           auto controlOrigin =
-            player.origin + controlCurrent.lookOffset - glm::vec2(0.0f, 32.0f)
+            playerOrigin + controlCurrent.lookOffset - glm::vec2(0.0f, 32.0f)
           ;
 
           if (
@@ -1588,6 +1589,7 @@ void plugin::entity::PlayerFireBadFetus(
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
+, glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
 ) {
   auto & badFetusInfo =
@@ -1609,7 +1611,7 @@ void plugin::entity::PlayerFireBadFetus(
     badFetusInfo.primaryActive = true;
     plugin::entity::FireBadFetusPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix, player
-    , playerAnim
+    , playerOrigin, playerAnim
     );
   }
 
@@ -1627,6 +1629,7 @@ void plugin::entity::FireBadFetusPrimary(
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
+, glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
 ) {
   auto & registry = scene.EnttRegistry();
@@ -1667,7 +1670,7 @@ void plugin::entity::FireBadFetusPrimary(
     );
     auto & state = instance.pieceToState["particle"];
     state.Apply("bad-fetus-primary-beam", true);
-    instance.origin = player.origin;
+    instance.origin = origin;
     state.flip = flip;
 
     plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
@@ -1685,7 +1688,9 @@ void plugin::entity::FireBadFetusPrimary(
   { // particle beam
     pul::core::ComponentParticleBeam particle;
     particle.update =
-      [&registry, &scene, &plugin, &player, &playerAnim, &weaponInfo](
+      [&registry, &scene, &plugin, &player, &playerOrigin, &playerAnim
+      , &weaponInfo
+      ](
         pul::animation::Instance & animInstance
       ) -> bool {
 
@@ -1704,7 +1709,7 @@ void plugin::entity::FireBadFetusPrimary(
 
         bool const weaponFlip = playerAnim.pieceToState["legs"].flip;
 
-        animInstance.origin = player.origin;
+        animInstance.origin = playerOrigin;
 
         auto & animState = animInstance.pieceToState["particle"];
         animState.flip = weaponFlip;
@@ -1825,7 +1830,7 @@ void plugin::entity::FireBadFetusPrimary(
           // if intersection, destroy both entities & create linkedball entity
           if (intersection) {
             CreateBadFetusLinkedBeam(
-              plugin, scene, player, playerAnim, weaponInfo
+              plugin, scene, player, playerOrigin, playerAnim, weaponInfo
             , endOrigin
             );
 
@@ -2011,6 +2016,7 @@ void plugin::entity::PlayerFireManshredder(
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
+, glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
 ) {
   auto & manshredderInfo =
@@ -2034,7 +2040,7 @@ void plugin::entity::PlayerFireManshredder(
     manshredderInfo.dischargingTimer = 150.0f;
     plugin::entity::FireManshredderPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
-    , player, playerAnim
+    , player, playerOrigin, playerAnim
     );
   }
 
@@ -2052,6 +2058,7 @@ void plugin::entity::FireManshredderPrimary(
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
+, glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
 ) {
   auto & registry = scene.EnttRegistry();
@@ -2085,7 +2092,7 @@ void plugin::entity::FireManshredderPrimary(
     , &playerAnim
     , [
         &plugin, &scene, manshredderProjectileEntity, &registry
-      , &manshredderInfo, &player
+      , &manshredderInfo, &player, &playerOrigin
       ]
         (pul::core::ComponentHitscanProjectile & projectile) -> bool
       {
@@ -2101,10 +2108,10 @@ void plugin::entity::FireManshredderPrimary(
         auto & state = animation.pieceToState.at("particle");
 
         { // update origin/animation
-          animation.origin = player.origin;
+          animation.origin = playerOrigin;
           state.flip = player.flip;
 
-          origin = player.origin - glm::vec2(0.0f, 44.0f);
+          origin = playerOrigin - glm::vec2(0.0f, 44.0f);
           direction =
             glm::vec2(
               glm::sin(player.lookAtAngle), glm::cos(player.lookAtAngle)

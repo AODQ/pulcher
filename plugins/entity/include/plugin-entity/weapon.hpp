@@ -123,6 +123,7 @@ namespace plugin::entity {
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
   , pul::core::ComponentPlayer & player
+  , glm::vec2 & playerOrigin
   , pul::animation::Instance & playerAnim
   );
   void FireBadFetusPrimary(
@@ -131,6 +132,7 @@ namespace plugin::entity {
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
   , pul::core::ComponentPlayer & player
+  , glm::vec2 & playerOrigin
   , pul::animation::Instance & playerAnim
   );
   void FireBadFetusSecondary(
@@ -190,6 +192,7 @@ namespace plugin::entity {
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
   , pul::core::ComponentPlayer & player
+  , glm::vec2 & playerOrigin
   , pul::animation::Instance & playerAnim
   );
   void FireManshredderPrimary(
@@ -198,6 +201,7 @@ namespace plugin::entity {
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
   , pul::core::ComponentPlayer & player
+  , glm::vec2 & playerOrigin
   , pul::animation::Instance & playerAnim
   );
   void FireManshredderSecondary(
