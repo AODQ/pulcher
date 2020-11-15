@@ -152,6 +152,10 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
     } break;
     case pul::plugin::Type::Physics: {
       auto & unit = plugin.physics;
+      ctx.LoadFunction(
+        unit.EntityIntersectionCircle,
+        "Physics_EntityIntersectionCircle"
+      );
       ctx.LoadFunction(unit.ProcessTileset,      "Physics_ProcessTileset");
       ctx.LoadFunction(unit.ClearMapGeometry,    "Physics_ClearMapGeometry");
       ctx.LoadFunction(unit.LoadMapGeometry,     "Physics_LoadMapGeometry");

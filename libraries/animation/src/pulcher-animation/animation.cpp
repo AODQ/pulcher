@@ -74,7 +74,6 @@ void pul::animation::Instance::StateInfo::Apply(
       static size_t rand = 0ul;
       ++ rand;
       variationRti.random.idx = rand % state.variations.size();
-      spdlog::debug("rand {} idx {}", rand, variationRti.random.idx);
     break;
   }
 }

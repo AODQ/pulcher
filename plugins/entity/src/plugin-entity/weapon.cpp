@@ -648,6 +648,10 @@ void plugin::entity::FireGrannibalPrimary(
     pul::core::ComponentParticleExploder exploder;
     exploder.explodeOnDelete = true;
     exploder.explodeOnCollide = true;
+    exploder.damagePlayer = true;
+    exploder.explosionRadius = 48.0f;
+    2xploder.explosionForce = 20.0f;
+    exploder.playerDamage = 80.0f;
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()

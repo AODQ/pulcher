@@ -59,8 +59,12 @@ namespace pul::core {
   struct ComponentParticleExploder {
     bool explodeOnDelete = false;
     bool explodeOnCollide = false;
-    bool damagePlayer = true;
     pul::animation::Instance animationInstance;
     bool * audioTrigger = nullptr; // really silly
+
+    bool damagePlayer = false;
+    float explosionRadius = 0.0f;
+    float explosionForce = 0.0f;
+    int32_t playerDamage = 0;
   };
 }

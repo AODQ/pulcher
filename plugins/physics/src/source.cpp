@@ -1,4 +1,5 @@
 #include <pulcher-core/map.hpp>
+#include <pulcher-core/player.hpp> // hitbox
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
@@ -10,6 +11,7 @@
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
 
+#include <entt/entt.hpp>
 #include <glad/glad.hpp>
 #include <imgui/imgui.hpp>
 
@@ -296,6 +298,33 @@ float CalculateSdfDistance(
   return physicsTile.signedDistanceField[texel.x][texel.y];
 }
 
+glm::vec2 GetAabbMin(glm::vec2 const & aabbOrigin, glm::vec2 const & aabbDim) {
+  glm::vec2 const p0 = aabbOrigin - aabbDim/2.0f;
+  glm::vec2 const p1 = aabbOrigin + aabbDim/2.0f;
+  return glm::min(p0, p1);
+}
+
+glm::vec2 GetAabbMax(glm::vec2 const & aabbOrigin, glm::vec2 const & aabbDim) {
+  glm::vec2 const p0 = aabbOrigin - aabbDim/2.0f;
+  glm::vec2 const p1 = aabbOrigin + aabbDim/2.0f;
+  return glm::max(p0, p1);
+}
+
+bool IntersectionCircleAabb(
+  glm::vec2 const & circleOrigin, float const circleRadius
+, glm::vec2 const & aabbOrigin, glm::vec2 const & aabbDim
+, glm::vec2 & closestOrigin
+) {
+  closestOrigin =
+    glm::clamp(
+      circleOrigin
+    , GetAabbMin(aabbOrigin, aabbDim)
+    , GetAabbMax(aabbOrigin, aabbDim)
+    );
+
+  return glm::length(circleOrigin - closestOrigin) <= circleRadius;
+}
+
 } // -- namespace
 
 // -- plugin functions
@@ -303,18 +332,39 @@ extern "C" {
 
 PUL_PLUGIN_DECL void Physics_EntityIntersectionCircle(
   pul::core::SceneBundle & scene
-, pul::physics::IntersectorCircle const & /*circle*/
-, pul::physics::IntersectionResults & /*intersectionResults*/
+, pul::physics::IntersectorCircle const & circle
+, pul::physics::EntityIntersectionResults & intersectionResults
 ) {
-  /* auto & registry = scene.EnttRegistry(); */
+  auto & registry = scene.EnttRegistry();
 
-  /* auto view = */
-  /*   registry.view< */
-  /*     pul::animation::ComponentInstance */
-  /*   , ::ComponentZeusStingerSecondary */
-  /*   >(); */
+  auto view =
+    registry.view<
+      pul::core::ComponentHitboxAABB
+    , pul::core::ComponentOrigin
+    >();
 
+  intersectionResults.entities.clear();
 
+  for (auto & entity : view) {
+    auto & hitbox = view.get<pul::core::ComponentHitboxAABB>(entity);
+    auto & origin = view.get<pul::core::ComponentOrigin>(entity);
+
+    glm::vec2 closestOrigin;
+    bool intersection = 
+      IntersectionCircleAabb(
+        glm::vec2(circle.origin), circle.radius
+      , origin.origin, glm::vec2(hitbox.dimensions)
+      , closestOrigin
+      );
+
+    if (intersection) {
+      intersectionResults.collision = true;
+      std::pair<glm::i32vec2, entt::entity> results;
+      std::get<0>(results) = glm::i32vec2(glm::round(closestOrigin));
+      std::get<1>(results) = entity;
+      intersectionResults.entities.emplace_back(results);
+    }
+  }
 }
 
 PUL_PLUGIN_DECL void Physics_ProcessTileset(

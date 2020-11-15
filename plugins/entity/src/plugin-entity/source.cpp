@@ -82,7 +82,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 ) {
   auto & registry = scene.EnttRegistry();
 
-  { // -- particle explode
+  { // -- projectile exploder
     auto view =
       registry.view<
         pul::animation::ComponentInstance
@@ -145,6 +145,40 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         registry.emplace<pul::core::ComponentParticle>(
           finAnimation, animation.instance.origin
         );
+
+        if (exploder.damagePlayer) {
+          pul::physics::IntersectorCircle circle;
+          circle.origin = explodeOrigin;
+          circle.radius = exploder.explosionRadius;
+          pul::physics::EntityIntersectionResults results;
+
+          // iterate thru all entity intersections, and if damageable record
+          // the damage
+          plugin.physics.EntityIntersectionCircle(scene, circle, results);
+          for (auto & entityIntersection : results.entities) {
+            auto * damage =
+              registry.try_get<pul::core::ComponentDamageable>(
+                std::get<1>(entityIntersection)
+              );
+            if (!damage) { continue; }
+
+            pul::core::DamageInfo damageInfo;
+            { // calculate damage info
+              glm::vec2 const dir =
+                glm::vec2(std::get<0>(entityIntersection)) - explodeOrigin;
+
+              float const forceRatio = (glm::length(dir) / circle.radius);
+
+              damageInfo.directionForce =
+                glm::normalize(dir) * forceRatio * exploder.explosionForce
+              ;
+
+              damageInfo.damage = forceRatio * exploder.playerDamage;
+            }
+
+            damage->frameDamageInfos.emplace_back(damageInfo);
+          }
+        }
 
         if (exploder.audioTrigger) *exploder.audioTrigger = true;
 
@@ -623,7 +657,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
     if (registry.has<pul::core::ComponentHitboxAABB>(entity) && treeStart()) {
       auto & comp = registry.get<pul::core::ComponentHitboxAABB>(entity);
       ImGui::Text("--- hitbox AABB ---");
-      ImGui::DragFloat2("dimensions", &comp.dimensions.x, 1.0f);
+      pul::imgui::DragInt2("dimensions", &comp.dimensions.x, 1.0f);
     }
 
     if (registry.has<pul::core::ComponentPlayer>(entity) && treeStart()) {

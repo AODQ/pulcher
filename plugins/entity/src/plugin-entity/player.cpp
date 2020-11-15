@@ -658,7 +658,7 @@ void plugin::entity::ConstructPlayer(
   auto & registry = scene.EnttRegistry();
   entity = registry.create();
   registry.emplace<pul::core::ComponentPlayer>(entity);
-  auto damageable = pul::core::ComponentDamageable { 100u, 0u };
+  auto damageable = pul::core::ComponentDamageable { 100, 0 };
   registry.emplace<pul::core::ComponentDamageable>(entity, damageable);
   registry.emplace<pul::core::ComponentOrigin>(entity);
   registry.emplace<pul::core::ComponentHitboxAABB>(entity);
@@ -781,6 +781,14 @@ void plugin::entity::UpdatePlayer(
 
   bool const frameStartGrounded = player.grounded;
   bool const prevCrouchSliding = player.crouchSliding;
+
+  // update damageable
+  for (auto & damage : damageable.frameDamageInfos) {
+    player.velocity += damage.directionForce;
+    damageable.health = glm::max(damageable.health - damage.damage, 0);
+    player.grounded = false;
+  }
+  damageable.frameDamageInfos = {};
 
   using MovementControl = pul::controls::Controller::Movement;
 

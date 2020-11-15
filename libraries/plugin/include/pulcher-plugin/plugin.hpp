@@ -13,7 +13,9 @@ namespace pul::animation { struct System; }
 namespace pul::core { enum class TileOrientation : size_t; }
 namespace pul::core { struct SceneBundle; }
 namespace pul::gfx { struct Image; }
+namespace pul::physics { struct EntityIntersectionResults; }
 namespace pul::physics { struct IntersectionResults; }
+namespace pul::physics { struct IntersectorCircle; }
 namespace pul::physics { struct IntersectorPoint; }
 namespace pul::physics { struct IntersectorRay; }
 namespace pul::physics { struct Tileset; }
@@ -97,6 +99,11 @@ namespace pul::plugin {
   };
 
   struct Physics {
+    void (*EntityIntersectionCircle)(
+      pul::core::SceneBundle & scene
+    , pul::physics::IntersectorCircle const & circle
+    , pul::physics::EntityIntersectionResults & intersectionResults
+    ) = nullptr;
     void (*ProcessTileset)(
       pul::physics::Tileset &
     , pul::gfx::Image const &

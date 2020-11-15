@@ -1,5 +1,6 @@
 #pragma once
 
+#include <entt/entt.hpp>
 #include <glm/glm.hpp>
 
 #include <array>
@@ -46,6 +47,12 @@ namespace pul::physics {
     glm::i32vec2 origin = glm::i32vec2(0);
 
     size_t imageTileIdx = -1ul, tilesetIdx = -1ul;
+  };
+
+  struct EntityIntersectionResults {
+    bool collision = false;
+
+    std::vector<std::pair<glm::i32vec2 /*origin*/, entt::entity>> entities;
   };
 
   // queries for debug purposes

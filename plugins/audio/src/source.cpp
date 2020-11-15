@@ -44,7 +44,7 @@ void InitializeSystem() {
     FMOD_System_GetMasterSoundGroup(fmodSystem, &soundGroup), return;
   );
 
-  FMOD_SoundGroup_SetVolume(soundGroup, 0.2f);
+  FMOD_SoundGroup_SetVolume(soundGroup, 0.1f);
 }
 
 }

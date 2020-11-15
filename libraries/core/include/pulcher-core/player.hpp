@@ -10,9 +10,16 @@
 
 namespace pul::core {
 
+  struct DamageInfo {
+    glm::vec2 directionForce;
+    int32_t damage;
+  };
+
   struct ComponentDamageable {
-    uint16_t health = 100u; // 2^16 to avoid (200+100) overflow
-    uint16_t armor = 0u;
+    int16_t health = 100; // 2^16 to avoid (200+100) overflow
+    int16_t armor = 0;
+
+    std::vector<DamageInfo> frameDamageInfos = {};
   };
 
   struct ComponentOrigin {
@@ -22,7 +29,7 @@ namespace pul::core {
   struct ComponentHitboxAABB {
     entt::entity entityOrigin { entt::null };
 
-    glm::vec2 dimensions;
+    glm::i32vec2 dimensions;
   };
 
   struct ComponentPlayer {
