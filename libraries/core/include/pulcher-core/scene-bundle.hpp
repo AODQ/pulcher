@@ -12,6 +12,7 @@ namespace entt { using registry = basic_registry<entity>; }
 namespace pul::animation { struct System; }
 namespace pul::audio { struct System; }
 namespace pul::controls { struct Controller; }
+namespace pul::core { struct ComponentOrigin; }
 namespace pul::core { struct ComponentPlayer; }
 namespace pul::core { struct PlayerMetaInfo; }
 namespace pul::core { struct HudInfo; }
@@ -40,6 +41,7 @@ namespace pul::core {
 
     // store player between reloads
     pul::core::ComponentPlayer & StoredDebugPlayerComponent();
+    pul::core::ComponentOrigin & StoredDebugPlayerOriginComponent();
 
     entt::registry & EnttRegistry();
 

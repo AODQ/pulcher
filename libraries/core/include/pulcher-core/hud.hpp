@@ -8,4 +8,4 @@ namespace pul::core {
   struct HudInfo {
     HudPlayerInfo player;
   };
-};
+}

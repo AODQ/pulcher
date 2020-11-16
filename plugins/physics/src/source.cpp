@@ -310,6 +310,29 @@ glm::vec2 GetAabbMax(glm::vec2 const & aabbOrigin, glm::vec2 const & aabbDim) {
   return glm::max(p0, p1);
 }
 
+bool IntersectionRayAabb(
+  glm::vec2 const & rayBegin, glm::vec2 const & rayEnd
+, glm::vec2 const & aabbOrigin, glm::vec2 const & aabbDim
+, float & intersectionLength
+) {
+  glm::vec2 normal = glm::normalize(rayEnd - rayBegin);
+  normal.x = normal.x == 0.0f ? 1.0f : 1.0f / normal.x;
+  normal.y = normal.y == 0.0f ? 1.0f : 1.0f / normal.y;
+
+  glm::vec2 const min = (GetAabbMin(aabbOrigin, aabbDim) - rayBegin) * normal;
+  glm::vec2 const max = (GetAabbMax(aabbOrigin, aabbDim) - rayBegin) * normal;
+
+  float tmin = glm::max(glm::min(min.x, max.x), glm::min(min.y, max.y));
+  float tmax = glm::min(glm::max(min.x, max.x), glm::max(min.y, max.y));
+
+  if (tmax < 0.0f || tmin > tmax)
+    { return false; }
+
+  float t = tmin < 0.0f ? tmax : tmin;
+  intersectionLength = t;
+  return t > 0.0f && t < glm::length(rayEnd - rayBegin);
+}
+
 bool IntersectionCircleAabb(
   glm::vec2 const & circleOrigin, float const circleRadius
 , glm::vec2 const & aabbOrigin, glm::vec2 const & aabbDim
@@ -330,6 +353,53 @@ bool IntersectionCircleAabb(
 // -- plugin functions
 extern "C" {
 
+PUL_PLUGIN_DECL void Physics_EntityIntersectionRaycast(
+  pul::core::SceneBundle & scene
+, pul::physics::IntersectorRay const & ray
+, pul::physics::EntityIntersectionResults & intersectionResults
+) {
+  auto & registry = scene.EnttRegistry();
+
+  auto view =
+    registry.view<
+      pul::core::ComponentHitboxAABB
+    , pul::core::ComponentOrigin
+    >();
+
+  intersectionResults.entities.clear();
+
+  glm::vec2 const
+    rayOriginBegin = glm::vec2(ray.beginOrigin)
+  , rayOriginEnd = glm::vec2(ray.endOrigin)
+  ;
+
+  for (auto & entity : view) {
+    auto const & hitbox = view.get<pul::core::ComponentHitboxAABB>(entity);
+    auto const & origin = view.get<pul::core::ComponentOrigin>(entity);
+
+    float intersectionLength;
+    bool const intersection =
+      ::IntersectionRayAabb(
+        rayOriginBegin, rayOriginEnd
+      , origin.origin, glm::vec2(hitbox.dimensions)
+      , intersectionLength
+      );
+
+    if (intersection) {
+      glm::vec2 const intersectionOrigin =
+          rayOriginBegin
+        + intersectionLength * glm::normalize(rayOriginEnd - rayOriginBegin)
+      ;
+
+      intersectionResults.collision = true;
+      std::pair<glm::i32vec2, entt::entity> results;
+      std::get<0>(results) = glm::i32vec2(glm::round(intersectionOrigin));
+      std::get<1>(results) = entity;
+      intersectionResults.entities.emplace_back(results);
+    }
+  }
+}
+
 PUL_PLUGIN_DECL void Physics_EntityIntersectionCircle(
   pul::core::SceneBundle & scene
 , pul::physics::IntersectorCircle const & circle
@@ -346,12 +416,12 @@ PUL_PLUGIN_DECL void Physics_EntityIntersectionCircle(
   intersectionResults.entities.clear();
 
   for (auto & entity : view) {
-    auto & hitbox = view.get<pul::core::ComponentHitboxAABB>(entity);
-    auto & origin = view.get<pul::core::ComponentOrigin>(entity);
+    auto const & hitbox = view.get<pul::core::ComponentHitboxAABB>(entity);
+    auto const & origin = view.get<pul::core::ComponentOrigin>(entity);
 
     glm::vec2 closestOrigin;
-    bool intersection = 
-      IntersectionCircleAabb(
+    bool intersection =
+      ::IntersectionCircleAabb(
         glm::vec2(circle.origin), circle.radius
       , origin.origin, glm::vec2(hitbox.dimensions)
       , closestOrigin
@@ -624,6 +694,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
 
 PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
   auto & queries = scene.PhysicsDebugQueries();
+  auto & registry = scene.EnttRegistry();
 
   if (::showPhysicsQueries && queries.intersectorPoints.size() > 0ul) {
     { // -- update buffers
@@ -672,6 +743,7 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
   }
 
   if (::showPhysicsQueries && queries.intersectorRays.size() > 0ul) {
+    size_t drawCount = 0ul;
     { // -- update buffers
       std::vector<glm::vec2> lines;
       std::vector<float> collisions;
@@ -687,6 +759,54 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
         collisions.emplace_back(static_cast<float>(collision));
       }
 
+      // update hitboxes
+      auto view =
+        registry.view<
+          pul::core::ComponentHitboxAABB, pul::core::ComponentOrigin
+        >();
+
+      for (auto & entity : view) {
+        // get origin/dimensions, for dimensions multiply by half in order to
+        // get its "radius" or whatever
+        auto const & dim =
+          glm::vec2(
+            view.get<pul::core::ComponentHitboxAABB>(entity).dimensions
+          ) * 0.5f
+        ;
+        auto const & origin =
+          view.get<pul::core::ComponentOrigin>(entity).origin;
+
+        auto const * damageable =
+          registry.try_get<pul::core::ComponentDamageable>(entity)
+        ;
+
+        bool hasCollision = damageable && !damageable->frameDamageInfos.empty();
+
+        // top
+        lines.emplace_back(origin + glm::vec2(-dim.x, -dim.y));
+        lines.emplace_back(origin + glm::vec2(+dim.x, -dim.y));
+        collisions.emplace_back(hasCollision);
+        collisions.emplace_back(hasCollision);
+
+        // bottom
+        lines.emplace_back(origin + glm::vec2(-dim.x, +dim.y));
+        lines.emplace_back(origin + glm::vec2(+dim.x, +dim.y));
+        collisions.emplace_back(hasCollision);
+        collisions.emplace_back(hasCollision);
+
+        // left
+        lines.emplace_back(origin + glm::vec2(-dim.x, -dim.y));
+        lines.emplace_back(origin + glm::vec2(-dim.x, +dim.y));
+        collisions.emplace_back(hasCollision);
+        collisions.emplace_back(hasCollision);
+
+        // right
+        lines.emplace_back(origin + glm::vec2(+dim.x, -dim.y));
+        lines.emplace_back(origin + glm::vec2(+dim.x, +dim.y));
+        collisions.emplace_back(hasCollision);
+        collisions.emplace_back(hasCollision);
+      }
+
       sg_update_buffer(
         debugRenderRay.bufferOrigin
       , lines.data(), lines.size() * sizeof(glm::vec2)
@@ -696,6 +816,8 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
         debugRenderRay.bufferCollision
       , collisions.data(), collisions.size() * sizeof(float)
       );
+
+      drawCount = lines.size();
     }
 
     // apply pipeline and render
@@ -719,7 +841,7 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
 
     glLineWidth(1.0f);
 
-    sg_draw(0, queries.intersectorRays.size()*2, 1);
+    sg_draw(0, drawCount, 1);
   }
 }
 

@@ -16,6 +16,7 @@ struct pul::core::SceneBundle::Impl {
   pul::controls::Controller playerController;
   pul::physics::DebugQueries physicsQueries;
   pul::core::ComponentPlayer storedDebugPlayerComponent;
+  pul::core::ComponentOrigin storedDebugPlayerOriginComponent;
   pul::core::HudInfo hudInfo;
 
   entt::registry enttRegistry;
@@ -48,6 +49,11 @@ pul::core::SceneBundle::PhysicsDebugQueries() {
 pul::core::ComponentPlayer &
 pul::core::SceneBundle::StoredDebugPlayerComponent() {
   return impl->storedDebugPlayerComponent;
+}
+
+pul::core::ComponentOrigin &
+pul::core::SceneBundle::StoredDebugPlayerOriginComponent() {
+  return impl->storedDebugPlayerOriginComponent;
 }
 
 pul::core::HudInfo & pul::core::SceneBundle::Hud() {

@@ -464,7 +464,7 @@ void ProcessRendering(
         ImVec2 imageCenter = ImGui::GetCursorScreenPos();
         imageCenter.x += scene.config.framebufferDim.x*0.5f;
         imageCenter.y += scene.config.framebufferDim.y*0.5f;
-        imageCenter.y -= 32.0f; // player center
+        imageCenter.y -= 22.0f; // player center
         scene.playerCenter = glm::u32vec2(imageCenter.x, imageCenter.y);
       }
 

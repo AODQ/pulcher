@@ -7,7 +7,18 @@
 #include <functional>
 #include <string>
 
+// TODO rename this from particle to projectile
+
 namespace pul::core {
+
+  struct ProjectileDamageInfo {
+    bool damagePlayer = false;
+    entt::entity ignoredPlayer = entt::null;
+    float explosionRadius = 0.0f;
+    float explosionForce = 0.0f;
+    int32_t playerDirectDamage = 0;
+    int32_t playerSplashDamage = 0;
+  };
 
   struct ComponentParticle {
     glm::vec2 origin = {};
@@ -38,6 +49,8 @@ namespace pul::core {
 
     pul::animation::Instance animationInstance = {};
     std::string bounceAnimation = "";
+
+    ProjectileDamageInfo damage = {};
   };
 
   // emits particle based on a distance
@@ -53,7 +66,11 @@ namespace pul::core {
 
   struct ComponentParticleBeam {
     // returns true if entity should be destroyed
-    std::function<bool(pul::animation::Instance & animInstance)> update;
+    std::function<
+      bool(pul::animation::Instance & animInstance, float & cooldown)
+    > update;
+
+    float hitCooldown = 0.0f;
   };
 
   struct ComponentParticleExploder {
@@ -62,9 +79,6 @@ namespace pul::core {
     pul::animation::Instance animationInstance;
     bool * audioTrigger = nullptr; // really silly
 
-    bool damagePlayer = false;
-    float explosionRadius = 0.0f;
-    float explosionForce = 0.0f;
-    int32_t playerDamage = 0;
+    ProjectileDamageInfo damage = {};
   };
 }

@@ -99,6 +99,11 @@ namespace pul::plugin {
   };
 
   struct Physics {
+    void (*EntityIntersectionRaycast)(
+      pul::core::SceneBundle & scene
+    , pul::physics::IntersectorRay const & ray
+    , pul::physics::EntityIntersectionResults & intersectionResults
+    ) = nullptr;
     void (*EntityIntersectionCircle)(
       pul::core::SceneBundle & scene
     , pul::physics::IntersectorCircle const & circle

@@ -1,7 +1,8 @@
-// entity plugin
+//  entity plugin
 
 #include <plugin-entity/cursor.hpp>
 #include <plugin-entity/player.hpp>
+#include <plugin-entity/weapon.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-controls/controls.hpp>
@@ -59,12 +60,15 @@ PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
     registry.view<
       pul::core::ComponentPlayerControllable, pul::core::ComponentPlayer
     , pul::core::ComponentCamera, pul::animation::ComponentInstance
+    , pul::core::ComponentOrigin
     >();
 
   for (auto entity : view) {
     // save player component for persistent reloads
     scene.StoredDebugPlayerComponent() =
       std::move(view.get<pul::core::ComponentPlayer>(entity));
+    scene.StoredDebugPlayerOriginComponent() =
+      std::move(view.get<pul::core::ComponentOrigin>(entity));
   }
 
   // delete registry
@@ -100,6 +104,8 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
        && animation.instance.pieceToState["particle"].animationFinished
       ;
 
+      entt::entity playerDirectHit = entt::null;
+
       glm::vec2 explodeOrigin = particle.origin;
 
       // check if physics bound
@@ -120,19 +126,20 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       }
 
       // check for player
-      // TODO
-      /* auto playerView = */
-      /*   registry.view< */
-      /*     pul::core::ComponentPlayer */
-      /*   >(); */
+      if (!explode && exploder.damage.damagePlayer) {
+        playerDirectHit =
+          plugin::entity::WeaponDamageRaycast(
+            plugin, scene
+          , animation.instance.origin
+          , animation.instance.origin + particle.velocity
+          , exploder.damage.playerDirectDamage
+          , exploder.damage.explosionForce
+          , exploder.damage.ignoredPlayer
+          ).entity
+        ;
 
-      /* for (auto playerEntity : playerView) { */
-      /*   auto & player = registry.get<pul::core::ComponentPlayer>(playerEntity); */
-      /*   auto origin = player.origin - glm::vec2(0.0f, 32.0f); */
-      /*   if (glm::length(origin - animation.instance.origin) < 8.0f) { */
-      /*     explode = true; */
-      /*   } */
-      /* } */
+        explode |= playerDirectHit != entt::null;
+      }
 
       if (explode) {
         PUL_ASSERT(exploder.animationInstance.animator , continue;);
@@ -146,38 +153,23 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           finAnimation, animation.instance.origin
         );
 
-        if (exploder.damagePlayer) {
+        if (
+            exploder.damage.damagePlayer
+         && exploder.damage.explosionRadius > 0.0f
+        ) {
           pul::physics::IntersectorCircle circle;
           circle.origin = explodeOrigin;
-          circle.radius = exploder.explosionRadius;
+          circle.radius = exploder.damage.explosionRadius;
           pul::physics::EntityIntersectionResults results;
 
-          // iterate thru all entity intersections, and if damageable record
-          // the damage
-          plugin.physics.EntityIntersectionCircle(scene, circle, results);
-          for (auto & entityIntersection : results.entities) {
-            auto * damage =
-              registry.try_get<pul::core::ComponentDamageable>(
-                std::get<1>(entityIntersection)
-              );
-            if (!damage) { continue; }
-
-            pul::core::DamageInfo damageInfo;
-            { // calculate damage info
-              glm::vec2 const dir =
-                glm::vec2(std::get<0>(entityIntersection)) - explodeOrigin;
-
-              float const forceRatio = (glm::length(dir) / circle.radius);
-
-              damageInfo.directionForce =
-                glm::normalize(dir) * forceRatio * exploder.explosionForce
-              ;
-
-              damageInfo.damage = forceRatio * exploder.playerDamage;
-            }
-
-            damage->frameDamageInfos.emplace_back(damageInfo);
-          }
+          plugin::entity::WeaponDamageCircle(
+            plugin, scene
+          , explodeOrigin
+          , exploder.damage.explosionRadius
+          , exploder.damage.playerSplashDamage
+          , exploder.damage.explosionForce
+          , playerDirectHit // fine if it's null; don't want to hit player 2x
+          );
         }
 
         if (exploder.audioTrigger) *exploder.audioTrigger = true;
@@ -296,17 +288,36 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
           -- particle.bounces;
         }
-
-        // TODO fix this
-        particle.origin += particle.velocity;
-        animation.instance.origin += particle.velocity;
       }
+
+      entt::entity playerDirectHit = entt::null;
+
+      if (!destroyInstance && particle.damage.damagePlayer) {
+        playerDirectHit =
+          plugin::entity::WeaponDamageRaycast(
+            plugin, scene
+          , animation.instance.origin
+          , animation.instance.origin + particle.velocity
+          , particle.damage.playerDirectDamage
+          , particle.damage.explosionForce
+          , particle.damage.ignoredPlayer
+          ).entity
+        ;
+
+        destroyInstance |= playerDirectHit != entt::null;
+      }
+
+
+      // TODO fix this
+      particle.origin += particle.velocity;
+      animation.instance.origin += particle.velocity;
 
       animation.instance.pieceToState["particle"].angle =
         std::atan2(particle.velocity.x, particle.velocity.y);
 
       if (destroyInstance) {
 
+        // -- create explosion animation
         auto finAnimation = registry.create();
         particle.animationInstance.origin = animation.instance.origin;
         registry.emplace<pul::animation::ComponentInstance>(
@@ -315,6 +326,26 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         registry.emplace<pul::core::ComponentParticle>(
           finAnimation, animation.instance.origin
         );
+
+        // -- apply weapon damage
+        if (
+            particle.damage.damagePlayer
+         && particle.damage.explosionRadius > 0.0f
+        ) {
+          pul::physics::IntersectorCircle circle;
+          circle.origin = animation.instance.origin;
+          circle.radius = particle.damage.explosionRadius;
+          pul::physics::EntityIntersectionResults results;
+
+          plugin::entity::WeaponDamageCircle(
+            plugin, scene
+          , animation.instance.origin
+          , particle.damage.explosionRadius
+          , particle.damage.playerSplashDamage
+          , particle.damage.explosionForce
+          , playerDirectHit // fine if it's null; don't want to hit player 2x
+          );
+        }
 
         animation.instance = {};
         registry.destroy(entity);
@@ -495,7 +526,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       }
       auto const offset = glm::pow(glm::length(L) / 500.0f, 0.7f) * L * 0.5f;
 
-      scene.playerOrigin = origin.origin - glm::vec2(0.0f, 40.0f);
+      scene.playerOrigin = origin.origin - glm::vec2(0.0f, 20.0f);
       scene.cameraOrigin =
         glm::mix(
           scene.cameraOrigin
@@ -553,7 +584,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       bool destroy = false;
 
       if (beam.update) {
-        destroy |= beam.update(animation.instance);
+        destroy |= beam.update(animation.instance, beam.hitCooldown);
       }
 
       if (destroy) {
@@ -579,11 +610,11 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       // speed (for example, if it is affected by gravity)
 
       emitter.distanceTravelled +=
-        glm::ceil(glm::length(animation.instance.origin - emitter.prevOrigin))
+        glm::length(animation.instance.origin - emitter.prevOrigin)
       ;
       emitter.prevOrigin = animation.instance.origin;
 
-      if (glm::ceil(emitter.distanceTravelled) >= emitter.originDist) {
+      if (emitter.distanceTravelled >= emitter.originDist) {
         emitter.distanceTravelled -= emitter.originDist;
         pul::animation::Instance animationInstance;
         plugin.animation.ConstructInstance(
@@ -707,6 +738,8 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
       ImGui::SameLine();
       ImGui::Checkbox("hasReleasedJump", &self.hasReleasedJump);
       ImGui::Checkbox("grounded", &self.grounded);
+      ImGui::SameLine();
+      ImGui::Checkbox("use gravity", &self.affectedByGravity);
       ImGui::Checkbox("wall cling left", &self.wallClingLeft);
       ImGui::SameLine();
       ImGui::Checkbox("wall cling right", &self.wallClingRight);

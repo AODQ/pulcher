@@ -16,6 +16,12 @@
 
 #include <entt/entt.hpp>
 
+// TODO
+// we have many unused parameters, probably have to change this to a
+// struct-based API in order to not have to deal with this anymore
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 namespace {
 
 struct ComponentZeusStingerSecondary {};
@@ -28,10 +34,11 @@ void CreateBadFetusLinkedBeam(
 , pul::animation::Instance & playerAnim
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 hitOrigin
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
-  auto origin = playerOrigin - glm::vec2(0, 32.0f);
+  auto origin = playerOrigin + glm::vec2(0, 28.0f);
 
   auto const & weaponState =
     playerAnim
@@ -53,7 +60,7 @@ void CreateBadFetusLinkedBeam(
     state.angle = player.lookAtAngle;
     state.flip = weaponState.flip;
 
-    instance.origin = origin + glm::vec2(0.0f, 32.0f);
+    instance.origin = origin + glm::vec2(0.0f, 28.0f);
     instance.automaticCachedMatrixCalculation = false;
 
     plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, weaponMatrix);
@@ -97,7 +104,7 @@ void CreateBadFetusLinkedBeam(
     );
     auto & state = instance.pieceToState["particle"];
     state.Apply("bad-fetus-link-beam", true);
-    instance.origin = playerOrigin;
+    instance.origin = playerOrigin + glm::vec2(0.0f, 28.0f);
     state.flip = weaponState.flip;
 
     plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, weaponMatrix);
@@ -117,9 +124,9 @@ void CreateBadFetusLinkedBeam(
     particle.update =
       [
         badFetusBallEntity, &registry, &scene, &plugin, &playerAnim
-      , &weaponInfo, &playerOrigin
+      , &weaponInfo, &playerOrigin, playerEntity
       ](
-        pul::animation::Instance & animInstance
+        pul::animation::Instance & animInstance, float & /*cooldown*/
       ) -> bool {
 
         // TODO rename
@@ -177,6 +184,13 @@ void CreateBadFetusLinkedBeam(
                 particle.bounces = 0;
                 particle.bounceAnimation = "bad-fetus-explosion";
 
+                particle.damage.damagePlayer = true;
+                particle.damage.ignoredPlayer = playerEntity;
+                particle.damage.explosionRadius = 64.0f;
+                particle.damage.explosionForce = -10.0f;
+                particle.damage.playerSplashDamage = 60.0f;
+                particle.damage.playerDirectDamage = 20.0f;
+
                 registry.emplace<pul::core::ComponentParticleGrenade>(
                   badFetusProjectileEntity, std::move(particle)
                 );
@@ -196,7 +210,7 @@ void CreateBadFetusLinkedBeam(
 
         bool const weaponFlip = playerAnim.pieceToState["legs"].flip;
 
-        animInstance.origin = playerOrigin;
+        animInstance.origin = playerOrigin + glm::vec2(0.0f, 28.0f);
 
         auto & animState = animInstance.pieceToState["particle"];
         animState.flip = weaponFlip;
@@ -243,7 +257,7 @@ void CreateBadFetusLinkedBeam(
           auto controlCurrent = scene.PlayerController().current;
 
           auto controlOrigin =
-            playerOrigin + controlCurrent.lookOffset - glm::vec2(0.0f, 32.0f)
+            playerOrigin + controlCurrent.lookOffset - glm::vec2(0.0f, 28.0f)
           ;
 
           if (
@@ -274,10 +288,15 @@ void CreateBadFetusLinkedBeam(
           glm::normalize(endOrigin - animComponent.instance.origin);
 
         accel =
-          glm::clamp(accel + dir*len*0.003f, glm::vec2(-15.0f), glm::vec2(15.0f))
+          glm::clamp(
+            accel + dir*len*0.003f, glm::vec2(-15.0f), glm::vec2(15.0f)
+          )
         ;
 
-        accel += glm::vec2(0.0f, 0.05f*glm::clamp(1.0f - glm::length(accel), 0.0f, 1.0f));
+        accel +=
+          glm::vec2(
+            0.0f, 0.05f*glm::clamp(1.0f - glm::length(accel), 0.0f, 1.0f)
+          );
 
         accel *= 0.95f;
 
@@ -340,6 +359,7 @@ void plugin::entity::PlayerFireVolnias(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & volInfo = std::get<pul::core::WeaponInfo::WiVolnias>(weaponInfo.info);
   auto & audioSystem = scene.AudioSystem();
@@ -374,7 +394,7 @@ void plugin::entity::PlayerFireVolnias(
       volInfo.primaryChargeupTimer -= 100.0f;
 
       plugin::entity::FireVolniasPrimary(
-        plugin, scene, origin, direction, angle, flip, matrix
+        plugin, scene, origin, direction, angle, flip, matrix, playerEntity
       );
 
       velocity += -direction*0.7f;
@@ -426,6 +446,7 @@ void plugin::entity::PlayerFireVolnias(
         plugin::entity::FireVolniasSecondary(
           3, volInfo.secondaryChargedShots-1, plugin
         , scene, origin, angle, flip, matrix
+        , playerEntity
         );
         if (--volInfo.secondaryChargedShots == 0u) {
           volInfo.dischargingSecondary = false;
@@ -441,6 +462,7 @@ void plugin::entity::FireVolniasPrimary(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
 
   auto & registry = scene.EnttRegistry();
@@ -500,6 +522,12 @@ void plugin::entity::FireVolniasPrimary(
     pul::core::ComponentParticleExploder exploder;
     exploder.explodeOnDelete = true;
     exploder.explodeOnCollide = true;
+    exploder.damage.damagePlayer = true;
+    exploder.damage.ignoredPlayer = playerEntity;
+    exploder.damage.explosionRadius = 0.0f;
+    exploder.damage.explosionForce = 1.0f;
+    exploder.damage.playerSplashDamage = 0.0f;
+    exploder.damage.playerDirectDamage = 10.0f;
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
@@ -523,6 +551,7 @@ void plugin::entity::FireVolniasSecondary(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   std::array<std::array<float, 3>, 5> shotPattern {{
     { -0.04f,  0.00f, +0.02f }
@@ -536,7 +565,7 @@ void plugin::entity::FireVolniasSecondary(
     fireAngle += angle;
     auto dir = glm::vec2(glm::sin(fireAngle), glm::cos(fireAngle));
     plugin::entity::FireVolniasPrimary(
-      plugin, scene, origin, dir, fireAngle, flip, matrix
+      plugin, scene, origin, dir, fireAngle, flip, matrix, playerEntity
     );
   }
 }
@@ -550,6 +579,7 @@ void plugin::entity::PlayerFireGrannibal(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & grannibalInfo =
     std::get<pul::core::WeaponInfo::WiGrannibal>(weaponInfo.info);
@@ -572,6 +602,7 @@ void plugin::entity::PlayerFireGrannibal(
     grannibalInfo.dischargingTimer = 1000.0f;
     plugin::entity::FireGrannibalPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 
@@ -579,6 +610,7 @@ void plugin::entity::PlayerFireGrannibal(
     grannibalInfo.dischargingTimer = 1000.0f;
     plugin::entity::FireGrannibalSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 }
@@ -588,6 +620,7 @@ void plugin::entity::FireGrannibalPrimary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -648,10 +681,11 @@ void plugin::entity::FireGrannibalPrimary(
     pul::core::ComponentParticleExploder exploder;
     exploder.explodeOnDelete = true;
     exploder.explodeOnCollide = true;
-    exploder.damagePlayer = true;
-    exploder.explosionRadius = 48.0f;
-    2xploder.explosionForce = 20.0f;
-    exploder.playerDamage = 80.0f;
+    exploder.damage.damagePlayer = true;
+    exploder.damage.ignoredPlayer = playerEntity;
+    exploder.damage.explosionRadius = 96.0f;
+    exploder.damage.explosionForce = 20.0f;
+    exploder.damage.playerSplashDamage = 80.0f;
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
@@ -673,6 +707,7 @@ void plugin::entity::FireGrannibalSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const &
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -722,6 +757,12 @@ void plugin::entity::FireGrannibalSecondary(
     );
 
     pul::core::ComponentParticleGrenade particle;
+    particle.damage.damagePlayer = true;
+    particle.damage.ignoredPlayer = playerEntity;
+    particle.damage.explosionRadius = 96.0f;
+    particle.damage.explosionForce = 10.0f;
+    particle.damage.playerSplashDamage = 50.0f;
+    particle.damage.playerDirectDamage = 80.0f;
 
     plugin.animation.ConstructInstance(
       scene, particle.animationInstance, scene.AnimationSystem()
@@ -754,6 +795,7 @@ void plugin::entity::PlayerFireDopplerBeam(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & dopplerBeamInfo =
     std::get<pul::core::WeaponInfo::WiDopplerBeam>(weaponInfo.info);
@@ -767,6 +809,7 @@ void plugin::entity::PlayerFireDopplerBeam(
     dopplerBeamInfo.dischargingTimer = 150.0f;
     plugin::entity::FireDopplerBeamPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 
@@ -774,6 +817,7 @@ void plugin::entity::PlayerFireDopplerBeam(
     dopplerBeamInfo.dischargingTimer = 1000.0f;
     plugin::entity::FireDopplerBeamSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 }
@@ -783,6 +827,7 @@ void plugin::entity::FireDopplerBeamPrimary(
 , [[maybe_unused]] pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -860,6 +905,12 @@ void plugin::entity::FireDopplerBeamPrimary(
     pul::core::ComponentParticleExploder exploder;
     exploder.explodeOnDelete = true;
     exploder.explodeOnCollide = true;
+    exploder.damage.damagePlayer = true;
+    exploder.damage.ignoredPlayer = playerEntity;
+    exploder.damage.explosionRadius = 0.0f;
+    exploder.damage.explosionForce = 1.0f;
+    exploder.damage.playerSplashDamage = 0.0f;
+    exploder.damage.playerDirectDamage = 10.0f;
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
@@ -883,6 +934,7 @@ void plugin::entity::FireDopplerBeamSecondary(
 , [[maybe_unused]] glm::vec2 const & direction
 , float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   std::array<float, 9> shotPattern {{
     -0.1f,  0.00f, +0.1f
@@ -892,14 +944,12 @@ void plugin::entity::FireDopplerBeamSecondary(
     auto dir = glm::vec2(glm::sin(fireAngle), glm::cos(fireAngle));
     plugin::entity::FireDopplerBeamPrimary(
       plugin, scene, weaponInfo, origin, dir, fireAngle, flip, matrix
+    , playerEntity
     );
   }
 }
 
 // -----------------------------------------------------------------------------
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 
 void plugin::entity::PlayerFirePericaliya(
   bool const primary, bool const secondary
@@ -908,6 +958,7 @@ void plugin::entity::PlayerFirePericaliya(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & pericaliyaInfo =
     std::get<pul::core::WeaponInfo::WiPericaliya>(weaponInfo.info);
@@ -937,6 +988,7 @@ void plugin::entity::PlayerFirePericaliya(
     pericaliyaInfo.isPrimaryActive = true;
     plugin::entity::FirePericaliyaPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 
@@ -944,6 +996,7 @@ void plugin::entity::PlayerFirePericaliya(
     pericaliyaInfo.isSecondaryActive = true;
     plugin::entity::FirePericaliyaSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 }
@@ -953,6 +1006,7 @@ void plugin::entity::FirePericaliyaPrimary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -1047,6 +1101,11 @@ void plugin::entity::FirePericaliyaPrimary(
     pul::core::ComponentParticleExploder exploder;
     exploder.explodeOnDelete = true;
     exploder.explodeOnCollide = true;
+    exploder.damage.damagePlayer = true;
+    exploder.damage.ignoredPlayer = playerEntity;
+    exploder.damage.explosionRadius = 128.0f;
+    exploder.damage.explosionForce = 5.0f;
+    exploder.damage.playerSplashDamage = 100.0f;
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
@@ -1068,6 +1127,7 @@ void plugin::entity::FirePericaliyaSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -1181,6 +1241,11 @@ void plugin::entity::FirePericaliyaSecondary(
       pul::core::ComponentParticleExploder exploder;
       exploder.explodeOnDelete = true;
       exploder.explodeOnCollide = true;
+      exploder.damage.damagePlayer = true;
+      exploder.damage.ignoredPlayer = playerEntity;
+      exploder.damage.explosionRadius = 64.0f;
+      exploder.damage.explosionForce = 2.0f;
+      exploder.damage.playerSplashDamage = 20.0f;
 
       plugin.animation.ConstructInstance(
         scene, exploder.animationInstance, scene.AnimationSystem()
@@ -1209,6 +1274,7 @@ void plugin::entity::PlayerFireZeusStinger(
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
 , pul::animation::Instance & playerAnim
+, entt::entity playerEntity
 ) {
   auto & zeusStingerInfo =
     std::get<pul::core::WeaponInfo::WiZeusStinger>(weaponInfo.info);
@@ -1223,6 +1289,7 @@ void plugin::entity::PlayerFireZeusStinger(
     plugin::entity::FireZeusStingerPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , player, playerAnim
+    , playerEntity
     );
   }
 
@@ -1230,6 +1297,7 @@ void plugin::entity::PlayerFireZeusStinger(
     zeusStingerInfo.dischargingTimer = 800.0f;
     plugin::entity::FireZeusStingerSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 }
@@ -1241,6 +1309,7 @@ void plugin::entity::FireZeusStingerPrimary(
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
 , pul::animation::Instance & playerAnim
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -1354,20 +1423,25 @@ void plugin::entity::FireZeusStingerPrimary(
     }
   }
 
-  // collision detection with nearest zeus stinger secondary
+  // collision detection with nearest entity (including zeus stinger secondary)
   {
     auto view =
       registry.view<
         pul::animation::ComponentInstance
       , ::ComponentZeusStingerSecondary
       >();
+
     entt::entity nearestEntity;
+
+    // find the nearest sphere, and then record the entity/distance which can
+    // then be compared to nearest hitbox entity & the sphere removed if a
+    // collision occured
     float nearestDist = 50000.0f;
+    auto const rayDirection = glm::normalize(endOrigin - beginOrigin);
     for (auto entity : view) {
       auto & animation = view.get<pul::animation::ComponentInstance>(entity);
 
       float dist;
-      auto const rayDirection = glm::normalize(endOrigin - beginOrigin);
       if (
         glm::intersectRaySphere(
           beginOrigin, rayDirection
@@ -1385,6 +1459,28 @@ void plugin::entity::FireZeusStingerPrimary(
         intersection = true;
         scatterIntersection = true;
       }
+    }
+
+    // apply weapon damage
+    auto weaponDamageInfo =
+      plugin::entity::WeaponDamageRaycast(
+        plugin, scene
+      , beginOrigin
+      , endOrigin
+      , 60.0f // direct damage
+      , 10.0f // force
+      , playerEntity // ignored player
+      )
+    ;
+
+    if (weaponDamageInfo.entity != entt::null) {
+      // no scatter intersection as player was hit before the nearest sphere
+      scatterIntersection = false;
+      intersection = true;
+
+      spdlog::debug("intersection");
+
+      endOrigin = originalEndOrigin = weaponDamageInfo.origin;
     }
 
     // if intersection, destroy entity & reorient the beam
@@ -1516,6 +1612,7 @@ void plugin::entity::FireZeusStingerPrimary(
     , endOrigin - glm::vec2(0.0f, 32.0f), dir, scatterAngle, false
     , scatterMatrix
     , player, playerAnim
+    , playerEntity
     );
   }
 }
@@ -1525,6 +1622,7 @@ void plugin::entity::FireZeusStingerSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -1557,6 +1655,12 @@ void plugin::entity::FireZeusStingerSecondary(
 
     {
       pul::core::ComponentParticleGrenade particle;
+      particle.damage.damagePlayer = true;
+      particle.damage.ignoredPlayer = playerEntity;
+      particle.damage.explosionRadius = 0.0f;
+      particle.damage.explosionForce = 1.0f;
+      particle.damage.playerSplashDamage = 0.0f;
+      particle.damage.playerDirectDamage = 40.0f;
 
       plugin.animation.ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
@@ -1595,6 +1699,7 @@ void plugin::entity::PlayerFireBadFetus(
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
+, entt::entity playerEntity
 ) {
   auto & badFetusInfo =
     std::get<pul::core::WeaponInfo::WiBadFetus>(weaponInfo.info);
@@ -1616,6 +1721,7 @@ void plugin::entity::PlayerFireBadFetus(
     plugin::entity::FireBadFetusPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix, player
     , playerOrigin, playerAnim
+    , playerEntity
     );
   }
 
@@ -1623,6 +1729,7 @@ void plugin::entity::PlayerFireBadFetus(
     badFetusInfo.dischargingTimer = 500.0f;
     plugin::entity::FireBadFetusSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 }
@@ -1635,6 +1742,7 @@ void plugin::entity::FireBadFetusPrimary(
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -1693,9 +1801,9 @@ void plugin::entity::FireBadFetusPrimary(
     pul::core::ComponentParticleBeam particle;
     particle.update =
       [&registry, &scene, &plugin, &player, &playerOrigin, &playerAnim
-      , &weaponInfo
+      , &weaponInfo, playerEntity
       ](
-        pul::animation::Instance & animInstance
+        pul::animation::Instance & animInstance, float & weaponCooldown
       ) -> bool {
 
         { // check if beam should be destroyed
@@ -1713,7 +1821,7 @@ void plugin::entity::FireBadFetusPrimary(
 
         bool const weaponFlip = playerAnim.pieceToState["legs"].flip;
 
-        animInstance.origin = playerOrigin;
+        animInstance.origin = playerOrigin + glm::vec2(0.0f, 32.0f);
 
         auto & animState = animInstance.pieceToState["particle"];
         animState.flip = weaponFlip;
@@ -1745,6 +1853,7 @@ void plugin::entity::FireBadFetusPrimary(
             )
         ;
 
+        bool hasHit = false;
         auto beamRay =
           pul::physics::IntersectorRay::Construct(
             beginOrigin
@@ -1755,12 +1864,40 @@ void plugin::entity::FireBadFetusPrimary(
           plugin.physics.IntersectionRaycast(scene, beamRay, resultsBeam)
         ) {
           endOrigin = resultsBeam.origin;
+          hasHit = true;
+        }
 
+        // when applying direct damage, we only apply damage whenever
+        // weaponCooldown is finished
+        auto weaponDamageInfo =
+          plugin::entity::WeaponDamageRaycast(
+            plugin, scene
+          , beginOrigin, endOrigin
+          , weaponCooldown <= 0.0f ? 1.0f : 0.0f // direct damage
+          , -0.45f // force
+          , playerEntity // ignored player
+          )
+        ;
+
+        if (weaponDamageInfo.entity != entt::null) {
+          endOrigin = weaponDamageInfo.origin;
+          hasHit = true;
+
+          // only reset when direct damage was done, which we know based off
+          // the same conditions that were used to apply direct damage
+          if (weaponCooldown <= 0.0f) {
+            weaponCooldown = 100.0f;
+          }
+        }
+
+        weaponCooldown -= pul::util::MsPerFrame;
+
+        if (hasHit) {
           // apply clipping
           animState.uvCoordWrap.x =
             glm::length(
               glm::vec2(beginOrigin)
-            - glm::vec2(resultsBeam.origin)
+            - glm::vec2(endOrigin)
             ) / 384.0f;
           animState.vertWrap.x = animState.uvCoordWrap.x;
           if (!weaponFlip) {
@@ -1770,7 +1907,7 @@ void plugin::entity::FireBadFetusPrimary(
           { // hit trail
             auto bigFetusTrailEntity = registry.create();
             registry.emplace<pul::core::ComponentParticle>(
-              bigFetusTrailEntity, resultsBeam.origin
+              bigFetusTrailEntity, endOrigin
             );
 
             pul::animation::Instance instance;
@@ -1785,11 +1922,11 @@ void plugin::entity::FireBadFetusPrimary(
 
             auto const dir =
                 glm::vec2(beginOrigin)
-              - glm::vec2(resultsBeam.origin)
+              - glm::vec2(endOrigin)
             ;
 
             instance.origin =
-              glm::vec2(resultsBeam.origin) + 2.0f*(dir/glm::length(dir))
+              glm::vec2(endOrigin) + 2.0f*(dir/glm::length(dir))
             ;
 
             registry.emplace<pul::animation::ComponentInstance>(
@@ -1835,7 +1972,7 @@ void plugin::entity::FireBadFetusPrimary(
           if (intersection) {
             CreateBadFetusLinkedBeam(
               plugin, scene, player, playerOrigin, playerAnim, weaponInfo
-            , endOrigin
+            , endOrigin, playerEntity
             );
 
             registry.destroy(nearestEntity);
@@ -1857,6 +1994,7 @@ void plugin::entity::FireBadFetusSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -1910,6 +2048,12 @@ void plugin::entity::FireBadFetusSecondary(
 
     {
       pul::core::ComponentParticleGrenade particle;
+      particle.damage.damagePlayer = true;
+      particle.damage.ignoredPlayer = playerEntity;
+      particle.damage.explosionRadius = 48.0f;
+      particle.damage.explosionForce = -10.0f;
+      particle.damage.playerSplashDamage = 50.0f;
+      particle.damage.playerDirectDamage = 50.0f;
 
       plugin.animation.ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
@@ -1969,6 +2113,7 @@ void plugin::entity::PlayerFirePMF(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {}
 
 void plugin::entity::FirePMFPrimary(
@@ -1976,6 +2121,7 @@ void plugin::entity::FirePMFPrimary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {}
 
 void plugin::entity::FirePMFSecondary(
@@ -1983,6 +2129,7 @@ void plugin::entity::FirePMFSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {}
 
 // -----------------------------------------------------------------------------
@@ -1994,6 +2141,7 @@ void plugin::entity::PlayerFireUnarmed(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {}
 
 void plugin::entity::FireUnarmedPrimary(
@@ -2001,6 +2149,7 @@ void plugin::entity::FireUnarmedPrimary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {}
 
 void plugin::entity::FireUnarmedSecondary(
@@ -2008,6 +2157,7 @@ void plugin::entity::FireUnarmedSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {}
 
 // -----------------------------------------------------------------------------
@@ -2022,6 +2172,7 @@ void plugin::entity::PlayerFireManshredder(
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
+, entt::entity playerEntity
 ) {
   auto & manshredderInfo =
     std::get<pul::core::WeaponInfo::WiManshredder>(weaponInfo.info);
@@ -2045,6 +2196,7 @@ void plugin::entity::PlayerFireManshredder(
     plugin::entity::FireManshredderPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , player, playerOrigin, playerAnim
+    , playerEntity
     );
   }
 
@@ -2052,6 +2204,7 @@ void plugin::entity::PlayerFireManshredder(
     manshredderInfo.dischargingTimer = 1000.0f;
     plugin::entity::FireManshredderSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 }
@@ -2064,6 +2217,7 @@ void plugin::entity::FireManshredderPrimary(
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -2096,7 +2250,7 @@ void plugin::entity::FireManshredderPrimary(
     , &playerAnim
     , [
         &plugin, &scene, manshredderProjectileEntity, &registry
-      , &manshredderInfo, &player, &playerOrigin
+      , &manshredderInfo, &player, &playerOrigin, playerEntity
       ]
         (pul::core::ComponentHitscanProjectile & projectile) -> bool
       {
@@ -2112,10 +2266,10 @@ void plugin::entity::FireManshredderPrimary(
         auto & state = animation.pieceToState.at("particle");
 
         { // update origin/animation
-          animation.origin = playerOrigin;
+          animation.origin = playerOrigin + glm::vec2(0.0f, 28.0f);
           state.flip = player.flip;
 
-          origin = playerOrigin - glm::vec2(0.0f, 44.0f);
+          origin = playerOrigin - glm::vec2(0.0f, 12.0f);
           direction =
             glm::vec2(
               glm::sin(player.lookAtAngle), glm::cos(player.lookAtAngle)
@@ -2128,14 +2282,32 @@ void plugin::entity::FireManshredderPrimary(
             pul::physics::IntersectorRay::Construct(
               origin, origin+direction*32.0f
             );
+          float dist = 32.0f;
+          bool hasHit = false;
           if (
             pul::physics::IntersectionResults results;
             plugin.physics.IntersectionRaycast(scene, ray, results)
           ) {
-            state.Apply("manshredder-primary-hit");
-          } else {
-            state.Apply("manshredder-primary-fire");
+            hasHit = true;
+            dist = glm::length(glm::vec2(results.origin) - origin);
           }
+
+          // apply weapon damage, clamped by previous environment check
+          hasHit |=
+            plugin::entity::WeaponDamageRaycast(
+              plugin, scene
+            , origin
+            , origin + direction*dist
+            , 60.0f // direct damage
+            , 10.0f // force
+            , playerEntity // ignored player
+            ).entity != entt::null
+          ;
+
+          state.Apply(
+            hasHit ? "manshredder-primary-hit" : "manshredder-primary-fire"
+          );
+
         } else {
           if (state.animationFinished) {
             state.Apply("manshredder-primary-fire");
@@ -2153,6 +2325,7 @@ void plugin::entity::FireManshredderSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -2195,18 +2368,49 @@ void plugin::entity::FireManshredderSecondary(
 
     instance.origin = origin - glm::vec2(0.0f, 8.0f);
 
+    { // emitter
+      pul::core::ComponentDistanceParticleEmitter emitter;
+
+      // -- animation
+      plugin.animation.ConstructInstance(
+        scene, emitter.animationInstance, scene.AnimationSystem()
+      , "manshredder-secondary-projectile"
+      );
+
+      emitter
+        .animationInstance
+        .pieceToState["particle"]
+        .Apply("manshredder-secondary-projectile", true);
+
+      // -- timer
+      emitter.velocity = glm::vec2();
+      emitter.originDist = 6.0f;
+
+      emitter.prevOrigin = instance.origin;
+
+      registry.emplace<pul::core::ComponentDistanceParticleEmitter>(
+        manshredderProjectileEntity, std::move(emitter)
+      );
+    }
+
+
     registry.emplace<pul::animation::ComponentInstance>(
       manshredderProjectileEntity, std::move(instance)
     );
 
     registry.emplace<pul::core::ComponentParticle>(
       manshredderProjectileEntity
-    , instance.origin, direction * 2.0f, false, false
+    , instance.origin, direction * 8.0f, false, false
     );
 
     pul::core::ComponentParticleExploder exploder;
     exploder.explodeOnDelete = false;
     exploder.explodeOnCollide = true;
+    exploder.damage.damagePlayer = true;
+    exploder.damage.ignoredPlayer = playerEntity;
+    exploder.damage.explosionRadius = 32.0f;
+    exploder.damage.explosionForce = 10.0f;
+    exploder.damage.playerSplashDamage = 20.0f;
 
     plugin.animation.ConstructInstance(
      scene, exploder.animationInstance, scene.AnimationSystem()
@@ -2232,6 +2436,7 @@ void plugin::entity::PlayerFireWallbanger(
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & wallbangerInfo =
     std::get<pul::core::WeaponInfo::WiWallbanger>(weaponInfo.info);
@@ -2245,6 +2450,7 @@ void plugin::entity::PlayerFireWallbanger(
     wallbangerInfo.dischargingTimer = 250.0f;
     plugin::entity::FireWallbangerPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 
@@ -2252,6 +2458,7 @@ void plugin::entity::PlayerFireWallbanger(
     wallbangerInfo.dischargingTimer = 1000.0f;
     plugin::entity::FireWallbangerSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+    , playerEntity
     );
   }
 }
@@ -2261,6 +2468,7 @@ void plugin::entity::FireWallbangerPrimary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -2309,6 +2517,12 @@ void plugin::entity::FireWallbangerPrimary(
 
     {
       pul::core::ComponentParticleGrenade particle;
+      particle.damage.damagePlayer = true;
+      particle.damage.ignoredPlayer = playerEntity;
+      particle.damage.explosionRadius = 0.0f;
+      particle.damage.explosionForce = 5.0f;
+      particle.damage.playerSplashDamage = 0.0f;
+      particle.damage.playerDirectDamage = 35.0f;
 
       plugin.animation.ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
@@ -2340,6 +2554,7 @@ void plugin::entity::FireWallbangerSecondary(
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
+, entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -2517,6 +2732,14 @@ void plugin::entity::FireWallbangerSecondary(
     animState.flipVertWrap = true;
   }
 
+  // damage player
+  plugin::entity::WeaponDamageCircle(
+    plugin, scene
+  , endOrigin, 128.0f
+  , 100.0f, 10.0f
+  , entt::null
+  );
+
   { // explosion
     auto wallbangerExplosionEntity = registry.create();
     registry.emplace<pul::core::ComponentParticle>(
@@ -2540,6 +2763,101 @@ void plugin::entity::FireWallbangerSecondary(
       wallbangerExplosionEntity, std::move(instance)
     );
   }
+}
+
+plugin::entity::WeaponDamageRaycastReturnInfo
+plugin::entity::WeaponDamageRaycast(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, glm::vec2 const & originBegin, glm::vec2 const & originEnd
+, float const damage, float const force
+, entt::entity ignoredEntity
+) {
+  auto & registry = scene.EnttRegistry();
+
+  pul::physics::IntersectorRay ray;
+  ray.beginOrigin = glm::i32vec2(glm::round(originBegin));
+  ray.endOrigin = glm::i32vec2(glm::round(originEnd));
+  pul::physics::EntityIntersectionResults results;
+
+  plugin::entity::WeaponDamageRaycastReturnInfo ri = {};
+
+  // iterate thru all entity intersections, and if damageable record
+  // the damage
+  plugin.physics.EntityIntersectionRaycast(scene, ray, results);
+  for (auto & entityIntersection : results.entities) {
+    auto * damageable =
+      registry.try_get<pul::core::ComponentDamageable>(
+        std::get<1>(entityIntersection)
+      );
+    if (!damageable) { continue; }
+    if (std::get<1>(entityIntersection) == ignoredEntity) { continue; }
+
+    pul::core::DamageInfo damageInfo;
+    { // calculate damage info
+      glm::vec2 const dir = glm::normalize(originEnd - originBegin);
+
+      damageInfo.directionForce = dir * force;
+      damageInfo.damage = damage;
+    }
+
+    damageable->frameDamageInfos.emplace_back(damageInfo);
+
+    // only one entity can be hit with ray (at least for now)
+    ri.entity = std::get<1>(entityIntersection);
+    ri.origin = std::get<0>(entityIntersection);
+
+    break;
+  }
+
+  return ri;
+}
+
+bool plugin::entity::WeaponDamageCircle(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, glm::vec2 const & origin, float radius
+, float const damage, float const force
+, entt::entity ignoredEntity
+) {
+  auto & registry = scene.EnttRegistry();
+
+  pul::physics::IntersectorCircle circle;
+  circle.origin = origin;
+  circle.radius = radius;
+  pul::physics::EntityIntersectionResults results;
+
+  // iterate thru all entity intersections, and if damageable record
+  // the damage
+  plugin.physics.EntityIntersectionCircle(scene, circle, results);
+  bool hasHit = false;
+  for (auto & entityIntersection : results.entities) {
+    auto * damageable =
+      registry.try_get<pul::core::ComponentDamageable>(
+        std::get<1>(entityIntersection)
+      );
+    if (!damageable) { continue; }
+
+    if (std::get<1>(entityIntersection) == ignoredEntity) { continue; }
+
+    hasHit = true;
+
+    pul::core::DamageInfo damageInfo;
+    { // calculate damage info
+      glm::vec2 const dir =
+        glm::vec2(std::get<0>(entityIntersection)) - origin;
+
+      float const forceRatio = 1.0f - glm::length(dir) / radius;
+
+      damageInfo.directionForce =
+        glm::normalize(dir) * forceRatio * force
+      ;
+
+      damageInfo.damage = forceRatio * damage;
+    }
+
+    damageable->frameDamageInfos.emplace_back(damageInfo);
+  }
+
+  return hasHit;
 }
 
 #pragma GCC diagnostic pop

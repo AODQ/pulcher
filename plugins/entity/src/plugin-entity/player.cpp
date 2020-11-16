@@ -487,6 +487,7 @@ void UpdatePlayerWeapon(
 , pul::core::ComponentHitboxAABB &
 , pul::animation::ComponentInstance & playerAnim
 ) {
+  auto const & registry = scene.EnttRegistry();
   auto const & controller = controls.current;
   auto const & controllerPrev = controls.previous;
 
@@ -530,6 +531,8 @@ void UpdatePlayerWeapon(
     weapon.cooldown = 0.0f;
   }
 
+  auto playerEntity = entt::to_entity(registry, player);
+
   switch (player.inventory.currentWeapon) {
     default: break;
     case pul::core::WeaponType::Pericaliya: {
@@ -540,7 +543,7 @@ void UpdatePlayerWeapon(
       , weapon
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
-      , weaponFlip, weaponMatrix
+      , weaponFlip, weaponMatrix, playerEntity
       );
     } break;
     case pul::core::WeaponType::Manshredder: {
@@ -552,7 +555,7 @@ void UpdatePlayerWeapon(
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
-      , player, playerOrigin, playerAnim.instance
+      , player, playerOrigin, playerAnim.instance, playerEntity
       );
     } break;
     case pul::core::WeaponType::Wallbanger: {
@@ -563,7 +566,7 @@ void UpdatePlayerWeapon(
       , weapon
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
-      , weaponFlip, weaponMatrix
+      , weaponFlip, weaponMatrix, playerEntity
       );
     } break;
     case pul::core::WeaponType::Unarmed: {
@@ -574,7 +577,7 @@ void UpdatePlayerWeapon(
       , weapon
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
-      , weaponFlip, weaponMatrix
+      , weaponFlip, weaponMatrix, playerEntity
       );
     } break;
     case pul::core::WeaponType::PMF: {
@@ -585,7 +588,7 @@ void UpdatePlayerWeapon(
       , weapon
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
-      , weaponFlip, weaponMatrix
+      , weaponFlip, weaponMatrix, playerEntity
       );
     } break;
     case pul::core::WeaponType::BadFetus: {
@@ -597,7 +600,7 @@ void UpdatePlayerWeapon(
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
-      , player, playerOrigin, playerAnim.instance
+      , player, playerOrigin, playerAnim.instance, playerEntity
       );
     } break;
     case pul::core::WeaponType::ZeusStinger: {
@@ -609,7 +612,7 @@ void UpdatePlayerWeapon(
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
-      , player, playerAnim.instance
+      , player, playerAnim.instance, playerEntity
       );
     } break;
     case pul::core::WeaponType::Grannibal: {
@@ -620,7 +623,7 @@ void UpdatePlayerWeapon(
       , weapon
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
-      , weaponFlip, weaponMatrix
+      , weaponFlip, weaponMatrix, playerEntity
       );
     } break;
     case pul::core::WeaponType::DopplerBeam: {
@@ -631,7 +634,7 @@ void UpdatePlayerWeapon(
       , weapon
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
-      , weaponFlip, weaponMatrix
+      , weaponFlip, weaponMatrix, playerEntity
       );
     } break;
     case pul::core::WeaponType::Volnias: {
@@ -642,7 +645,7 @@ void UpdatePlayerWeapon(
       , weapon
       , plugin, scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
-      , weaponFlip, weaponMatrix
+      , weaponFlip, weaponMatrix, playerEntity
       );
     } break;
   }
@@ -661,7 +664,6 @@ void plugin::entity::ConstructPlayer(
   auto damageable = pul::core::ComponentDamageable { 100, 0 };
   registry.emplace<pul::core::ComponentDamageable>(entity, damageable);
   registry.emplace<pul::core::ComponentOrigin>(entity);
-  registry.emplace<pul::core::ComponentHitboxAABB>(entity);
   registry.emplace<pul::controls::ComponentController>(entity);
   registry.emplace<pul::core::ComponentCamera>(entity);
   registry.emplace<pul::core::ComponentLabel>(entity, "Player");
@@ -675,12 +677,28 @@ void plugin::entity::ConstructPlayer(
   );
 
   auto & player = registry.get<pul::core::ComponentPlayer>(entity);
+  auto & playerOrigin = registry.get<pul::core::ComponentOrigin>(entity);
+
+  { // hitbox
+    pul::core::ComponentHitboxAABB hitbox;
+    hitbox.dimensions = glm::i32vec2(15, 50);
+    registry.emplace<pul::core::ComponentHitboxAABB>(entity, hitbox);
+  }
+
+  // choose map origin
+  if (scene.PlayerMetaInfo().playerSpawnPoints.size() > 0ul) {
+    registry.get<pul::core::ComponentOrigin>(entity).origin =
+      scene.PlayerMetaInfo().playerSpawnPoints[0];
+  }
 
   // load up player weapon animation & state from previous plugin load
   if (mainPlayer) {
 
     // overwrite with player component for persistent reloads
     player = scene.StoredDebugPlayerComponent();
+
+    if (scene.StoredDebugPlayerOriginComponent().origin != glm::vec2(0.0f))
+      { playerOrigin = scene.StoredDebugPlayerOriginComponent(); }
 
     registry.emplace<pul::core::ComponentPlayerControllable>(entity);
   } else {
@@ -697,12 +715,6 @@ void plugin::entity::ConstructPlayer(
   registry.emplace<pul::animation::ComponentInstance>(
     player.weaponAnimation, std::move(weaponInstance)
   );
-
-  // choose map origin
-  if (scene.PlayerMetaInfo().playerSpawnPoints.size() > 0ul) {
-    registry.get<pul::core::ComponentOrigin>(entity).origin =
-      scene.PlayerMetaInfo().playerSpawnPoints[0];
-  }
 }
 
 void plugin::entity::UpdatePlayer(
@@ -714,6 +726,10 @@ void plugin::entity::UpdatePlayer(
 , pul::animation::ComponentInstance & playerAnim
 , pul::core::ComponentDamageable & damageable
 ) {
+
+  // add/remove 19 while doing calculations as it basically offsets the hitbox
+  // to the center
+  playerOrigin += glm::vec2(0.0f, 28.0f);
 
   auto & registry = scene.EnttRegistry();
 
@@ -753,7 +769,7 @@ void plugin::entity::UpdatePlayer(
   bool const prevGrounded = player.grounded;
 
   // gravity/ground check
-  {
+  if (player.affectedByGravity) {
     pul::physics::IntersectorPoint point;
     point.origin = playerOrigin + glm::vec2(0.0f, 1.0f);
     pul::physics::IntersectionResults results;
@@ -786,6 +802,12 @@ void plugin::entity::UpdatePlayer(
   for (auto & damage : damageable.frameDamageInfos) {
     player.velocity += damage.directionForce;
     damageable.health = glm::max(damageable.health - damage.damage, 0);
+
+    // pop origin up if grounded if there is Y force
+    if (player.grounded && damage.directionForce.y < 0.0f) {
+      playerOrigin.y -= 2.0f;
+    }
+
     player.grounded = false;
   }
   damageable.frameDamageInfos = {};
@@ -1377,6 +1399,8 @@ void plugin::entity::UpdatePlayer(
       static_cast<size_t>(glm::clamp(player.prevAirVelocity/5.0f, 0.0f, 2.0f));
     audioSystem.playerLanded |= player.prevAirVelocity > 9.0f;
   }
+
+  playerOrigin -= glm::vec2(0.0f, 28.0f);
 }
 
 void plugin::entity::UiRenderPlayer(

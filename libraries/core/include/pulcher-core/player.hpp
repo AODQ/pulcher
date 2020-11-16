@@ -27,8 +27,6 @@ namespace pul::core {
   };
 
   struct ComponentHitboxAABB {
-    entt::entity entityOrigin { entt::null };
-
     glm::i32vec2 dimensions;
   };
 
@@ -37,6 +35,8 @@ namespace pul::core {
     glm::vec2 storedVelocity = {};
     float lookAtAngle = 0.0f;
     bool flip = false;
+
+    bool affectedByGravity = true;
 
     float prevAirVelocity = 0.0f;
 

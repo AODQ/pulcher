@@ -153,6 +153,10 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
     case pul::plugin::Type::Physics: {
       auto & unit = plugin.physics;
       ctx.LoadFunction(
+        unit.EntityIntersectionRaycast,
+        "Physics_EntityIntersectionRaycast"
+      );
+      ctx.LoadFunction(
         unit.EntityIntersectionCircle,
         "Physics_EntityIntersectionCircle"
       );

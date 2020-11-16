@@ -14,17 +14,20 @@ namespace plugin::entity {
   , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireVolniasPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireVolniasSecondary(
     uint8_t shots, uint8_t shotSet
   , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFireGrannibal(
@@ -34,18 +37,21 @@ namespace plugin::entity {
   , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireGrannibalPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireGrannibalSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFireDopplerBeam(
@@ -55,18 +61,21 @@ namespace plugin::entity {
   , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireDopplerBeamPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireDopplerBeamSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFirePericaliya(
@@ -76,18 +85,21 @@ namespace plugin::entity {
   , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FirePericaliyaPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FirePericaliyaSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFireZeusStinger(
@@ -99,6 +111,7 @@ namespace plugin::entity {
   , bool const flip, glm::mat3 const & matrix
   , pul::core::ComponentPlayer & player
   , pul::animation::Instance & playerAnim
+  , entt::entity playerEntity
   );
   void FireZeusStingerPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
@@ -107,12 +120,14 @@ namespace plugin::entity {
   , bool const flip, glm::mat3 const & matrix
   , pul::core::ComponentPlayer & player
   , pul::animation::Instance & playerAnim
+  , entt::entity playerEntity
   );
   void FireZeusStingerSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFireBadFetus(
@@ -125,6 +140,7 @@ namespace plugin::entity {
   , pul::core::ComponentPlayer & player
   , glm::vec2 & playerOrigin
   , pul::animation::Instance & playerAnim
+  , entt::entity playerEntity
   );
   void FireBadFetusPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
@@ -134,12 +150,14 @@ namespace plugin::entity {
   , pul::core::ComponentPlayer & player
   , glm::vec2 & playerOrigin
   , pul::animation::Instance & playerAnim
+  , entt::entity playerEntity
   );
   void FireBadFetusSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFirePMF(
@@ -149,18 +167,21 @@ namespace plugin::entity {
   , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FirePMFPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FirePMFSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFireUnarmed(
@@ -170,18 +191,21 @@ namespace plugin::entity {
   , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireUnarmedPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireUnarmedSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFireManshredder(
@@ -194,6 +218,7 @@ namespace plugin::entity {
   , pul::core::ComponentPlayer & player
   , glm::vec2 & playerOrigin
   , pul::animation::Instance & playerAnim
+  , entt::entity playerEntity
   );
   void FireManshredderPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
@@ -203,12 +228,14 @@ namespace plugin::entity {
   , pul::core::ComponentPlayer & player
   , glm::vec2 & playerOrigin
   , pul::animation::Instance & playerAnim
+  , entt::entity playerEntity
   );
   void FireManshredderSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
 
   void PlayerFireWallbanger(
@@ -218,17 +245,40 @@ namespace plugin::entity {
   , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireWallbangerPrimary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
   );
   void FireWallbangerSecondary(
     pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
   , pul::core::WeaponInfo & weaponInfo
   , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
   , bool const flip, glm::mat3 const & matrix
+  , entt::entity playerEntity
+  );
+
+  struct WeaponDamageRaycastReturnInfo {
+    entt::entity entity = entt::null;
+    glm::vec2 origin = {};
+  };
+
+  WeaponDamageRaycastReturnInfo WeaponDamageRaycast(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & originBegin, glm::vec2 const & originEnd
+  , float const damage, float const force
+  , entt::entity playerEntity
+  );
+
+  // ignoreEntity - can be null, describes which entity to be ignored
+  bool WeaponDamageCircle(
+    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  , glm::vec2 const & origin, float const radius
+  , float const damage, float const force
+  , entt::entity const ignoredEntity
   );
 }
