@@ -321,6 +321,8 @@ void ProcessRendering(
       // continue loading plugins
       pul::plugin::UpdatePlugins(plugin);
       ::LoadPluginInfo(plugin, scene);
+
+      pul::controls::LoadControllerConfig(scene.PlayerController());
     }
     pul::imgui::ItemTooltip(
       "NOTE: RELOADING plugins will save animations, configs, etc"
@@ -620,6 +622,7 @@ int main(int argc, char const ** argv) {
   pul::core::SceneBundle sceneBundle;
   sceneBundle.config = userConfig;
   ::LoadPluginInfo(plugin, sceneBundle);
+  pul::controls::LoadControllerConfig(sceneBundle.PlayerController());
 
   ImGuiApplyStyling();
 

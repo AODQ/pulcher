@@ -2,9 +2,11 @@
 
 #include <pulcher-util/consts.hpp>
 
-#include <cstdint>
-
 #include <glm/fwd.hpp>
+
+#include <cstdint>
+#include <map>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -16,6 +18,27 @@ namespace pul::controls {
       Up = -1, Down = +1,
       None = 0ul, Size = 3ul
     };
+
+    enum class ControlOutputType {
+      Jump, Dash, Crouch, Walk
+    , Taunt, ShootPrimary, ShootSecondary
+    , WeaponSwitchNext, WeaponSwitchPrev
+    , Up, Down, Left, Right
+    };
+
+    struct Keymap {
+      enum Type {
+        Keyboard
+      , Mouse
+      , MouseWheel
+      };
+
+      Type type = Type::Keyboard;
+      uint32_t value = 0;
+      std::vector<ControlOutputType> outputs = {};
+    };
+
+    std::vector<Keymap> keymappings;
 
     struct Frame {
       pul::Direction movementDirection = pul::Direction::None;
@@ -50,4 +73,6 @@ namespace pul::controls {
   struct ComponentController {
     pul::controls::Controller controller;
   };
+
+  void LoadControllerConfig(pul::controls::Controller & controller);
 }

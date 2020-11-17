@@ -21,5 +21,5 @@ target_link_libraries(
   PUBLIC
     glm pulcher-util
   PRIVATE
-    glfw
+    glfw cjson
 )
