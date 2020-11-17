@@ -1,5 +1,6 @@
 //  entity plugin
 
+#include <plugin-entity/config.hpp>
 #include <plugin-entity/cursor.hpp>
 #include <plugin-entity/player.hpp>
 #include <plugin-entity/weapon.hpp>
@@ -48,8 +49,10 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   plugin::entity::ConstructPlayer(playerEntity, plugin, scene, true);
 
   // bot/AI
-  entt::entity botEntity;
-  plugin::entity::ConstructPlayer(botEntity, plugin, scene, false);
+  for (size_t i = 0; i < 32; ++ i) {
+    entt::entity botEntity;
+    plugin::entity::ConstructPlayer(botEntity, plugin, scene, false);
+  }
 }
 
 PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
@@ -205,7 +208,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       if (particle.velocity != glm::vec2()) {
 
         if (particle.gravityAffected)
-          { particle.velocity.y += 0.15f; }
+          { particle.velocity.y += 0.05f; }
 
         auto ray =
           pul::physics::IntersectorRay::Construct(
@@ -467,6 +470,15 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           controller.current.crouch = true;
         }
         if (distribution(generator) < 10) {
+          controller.current.weaponSwitchNext = true;
+        }
+        if (distribution(generator) < 10) {
+          controller.current.shootPrimary = true;
+        }
+        if (distribution(generator) < 10) {
+          controller.current.shootSecondary = true;
+        }
+        if (distribution(generator) < 10) {
           controller.current.dash = true;
         }
         controller.current.lookAngle = dir ? -4 : +3;
@@ -649,8 +661,20 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
+  plugin::config::RenderImGui();
+
   ImGui::Begin("Entity");
   ImGui::Checkbox("allow bot to move around", &::botPlays);
+  if (ImGui::Button("give all weapons")) {
+    auto view = registry.view<pul::core::ComponentPlayer>();
+    for (auto & entity : view) {
+      auto & player = view.get<pul::core::ComponentPlayer>(entity);
+      for (auto & weapon : player.inventory.weapons) {
+        weapon.pickedUp = true;
+        weapon.ammunition = 500u;
+      }
+    }
+  }
   registry.each([&](auto entity) {
 
     std::string label = fmt::format("{}", static_cast<size_t>(entity));

@@ -4,9 +4,10 @@ target_include_directories(plugin-entity PUBLIC "include/")
 target_sources(
   plugin-entity
   PRIVATE
+    src/plugin-entity/config.cpp
     src/plugin-entity/cursor.cpp
-    src/plugin-entity/source.cpp
     src/plugin-entity/player.cpp
+    src/plugin-entity/source.cpp
     src/plugin-entity/weapon.cpp
 )
 

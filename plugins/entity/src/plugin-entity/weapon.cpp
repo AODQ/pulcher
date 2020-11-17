@@ -1,3 +1,4 @@
+#include <plugin-entity/config.hpp>
 #include <plugin-entity/weapon.hpp>
 
 #include <pulcher-animation/animation.hpp>
@@ -44,6 +45,8 @@ void CreateBadFetusLinkedBeam(
     playerAnim
       .pieceToState["weapon-placeholder"];
   auto const & weaponMatrix = weaponState.cachedLocalSkeletalMatrix;
+
+  namespace config = plugin::config::badFetus::combo;
 
   { // muzzle
     auto badFetusMuzzleEntity = registry.create();
@@ -136,7 +139,6 @@ void CreateBadFetusLinkedBeam(
         // TODO move this out
         static glm::vec2 accel = glm::vec2(0.0f);
 
-
         { // check if beam should be destroyed
           auto const * const badFetusInfo =
             std::get_if<pul::core::WeaponInfo::WiBadFetus>(&weaponInfo.info);
@@ -178,7 +180,7 @@ void CreateBadFetusLinkedBeam(
 
                 particle.origin = animComponent.instance.origin;
                 particle.velocity = accel;
-                particle.velocityFriction = 0.5f;
+                particle.velocityFriction = config::VelocityFriction();
                 particle.gravityAffected = false;
                 particle.useBounces = true;
                 particle.bounces = 0;
@@ -186,10 +188,12 @@ void CreateBadFetusLinkedBeam(
 
                 particle.damage.damagePlayer = true;
                 particle.damage.ignoredPlayer = playerEntity;
-                particle.damage.explosionRadius = 64.0f;
-                particle.damage.explosionForce = -10.0f;
-                particle.damage.playerSplashDamage = 60.0f;
-                particle.damage.playerDirectDamage = 20.0f;
+                particle.damage.explosionRadius    = config::ExplosionRadius();
+                particle.damage.explosionForce     = config::ExplosionForce();
+                particle.damage.playerSplashDamage =
+                  config::ProjectileSplashDamageMax();
+                particle.damage.playerDirectDamage =
+                  config::ProjectileDirectDamage();
 
                 registry.emplace<pul::core::ComponentParticleGrenade>(
                   badFetusProjectileEntity, std::move(particle)
@@ -354,7 +358,7 @@ void GrannibalMuzzleTrail(
 
 void plugin::entity::PlayerFireVolnias(
   bool const primary, bool const secondary
-, glm::vec2 & velocity
+, glm::vec2 & velocity // TODO remove this
 , pul::core::WeaponInfo & weaponInfo
 , pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
@@ -366,12 +370,18 @@ void plugin::entity::PlayerFireVolnias(
 
   bool forceCooldown = (primary && secondary) || volInfo.dischargingSecondary;
 
+  namespace config = plugin::config::volnias::primary;
+  namespace configSec = plugin::config::volnias::secondary;
+
   // TODO use controller or something
   static bool prevPrim = false;
 
-  if (!primary && prevPrim && volInfo.primaryChargeupTimer >= 400.0f) {
+  if (
+      !primary && prevPrim
+   && volInfo.primaryChargeupTimer >= config::ChargeupTimerEnd()
+  ) {
     audioSystem.volniasEndPrimary = true;
-    weaponInfo.cooldown = 300.0f;
+    weaponInfo.cooldown = config::DischargeCooldown();
   }
 
   prevPrim = primary;
@@ -386,29 +396,33 @@ void plugin::entity::PlayerFireVolnias(
   // apply primary shooting
   if (primary && !forceCooldown) {
     volInfo.primaryChargeupTimer += pul::util::MsPerFrame;
-    if (!volInfo.hasChargedPrimary && volInfo.primaryChargeupTimer >= 100.0f) {
+    if (
+        !volInfo.hasChargedPrimary
+     && volInfo.primaryChargeupTimer >= config::ChargeupPreBeginThreshold()
+    ) {
       volInfo.hasChargedPrimary = true;
       audioSystem.volniasPrefirePrimary = true;
     }
-    if (volInfo.primaryChargeupTimer >= 1000.0f) {
-      volInfo.primaryChargeupTimer -= 100.0f;
+
+    if (volInfo.primaryChargeupTimer >= config::ChargeupBeginThreshold()) {
+      volInfo.primaryChargeupTimer -= config::ChargeupDelta();
 
       plugin::entity::FireVolniasPrimary(
         plugin, scene, origin, direction, angle, flip, matrix, playerEntity
       );
-
-      velocity += -direction*0.7f;
     }
   }
 
   // apply secondary chargeup
   if (secondary && !forceCooldown) {
-    if (volInfo.secondaryChargedShots < 5) {
+    if (volInfo.secondaryChargedShots < configSec::MaxChargedShots()) {
       volInfo.secondaryChargeupTimer += pul::util::MsPerFrame;
-      if (volInfo.secondaryChargeupTimer >= 600.0f) {
-        volInfo.secondaryChargeupTimer -= 600.0f;
+      if (volInfo.secondaryChargeupTimer >= configSec::ChargeupDelta()) {
+        volInfo.secondaryChargeupTimer -= configSec::ChargeupDelta();
         audioSystem.volniasChargePrimary = true;
-        if (++ volInfo.secondaryChargedShots == 5) {
+
+        ++ volInfo.secondaryChargedShots;
+        if (volInfo.secondaryChargedShots == configSec::MaxChargedShots()) {
           audioSystem.volniasChargeSecondary = true;
         }
       }
@@ -418,13 +432,14 @@ void plugin::entity::PlayerFireVolnias(
       volInfo.secondaryChargeupTimer += pul::util::MsPerFrame;
       if (
           !volInfo.overchargedSecondary
-       && volInfo.secondaryChargeupTimer >= 5500.0f
+       && volInfo.secondaryChargeupTimer
+       >= configSec::ChargeupMaxThreshold() - 500.0f
       ) {
         audioSystem.volniasPrefireSecondary = true;
         volInfo.overchargedSecondary = true;
       }
 
-      if (volInfo.secondaryChargeupTimer >= 6000.0f) {
+      if (volInfo.secondaryChargeupTimer >= configSec::ChargeupMaxThreshold()) {
         forceCooldown = true;
       }
     }
@@ -432,7 +447,7 @@ void plugin::entity::PlayerFireVolnias(
 
   // secondary fires on release
   if (!secondary || forceCooldown) {
-    volInfo.secondaryChargeupTimer = 580.0f;
+    volInfo.secondaryChargeupTimer = configSec::ChargeupTimerStart();
     volInfo.overchargedSecondary = false;
     if (volInfo.secondaryChargedShots > 0u) {
       if (!volInfo.dischargingSecondary) {
@@ -441,8 +456,8 @@ void plugin::entity::PlayerFireVolnias(
       volInfo.dischargingSecondary = true;
 
       volInfo.dischargingTimer += pul::util::MsPerFrame;
-      if (volInfo.dischargingTimer > 40.0f) {
-        volInfo.dischargingTimer -= 40.0f;
+      if (volInfo.dischargingTimer > configSec::DischargeDelta()) {
+        volInfo.dischargingTimer -= configSec::DischargeDelta();
         plugin::entity::FireVolniasSecondary(
           3, volInfo.secondaryChargedShots-1, plugin
         , scene, origin, angle, flip, matrix
@@ -451,7 +466,7 @@ void plugin::entity::PlayerFireVolnias(
         if (--volInfo.secondaryChargedShots == 0u) {
           volInfo.dischargingSecondary = false;
           volInfo.dischargingTimer = 0.0f;
-          weaponInfo.cooldown = 300.0f;
+          weaponInfo.cooldown = config::DischargeCooldown();
         }
       }
     }
@@ -466,8 +481,9 @@ void plugin::entity::FireVolniasPrimary(
 ) {
 
   auto & registry = scene.EnttRegistry();
-
   auto & audioSystem = scene.AudioSystem();
+
+  namespace config = plugin::config::volnias::primary;
 
   if (audioSystem.volniasFire == -1ul) { audioSystem.volniasFire = 0ul; }
 
@@ -515,7 +531,7 @@ void plugin::entity::FireVolniasPrimary(
 
     registry.emplace<pul::core::ComponentParticle>(
       volniasProjectileEntity
-    , instance.origin, direction * 5.0f
+    , instance.origin, direction * config::ProjectileVelocity()
     );
 
 
@@ -525,9 +541,9 @@ void plugin::entity::FireVolniasPrimary(
     exploder.damage.damagePlayer = true;
     exploder.damage.ignoredPlayer = playerEntity;
     exploder.damage.explosionRadius = 0.0f;
-    exploder.damage.explosionForce = 1.0f;
+    exploder.damage.explosionForce     = config::ProjectileForce();
     exploder.damage.playerSplashDamage = 0.0f;
-    exploder.damage.playerDirectDamage = 10.0f;
+    exploder.damage.playerDirectDamage = config::ProjectileDamage();
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
@@ -544,6 +560,11 @@ void plugin::entity::FireVolniasPrimary(
       volniasProjectileEntity, std::move(exploder)
     );
   }
+
+  // knockback player if they are in air
+  auto & player = registry.get<pul::core::ComponentPlayer>(playerEntity);
+  if (!player.grounded)
+    { player.velocity += -direction*config::Knockback(); }
 }
 
 void plugin::entity::FireVolniasSecondary(
@@ -584,11 +605,14 @@ void plugin::entity::PlayerFireGrannibal(
   auto & grannibalInfo =
     std::get<pul::core::WeaponInfo::WiGrannibal>(weaponInfo.info);
 
+  namespace config = plugin::config::grannibal::primary;
+  namespace configSec = plugin::config::grannibal::secondary;
+
   if (grannibalInfo.primaryMuzzleTrailLeft > 0) {
     if (grannibalInfo.primaryMuzzleTrailTimer <= 0.0f) {
       ::GrannibalMuzzleTrail(plugin, scene, origin, flip, matrix);
       -- grannibalInfo.primaryMuzzleTrailLeft;
-      grannibalInfo.primaryMuzzleTrailTimer = 70.0f;
+      grannibalInfo.primaryMuzzleTrailTimer = config::MuzzleTrailTimer();
     }
     grannibalInfo.primaryMuzzleTrailTimer -= pul::util::MsPerFrame;
   }
@@ -599,7 +623,7 @@ void plugin::entity::PlayerFireGrannibal(
   }
 
   if (primary) {
-    grannibalInfo.dischargingTimer = 1000.0f;
+    grannibalInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireGrannibalPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -607,7 +631,7 @@ void plugin::entity::PlayerFireGrannibal(
   }
 
   if (secondary) {
-    grannibalInfo.dischargingTimer = 1000.0f;
+    grannibalInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireGrannibalSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -627,8 +651,10 @@ void plugin::entity::FireGrannibalPrimary(
   auto & grannibalInfo =
     std::get<pul::core::WeaponInfo::WiGrannibal>(weaponInfo.info);
 
-  grannibalInfo.primaryMuzzleTrailLeft = 4;
-  grannibalInfo.primaryMuzzleTrailTimer = 70.0f;
+  namespace config = plugin::config::grannibal::primary;
+
+  grannibalInfo.primaryMuzzleTrailLeft = config::MuzzleTrailParticles();
+  grannibalInfo.primaryMuzzleTrailTimer = config::MuzzleTrailTimer();
 
   ::GrannibalMuzzleTrail(plugin, scene, origin, flip, matrix);
 
@@ -643,6 +669,7 @@ void plugin::entity::FireGrannibalPrimary(
     state.angle = angle;
     state.flip = flip;
 
+    // TODO ? use weapon holder or sometihg
     instance.origin = origin - glm::vec2(-30.0f, -30.0f)*direction;
 
     { // emitter
@@ -675,7 +702,7 @@ void plugin::entity::FireGrannibalPrimary(
 
     registry.emplace<pul::core::ComponentParticle>(
       grannibalProjectileEntity
-    , instance.origin, direction*10.0f, false, true
+    , instance.origin, direction*config::ProjectileVelocity(), false, true
     );
 
     pul::core::ComponentParticleExploder exploder;
@@ -683,9 +710,10 @@ void plugin::entity::FireGrannibalPrimary(
     exploder.explodeOnCollide = true;
     exploder.damage.damagePlayer = true;
     exploder.damage.ignoredPlayer = playerEntity;
-    exploder.damage.explosionRadius = 96.0f;
-    exploder.damage.explosionForce = 20.0f;
-    exploder.damage.playerSplashDamage = 80.0f;
+    exploder.damage.explosionRadius    = config::ProjectileExplosionRadius();
+    exploder.damage.explosionForce     = config::ProjectileExplosionForce();
+    exploder.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
+    exploder.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
@@ -710,6 +738,8 @@ void plugin::entity::FireGrannibalSecondary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::grannibal::secondary;
 
   [[maybe_unused]]
   auto & grannibalInfo =
@@ -759,10 +789,10 @@ void plugin::entity::FireGrannibalSecondary(
     pul::core::ComponentParticleGrenade particle;
     particle.damage.damagePlayer = true;
     particle.damage.ignoredPlayer = playerEntity;
-    particle.damage.explosionRadius = 96.0f;
-    particle.damage.explosionForce = 10.0f;
-    particle.damage.playerSplashDamage = 50.0f;
-    particle.damage.playerDirectDamage = 80.0f;
+    particle.damage.explosionRadius    = config::ProjectileExplosionRadius();
+    particle.damage.explosionForce     = config::ProjectileExplosionForce();
+    particle.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
+    particle.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
     plugin.animation.ConstructInstance(
       scene, particle.animationInstance, scene.AnimationSystem()
@@ -774,10 +804,10 @@ void plugin::entity::FireGrannibalSecondary(
       .pieceToState["particle"].Apply("grannibal-hit", true);
 
     particle.origin = instance.origin;
-    particle.velocity = direction*5.0f;
-    particle.velocityFriction = 0.7f;
+    particle.velocity = direction*config::ProjectileVelocity();
+    particle.velocityFriction = config::ProjectileVelocityFriction();
     particle.gravityAffected = true;
-    particle.bounces = 2u;
+    particle.bounces = config::Bounces();
     particle.useBounces = true;
 
     registry.emplace<pul::core::ComponentParticleGrenade>(
@@ -800,13 +830,16 @@ void plugin::entity::PlayerFireDopplerBeam(
   auto & dopplerBeamInfo =
     std::get<pul::core::WeaponInfo::WiDopplerBeam>(weaponInfo.info);
 
+  namespace config = plugin::config::dopplerBeam::primary;
+  namespace configSec = plugin::config::dopplerBeam::secondary;
+
   if (dopplerBeamInfo.dischargingTimer > 0.0f) {
     dopplerBeamInfo.dischargingTimer -= pul::util::MsPerFrame;
     return;
   }
 
   if (primary) {
-    dopplerBeamInfo.dischargingTimer = 150.0f;
+    dopplerBeamInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireDopplerBeamPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -814,7 +847,7 @@ void plugin::entity::PlayerFireDopplerBeam(
   }
 
   if (secondary) {
-    dopplerBeamInfo.dischargingTimer = 1000.0f;
+    dopplerBeamInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireDopplerBeamSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -830,6 +863,8 @@ void plugin::entity::FireDopplerBeamPrimary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::dopplerBeam::primary;
 
   {
     auto dopplerBeamFireEntity = registry.create();
@@ -875,7 +910,7 @@ void plugin::entity::FireDopplerBeamPrimary(
 
     registry.emplace<pul::core::ComponentParticle>(
       dopplerBeamProjectileEntity
-    , instance.origin, direction * 5.0f, false, true
+    , instance.origin, direction * config::ProjectileVelocity(), false, true
     );
 
     { // emitter
@@ -908,9 +943,9 @@ void plugin::entity::FireDopplerBeamPrimary(
     exploder.damage.damagePlayer = true;
     exploder.damage.ignoredPlayer = playerEntity;
     exploder.damage.explosionRadius = 0.0f;
-    exploder.damage.explosionForce = 1.0f;
+    exploder.damage.explosionForce = config::ProjectileForce();
     exploder.damage.playerSplashDamage = 0.0f;
-    exploder.damage.playerDirectDamage = 10.0f;
+    exploder.damage.playerDirectDamage = config::ProjectileDamage();
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
@@ -936,10 +971,10 @@ void plugin::entity::FireDopplerBeamSecondary(
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
 ) {
-  std::array<float, 9> shotPattern {{
-    -0.1f,  0.00f, +0.1f
-  }};
-  for (auto fireAngle : shotPattern) {
+
+  namespace config = plugin::config::dopplerBeam::secondary;
+
+  for (auto fireAngle : config::ShotPattern()) {
     fireAngle += angle;
     auto dir = glm::vec2(glm::sin(fireAngle), glm::cos(fireAngle));
     plugin::entity::FireDopplerBeamPrimary(
@@ -963,6 +998,9 @@ void plugin::entity::PlayerFirePericaliya(
   auto & pericaliyaInfo =
     std::get<pul::core::WeaponInfo::WiPericaliya>(weaponInfo.info);
 
+  namespace config = plugin::config::pericaliya::primary;
+  namespace configSec = plugin::config::pericaliya::secondary;
+
   if (pericaliyaInfo.dischargingTimer > 0.0f) {
     pericaliyaInfo.dischargingTimer -= pul::util::MsPerFrame;
     return;
@@ -971,7 +1009,7 @@ void plugin::entity::PlayerFirePericaliya(
   if (pericaliyaInfo.isPrimaryActive) {
     if (!primary) {
       pericaliyaInfo.isPrimaryActive = false;
-      pericaliyaInfo.dischargingTimer = 1000.0f;
+      pericaliyaInfo.dischargingTimer = config::DischargeCooldown();
     }
     return;
   }
@@ -979,7 +1017,7 @@ void plugin::entity::PlayerFirePericaliya(
   if (pericaliyaInfo.isSecondaryActive) {
     if (!secondary) {
       pericaliyaInfo.isSecondaryActive = false;
-      pericaliyaInfo.dischargingTimer = 1000.0f;
+      pericaliyaInfo.dischargingTimer = configSec::DischargeCooldown();
     }
     return;
   }
@@ -1009,6 +1047,8 @@ void plugin::entity::FirePericaliyaPrimary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::pericaliya::primary;
 
   auto & pericaliyaInfo =
     std::get<pul::core::WeaponInfo::WiPericaliya>(weaponInfo.info);
@@ -1088,7 +1128,7 @@ void plugin::entity::FirePericaliyaPrimary(
         (glm::vec2 & vel) mutable -> void
       {
         if (pericaliyaInfo.isPrimaryActive && !hasBeenActive) {
-          vel = direction*4.0f;
+          vel = direction*config::ProjectileVelocity();
         }
 
         // disable for this projectile
@@ -1103,9 +1143,10 @@ void plugin::entity::FirePericaliyaPrimary(
     exploder.explodeOnCollide = true;
     exploder.damage.damagePlayer = true;
     exploder.damage.ignoredPlayer = playerEntity;
-    exploder.damage.explosionRadius = 128.0f;
-    exploder.damage.explosionForce = 5.0f;
-    exploder.damage.playerSplashDamage = 100.0f;
+    exploder.damage.explosionRadius    = config::ProjectileExplosionRadius();
+    exploder.damage.explosionForce     = config::ProjectileExplosionForce();
+    exploder.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
+    exploder.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
     plugin.animation.ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
@@ -1131,10 +1172,12 @@ void plugin::entity::FirePericaliyaSecondary(
 ) {
   auto & registry = scene.EnttRegistry();
 
+  namespace config = plugin::config::pericaliya::secondary;
+
   auto & pericaliyaInfo =
     std::get<pul::core::WeaponInfo::WiPericaliya>(weaponInfo.info);
 
-  for (auto fireAngle : {-0.2f, 0.0f, +0.2f}) {
+  for (auto fireAngle : config::ShotPattern()) {
     float localFireAngle = fireAngle;
     fireAngle += angle;
     auto dir = glm::vec2(glm::sin(fireAngle), glm::cos(fireAngle));
@@ -1210,7 +1253,7 @@ void plugin::entity::FirePericaliyaSecondary(
       float activeTimer = 0.0f;
       registry.emplace<pul::core::ComponentParticle>(
         pericaliyaProjectileEntity
-      , instance.origin, dir*7.0f, false, false
+      , instance.origin, dir*config::ProjectileVelocity(), false, false
       , [
           &pericaliyaInfo, hasBeenActive, fireAngle, localFireAngle, activeTimer
         ](
@@ -1221,7 +1264,7 @@ void plugin::entity::FirePericaliyaSecondary(
             hasBeenActive = true;
 
             // only do redirection after 200ms
-            if (activeTimer >= 100.0f) {
+            if (activeTimer >= config::RedirectionMinimumThreshold()) {
               // redirect so that particles meet in 'middle'
               glm::vec2 newDir =
                 glm::vec2(
@@ -1243,9 +1286,10 @@ void plugin::entity::FirePericaliyaSecondary(
       exploder.explodeOnCollide = true;
       exploder.damage.damagePlayer = true;
       exploder.damage.ignoredPlayer = playerEntity;
-      exploder.damage.explosionRadius = 64.0f;
-      exploder.damage.explosionForce = 2.0f;
-      exploder.damage.playerSplashDamage = 20.0f;
+      exploder.damage.explosionRadius    = config::ProjectileExplosionRadius();
+      exploder.damage.explosionForce     = config::ProjectileExplosionForce();
+      exploder.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
+      exploder.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
       plugin.animation.ConstructInstance(
         scene, exploder.animationInstance, scene.AnimationSystem()
@@ -1279,13 +1323,16 @@ void plugin::entity::PlayerFireZeusStinger(
   auto & zeusStingerInfo =
     std::get<pul::core::WeaponInfo::WiZeusStinger>(weaponInfo.info);
 
+  namespace config = plugin::config::zeusStinger::primary;
+  namespace configSec = plugin::config::zeusStinger::secondary;
+
   if (zeusStingerInfo.dischargingTimer > 0.0f) {
     zeusStingerInfo.dischargingTimer -= pul::util::MsPerFrame;
     return;
   }
 
   if (primary) {
-    zeusStingerInfo.dischargingTimer = 1500.0f;
+    zeusStingerInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireZeusStingerPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , player, playerAnim
@@ -1294,7 +1341,7 @@ void plugin::entity::PlayerFireZeusStinger(
   }
 
   if (secondary) {
-    zeusStingerInfo.dischargingTimer = 800.0f;
+    zeusStingerInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireZeusStingerSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -1312,6 +1359,8 @@ void plugin::entity::FireZeusStingerPrimary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::zeusStinger::primary;
 
   auto zeusStingerMuzzleEntity = registry.create();
   { // muzzle
@@ -1467,8 +1516,8 @@ void plugin::entity::FireZeusStingerPrimary(
         plugin, scene
       , beginOrigin
       , endOrigin
-      , 60.0f // direct damage
-      , 10.0f // force
+      , config::ProjectileDamage()
+      , config::ProjectileForce()
       , playerEntity // ignored player
       )
     ;
@@ -1477,8 +1526,6 @@ void plugin::entity::FireZeusStingerPrimary(
       // no scatter intersection as player was hit before the nearest sphere
       scatterIntersection = false;
       intersection = true;
-
-      spdlog::debug("intersection");
 
       endOrigin = originalEndOrigin = weaponDamageInfo.origin;
     }
@@ -1626,6 +1673,8 @@ void plugin::entity::FireZeusStingerSecondary(
 ) {
   auto & registry = scene.EnttRegistry();
 
+  namespace config = plugin::config::zeusStinger::secondary;
+
   {
     auto zeusStingerProjectileEntity = registry.create();
 
@@ -1657,10 +1706,10 @@ void plugin::entity::FireZeusStingerSecondary(
       pul::core::ComponentParticleGrenade particle;
       particle.damage.damagePlayer = true;
       particle.damage.ignoredPlayer = playerEntity;
-      particle.damage.explosionRadius = 0.0f;
-      particle.damage.explosionForce = 1.0f;
-      particle.damage.playerSplashDamage = 0.0f;
-      particle.damage.playerDirectDamage = 40.0f;
+      particle.damage.explosionRadius    = config::ProjectileExplosionRadius();
+      particle.damage.explosionForce     = config::ProjectileExplosionForce();
+      particle.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
+      particle.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
       plugin.animation.ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
@@ -1673,11 +1722,11 @@ void plugin::entity::FireZeusStingerSecondary(
         .Apply("zeus-stinger-secondary-explosion", true);
 
       particle.origin = instance.origin;
-      particle.velocity = direction*3.0f;
-      particle.velocityFriction = 0.9f;
+      particle.velocity = direction*config::ProjectileVelocity();
+      particle.velocityFriction = config::ProjectileVelocityFriction();
       particle.gravityAffected = false;
       particle.useBounces = false;
-      particle.timer = 4000.0f;
+      particle.timer = config::ProjectileLifetime();
       particle.bounceAnimation = "zeus-stinger-secondary-projectile-trail";
 
       registry.emplace<pul::core::ComponentParticleGrenade>(
@@ -1704,6 +1753,9 @@ void plugin::entity::PlayerFireBadFetus(
   auto & badFetusInfo =
     std::get<pul::core::WeaponInfo::WiBadFetus>(weaponInfo.info);
 
+  namespace config = plugin::config::badFetus::primary;
+  namespace configSec = plugin::config::badFetus::secondary;
+
   if (badFetusInfo.dischargingTimer > 0.0f) {
     badFetusInfo.dischargingTimer -= pul::util::MsPerFrame;
     return;
@@ -1713,7 +1765,7 @@ void plugin::entity::PlayerFireBadFetus(
     if (primary) { return; }
 
     badFetusInfo.primaryActive = false;
-    badFetusInfo.dischargingTimer = 300.0f;
+    badFetusInfo.dischargingTimer = config::DischargeCooldown();
   }
 
   if (primary) {
@@ -1726,7 +1778,7 @@ void plugin::entity::PlayerFireBadFetus(
   }
 
   if (secondary) {
-    badFetusInfo.dischargingTimer = 500.0f;
+    badFetusInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireBadFetusSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -1745,6 +1797,8 @@ void plugin::entity::FireBadFetusPrimary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::badFetus::primary;
 
   { // muzzle
     auto badFetusMuzzleEntity = registry.create();
@@ -1873,8 +1927,8 @@ void plugin::entity::FireBadFetusPrimary(
           plugin::entity::WeaponDamageRaycast(
             plugin, scene
           , beginOrigin, endOrigin
-          , weaponCooldown <= 0.0f ? 1.0f : 0.0f // direct damage
-          , -0.45f // force
+          , weaponCooldown <= 0.0f ? config::ProjectileDamage() : 0.0f
+          , config::ProjectileForce() // force
           , playerEntity // ignored player
           )
         ;
@@ -1886,7 +1940,7 @@ void plugin::entity::FireBadFetusPrimary(
           // only reset when direct damage was done, which we know based off
           // the same conditions that were used to apply direct damage
           if (weaponCooldown <= 0.0f) {
-            weaponCooldown = 100.0f;
+            weaponCooldown = config::ProjectileCooldown();
           }
         }
 
@@ -1998,6 +2052,8 @@ void plugin::entity::FireBadFetusSecondary(
 ) {
   auto & registry = scene.EnttRegistry();
 
+  namespace config = plugin::config::badFetus::secondary;
+
   { // muzzle
     auto badFetusMuzzleEntity = registry.create();
     registry.emplace<pul::core::ComponentParticle>(
@@ -2050,10 +2106,10 @@ void plugin::entity::FireBadFetusSecondary(
       pul::core::ComponentParticleGrenade particle;
       particle.damage.damagePlayer = true;
       particle.damage.ignoredPlayer = playerEntity;
-      particle.damage.explosionRadius = 48.0f;
-      particle.damage.explosionForce = -10.0f;
-      particle.damage.playerSplashDamage = 50.0f;
-      particle.damage.playerDirectDamage = 50.0f;
+      particle.damage.explosionRadius    = config::ProjectileExplosionRadius();
+      particle.damage.explosionForce     = config::ProjectileExplosionForce();
+      particle.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
+      particle.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
       plugin.animation.ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
@@ -2066,11 +2122,11 @@ void plugin::entity::FireBadFetusSecondary(
         .Apply("bad-fetus-explosion", true);
 
       particle.origin = instance.origin;
-      particle.velocity = direction*7.0f;
-      particle.velocityFriction = 0.5f;
+      particle.velocity = direction*config::ProjectileVelocity();
+      particle.velocityFriction = config::ProjectileVelocityFriction();
       particle.gravityAffected = true;
       particle.useBounces = false;
-      particle.timer = 4000.0f;
+      particle.timer = config::ProjectileLifetime();
       particle.bounceAnimation = "bad-fetus-secondary-projectile-bounce";
 
       registry.emplace<pul::core::ComponentParticleGrenade>(
@@ -2177,6 +2233,9 @@ void plugin::entity::PlayerFireManshredder(
   auto & manshredderInfo =
     std::get<pul::core::WeaponInfo::WiManshredder>(weaponInfo.info);
 
+  namespace config = plugin::config::manshredder::primary;
+  namespace configSec = plugin::config::manshredder::secondary;
+
   if (manshredderInfo.dischargingTimer > 0.0f) {
     manshredderInfo.dischargingTimer -= pul::util::MsPerFrame;
     return;
@@ -2185,14 +2244,14 @@ void plugin::entity::PlayerFireManshredder(
   if (manshredderInfo.isPrimaryActive) {
     if (!primary) {
       manshredderInfo.isPrimaryActive = false;
-      manshredderInfo.dischargingTimer = 50.0f;
+      manshredderInfo.dischargingTimer = config::DischargeCooldown();
     }
     return;
   }
 
   if (primary) {
     manshredderInfo.isPrimaryActive = true;
-    manshredderInfo.dischargingTimer = 150.0f;
+    manshredderInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireManshredderPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , player, playerOrigin, playerAnim
@@ -2201,7 +2260,7 @@ void plugin::entity::PlayerFireManshredder(
   }
 
   if (secondary) {
-    manshredderInfo.dischargingTimer = 1000.0f;
+    manshredderInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireManshredderSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -2220,6 +2279,8 @@ void plugin::entity::FireManshredderPrimary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::manshredder::primary;
 
   auto & manshredderInfo =
     std::get<pul::core::WeaponInfo::WiManshredder>(weaponInfo.info);
@@ -2280,9 +2341,9 @@ void plugin::entity::FireManshredderPrimary(
         { // update hit
           auto ray =
             pul::physics::IntersectorRay::Construct(
-              origin, origin+direction*32.0f
+              origin, origin+direction*config::ProjectileDistance()
             );
-          float dist = 32.0f;
+          float dist = config::ProjectileDistance();
           bool hasHit = false;
           if (
             pul::physics::IntersectionResults results;
@@ -2298,8 +2359,8 @@ void plugin::entity::FireManshredderPrimary(
               plugin, scene
             , origin
             , origin + direction*dist
-            , 60.0f // direct damage
-            , 10.0f // force
+            , config::ProjectileDamage()
+            , config::ProjectileForce()
             , playerEntity // ignored player
             ).entity != entt::null
           ;
@@ -2328,6 +2389,8 @@ void plugin::entity::FireManshredderSecondary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::manshredder::secondary;
 
   { // muzzle flash
     auto manshredderFireEntity = registry.create();
@@ -2400,7 +2463,7 @@ void plugin::entity::FireManshredderSecondary(
 
     registry.emplace<pul::core::ComponentParticle>(
       manshredderProjectileEntity
-    , instance.origin, direction * 8.0f, false, false
+    , instance.origin, direction * config::ProjectileVelocity(), false, false
     );
 
     pul::core::ComponentParticleExploder exploder;
@@ -2408,9 +2471,10 @@ void plugin::entity::FireManshredderSecondary(
     exploder.explodeOnCollide = true;
     exploder.damage.damagePlayer = true;
     exploder.damage.ignoredPlayer = playerEntity;
-    exploder.damage.explosionRadius = 32.0f;
-    exploder.damage.explosionForce = 10.0f;
-    exploder.damage.playerSplashDamage = 20.0f;
+    exploder.damage.explosionRadius    = config::ProjectileExplosionRadius();
+    exploder.damage.explosionForce     = config::ProjectileExplosionForce();
+    exploder.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
+    exploder.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
     plugin.animation.ConstructInstance(
      scene, exploder.animationInstance, scene.AnimationSystem()
@@ -2441,13 +2505,16 @@ void plugin::entity::PlayerFireWallbanger(
   auto & wallbangerInfo =
     std::get<pul::core::WeaponInfo::WiWallbanger>(weaponInfo.info);
 
+  namespace config = plugin::config::wallbanger::primary;
+  namespace configSec = plugin::config::wallbanger::secondary;
+
   if (wallbangerInfo.dischargingTimer > 0.0f) {
     wallbangerInfo.dischargingTimer -= pul::util::MsPerFrame;
     return;
   }
 
   if (primary) {
-    wallbangerInfo.dischargingTimer = 250.0f;
+    wallbangerInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireWallbangerPrimary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -2455,7 +2522,7 @@ void plugin::entity::PlayerFireWallbanger(
   }
 
   if (secondary) {
-    wallbangerInfo.dischargingTimer = 1000.0f;
+    wallbangerInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireWallbangerSecondary(
       plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
@@ -2471,6 +2538,8 @@ void plugin::entity::FireWallbangerPrimary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::wallbanger::primary;
 
   { // muzzle
     auto wallbangerMuzzleEntity = registry.create();
@@ -2520,9 +2589,9 @@ void plugin::entity::FireWallbangerPrimary(
       particle.damage.damagePlayer = true;
       particle.damage.ignoredPlayer = playerEntity;
       particle.damage.explosionRadius = 0.0f;
-      particle.damage.explosionForce = 5.0f;
+      particle.damage.explosionForce = config::ProjectileForce();
       particle.damage.playerSplashDamage = 0.0f;
-      particle.damage.playerDirectDamage = 35.0f;
+      particle.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
       plugin.animation.ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
@@ -2535,7 +2604,7 @@ void plugin::entity::FireWallbangerPrimary(
         .Apply("wallbanger-primary-explosion", true);
 
       particle.origin = instance.origin;
-      particle.velocity = direction*15.0f;
+      particle.velocity = direction*config::ProjectileVelocity();
       particle.velocityFriction = 1.0f;
       particle.gravityAffected = false;
       particle.bounces = 1u;
@@ -2557,6 +2626,8 @@ void plugin::entity::FireWallbangerSecondary(
 , entt::entity playerEntity
 ) {
   auto & registry = scene.EnttRegistry();
+
+  namespace config = plugin::config::wallbanger::secondary;
 
   { // big muzzle
     auto wallbangerMuzzleEntity = registry.create();
@@ -2736,7 +2807,7 @@ void plugin::entity::FireWallbangerSecondary(
   plugin::entity::WeaponDamageCircle(
     plugin, scene
   , endOrigin, 128.0f
-  , 100.0f, 10.0f
+  , config::ProjectileDamage(), config::ProjectileForce()
   , entt::null
   );
 
