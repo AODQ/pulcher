@@ -71,7 +71,6 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
       + std::get<1>(pickup) + ".wav"
     ;
 
-    spdlog::debug("str {}", str);
     FMOD_ASSERT(
       FMOD_System_CreateSound(
         ::fmodSystem

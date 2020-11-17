@@ -921,7 +921,6 @@ cJSON * SaveAnimation(pul::animation::Animator& animator) {
             );
           break;
           case pul::animation::VariationType::Random:
-            spdlog::debug("saving {}", variation.random.data.size());
             cJSON_AddItemToObject(
               variationJson, "default"
             , SaveAnimationComponent(variation.random.data)
@@ -958,9 +957,6 @@ void SaveAnimations(pul::animation::System & system) {
   std::map<std::string, std::vector<cJSON *>> filenameToCJson;
   for (auto & animatorPair : system.animators) {
     auto & animator = *animatorPair.second;
-    spdlog::debug(
-      "attempting to save '{}' to '{}'", animator.label, animator.filename
-    );
     filenameToCJson[animator.filename].emplace_back(SaveAnimation(animator));
   }
 
@@ -1207,8 +1203,6 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
     cJSON * spritesheetDataJson =
       ::LoadJsonFile("assets/base/spritesheets/data.json");
 
-    spdlog::debug("Loading animations");
-
     cJSON * filenameJson;
     cJSON_ArrayForEach(
       filenameJson
@@ -1341,6 +1335,8 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
 
 PUL_PLUGIN_DECL void Animation_Shutdown(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
+
+  ::SaveAnimations(scene.AnimationSystem());
 
   { // -- delete sokol animation information
     auto view = registry.view<pul::animation::ComponentInstance>();

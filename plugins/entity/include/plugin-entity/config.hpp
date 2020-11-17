@@ -5,178 +5,178 @@
 namespace plugin::config {
 
   namespace volnias::primary {
-    float & ChargeupPreBeginThreshold();
-    float & ChargeupBeginThreshold();
-    float & ChargeupDelta();
-    float & ChargeupTimerEnd();
-    float & DischargeCooldown();
+    int32_t & ChargeupPreBeginThreshold();
+    int32_t & ChargeupBeginThreshold();
+    int32_t & ChargeupDelta();
+    int32_t & ChargeupTimerEnd();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
     float & ProjectileForce();
-    float & ProjectileDamage();
+    int32_t & ProjectileDamage();
     float & Knockback();
   }
 
   namespace volnias::secondary {
-    uint8_t & MaxChargedShots();
-    float & ChargeupDelta();
-    float & ChargeupMaxThreshold();
-    float & ChargeupTimerStart();
-    float & DischargeDelta();
+    int32_t & MaxChargedShots();
+    int32_t & ChargeupDelta();
+    int32_t & ChargeupMaxThreshold();
+    int32_t & ChargeupTimerStart();
+    int32_t & DischargeDelta();
 
-    float & DischargeCooldown();
-  };
+    int32_t & DischargeCooldown();
+  }
 
   namespace grannibal::primary {
-    float & MuzzleTrailTimer();
-    uint32_t & MuzzleTrailParticles();
+    int32_t & MuzzleTrailTimer();
+    int32_t & MuzzleTrailParticles();
 
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
-    float & ProjectileExplosionRadius();
+    int32_t & ProjectileExplosionRadius();
     float & ProjectileExplosionForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
-  };
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
+  }
 
   namespace grannibal::secondary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
-    float & ProjectileExplosionRadius();
+    int32_t & ProjectileExplosionRadius();
     float & ProjectileExplosionForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
 
-    uint32_t & Bounces();
+    int32_t & Bounces();
     float & ProjectileVelocityFriction();
   }
 
   namespace dopplerBeam::primary {
     float & ProjectileVelocity();
     float & ProjectileForce();
-    float & ProjectileDamage();
-    float & DischargeCooldown();
+    int32_t & ProjectileDamage();
+    int32_t & DischargeCooldown();
   }
 
   namespace dopplerBeam::secondary {
     float & ProjectileVelocity();
     float & ProjectileForce();
-    float & ProjectileDamage();
+    int32_t & ProjectileDamage();
     std::vector<float> & ShotPattern();
-    float & DischargeCooldown();
-  };
+    int32_t & DischargeCooldown();
+  }
 
   namespace pericaliya::primary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
-    float & ProjectileExplosionRadius();
+    int32_t & ProjectileExplosionRadius();
     float & ProjectileExplosionForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
-  };
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
+  }
 
   namespace pericaliya::secondary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
-    float & ProjectileExplosionRadius();
+    int32_t & ProjectileExplosionRadius();
     float & ProjectileExplosionForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
 
-    float & RedirectionMinimumThreshold();
+    int32_t & RedirectionMinimumThreshold();
 
     std::vector<float> & ShotPattern();
   }
 
   namespace zeusStinger::primary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileForce();
-    float & ProjectileDamage();
-  };
+    int32_t & ProjectileDamage();
+  }
 
   namespace zeusStinger::secondary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
     float & ProjectileVelocityFriction();
-    float & ProjectileLifetime();
-    float & ProjectileExplosionRadius();
+    int32_t & ProjectileLifetime();
+    int32_t & ProjectileExplosionRadius();
     float & ProjectileExplosionForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
 
-    float & RedirectionMinimumThreshold();
+    int32_t & RedirectionMinimumThreshold();
 
     std::vector<float> & ShotPattern();
   }
 
   namespace badFetus::primary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileForce();
-    float & ProjectileCooldown();
-    float & ProjectileDamage();
-  };
+    int32_t & ProjectileCooldown();
+    int32_t & ProjectileDamage();
+  }
 
   namespace badFetus::secondary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
     float & ProjectileVelocityFriction();
-    float & ProjectileLifetime();
-    float & ProjectileExplosionRadius();
+    int32_t & ProjectileLifetime();
+    int32_t & ProjectileExplosionRadius();
     float & ProjectileExplosionForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
   }
 
   namespace badFetus::combo {
     float & VelocityFriction();
-    float & ExplosionRadius();
+    int32_t & ExplosionRadius();
     float & ExplosionForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
   }
 
   namespace manshredder::primary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileForce();
-    float & ProjectileCooldown();
-    float & ProjectileDamage();
-    float & ProjectileDistance();
-  };
+    int32_t & ProjectileCooldown();
+    int32_t & ProjectileDamage();
+    int32_t & ProjectileDistance();
+  }
 
   namespace manshredder::secondary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
-    float & ProjectileExplosionRadius();
+    int32_t & ProjectileExplosionRadius();
     float & ProjectileExplosionForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
-  };
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
+  }
 
   namespace wallbanger::primary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileVelocity();
     float & ProjectileForce();
-    float & ProjectileSplashDamageMin();
-    float & ProjectileSplashDamageMax();
-    float & ProjectileDirectDamage();
-  };
+    int32_t & ProjectileSplashDamageMin();
+    int32_t & ProjectileSplashDamageMax();
+    int32_t & ProjectileDirectDamage();
+  }
 
   namespace wallbanger::secondary {
-    float & DischargeCooldown();
+    int32_t & DischargeCooldown();
     float & ProjectileForce();
-    float & ProjectileDamage();
-  };
+    int32_t & ProjectileDamage();
+  }
 
   namespace weapon {
-    float & WeaponSwitchCooldown();
-  };
+    int32_t & WeaponSwitchCooldown();
+  }
 
   void SaveConfig();
   void LoadConfig();

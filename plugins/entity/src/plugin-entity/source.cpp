@@ -42,6 +42,9 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 ) {
 
+  // load config
+  plugin::config::LoadConfig();
+
   plugin::entity::ConstructCursor(plugin, scene);
 
   // player
@@ -57,6 +60,9 @@ PUL_PLUGIN_DECL void Entity_StartScene(
 
 PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
+
+  // save config
+  plugin::config::SaveConfig();
 
   // store player
   auto view =

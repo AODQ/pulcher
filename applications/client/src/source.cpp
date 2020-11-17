@@ -323,8 +323,7 @@ void ProcessRendering(
       ::LoadPluginInfo(plugin, scene);
     }
     pul::imgui::ItemTooltip(
-      "WARNING: RELOADING plugins will not save anything!\n"
-      "progress (like editing animations) will be lost"
+      "NOTE: RELOADING plugins will save animations, configs, etc"
     );
     ImGui::SliderFloat(
       "ms / frame", &scene.calculatedMsPerFrame

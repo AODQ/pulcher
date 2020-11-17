@@ -2341,7 +2341,8 @@ void plugin::entity::FireManshredderPrimary(
         { // update hit
           auto ray =
             pul::physics::IntersectorRay::Construct(
-              origin, origin+direction*config::ProjectileDistance()
+              origin
+            , origin+direction*static_cast<float>(config::ProjectileDistance())
             );
           float dist = config::ProjectileDistance();
           bool hasHit = false;

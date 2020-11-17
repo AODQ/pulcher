@@ -675,8 +675,6 @@ PUL_PLUGIN_DECL void Map_LoadMap(
     auto layerLabel =
       cJSON_GetObjectItemCaseSensitive(layer, "name")->valuestring;
 
-    spdlog::debug("parsing layer '{}'", layerLabel);
-
     auto const layerType =
       std::string{cJSON_GetObjectItemCaseSensitive(layer, "type")->valuestring};
 
@@ -698,8 +696,6 @@ PUL_PLUGIN_DECL void Map_LoadMap(
     std::vector<std::span<size_t>> mapTileIndices;
     std::vector<std::span<glm::u32vec2>> mapTileOrigins;
     std::vector<std::span<pul::core::TileOrientation>> mapTileOrientations;
-
-    spdlog::debug("renderable count {}", ::renderables.size());
 
     for (auto & renderable : ::renderables) {
       // only depth 0 layers can have collision

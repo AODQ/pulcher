@@ -3,294 +3,36 @@
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-util/log.hpp>
 
+#include <cjson/cJSON.h>
+#include <fstream>
+
 // this file is just configs so formatting it is unnecssary
-
-void plugin::config::RenderImGui() {
-  ImGui::Begin("weapon config");
-
-  {
-    namespace config = plugin::config::volnias::primary;
-
-    ImGui::Text("--- volnias::primary ---");
-    ImGui::PushID("volnias::primary");
-    ImGui::DragFloat("chargeupPreBeginThreshold", &config::ChargeupPreBeginThreshold(), 0.01f);
-    ImGui::DragFloat("chargeupBeginThreshold", &config::ChargeupBeginThreshold(), 0.01f);
-    ImGui::DragFloat("chargeupDelta", &config::ChargeupDelta(), 0.01f);
-    ImGui::DragFloat("chargeupTimerEnd", &config::ChargeupTimerEnd(), 0.01f);
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileForce", &config::ProjectileForce(), 0.01f);
-    ImGui::DragFloat("projectileDamage", &config::ProjectileDamage(), 0.01f);
-    ImGui::DragFloat("knockback", &config::Knockback(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::volnias::secondary;
-
-    ImGui::Text("--- volnias::secondary ---");
-    ImGui::PushID("volnias::secondary");
-    pul::imgui::DragInt("maxChargedShots", &config::MaxChargedShots(), 0.1f);
-    ImGui::DragFloat("chargeupDelta", &config::ChargeupDelta(), 0.01f);
-    ImGui::DragFloat("chargeupMaxThreshold", &config::ChargeupMaxThreshold(), 0.01f);
-    ImGui::DragFloat("chargeupTimerStart", &config::ChargeupTimerStart(), 0.01f);
-    ImGui::DragFloat("dischargeDelta", &config::DischargeDelta(), 0.01f);
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::grannibal::primary;
-
-    ImGui::Text("--- grannibal::primary ---");
-    ImGui::PushID("grannibal::primary");
-    ImGui::DragFloat("muzzleTrailTimer", &config::MuzzleTrailTimer(), 0.01f);
-    pul::imgui::DragInt("muzzleTrailParticles", &config::MuzzleTrailParticles(), 0.1f);
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileExplosionRadius", &config::ProjectileExplosionRadius(), 0.01f);
-    ImGui::DragFloat("projectileExplosionForce", &config::ProjectileExplosionForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::grannibal::secondary;
-
-    ImGui::Text("--- grannibal::secondary ---");
-    ImGui::PushID("grannibal::secondary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileExplosionRadius", &config::ProjectileExplosionRadius(), 0.01f);
-    ImGui::DragFloat("projectileExplosionForce", &config::ProjectileExplosionForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    pul::imgui::DragInt("bounces", &config::Bounces(), 0.1f);
-    ImGui::DragFloat("projectileVelocityFriction", &config::ProjectileVelocityFriction(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::dopplerBeam::primary;
-
-    ImGui::Text("--- dopplerBeam::primary ---");
-    ImGui::PushID("dopplerBeam::primary");
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileForce", &config::ProjectileForce(), 0.01f);
-    ImGui::DragFloat("projectileDamage", &config::ProjectileDamage(), 0.01f);
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::dopplerBeam::secondary;
-
-    ImGui::Text("--- dopplerBeam::secondary ---");
-    ImGui::PushID("dopplerBeam::secondary");
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileForce", &config::ProjectileForce(), 0.01f);
-    ImGui::DragFloat("projectileDamage", &config::ProjectileDamage(), 0.01f);
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    for (size_t i = 0ul; i < config::ShotPattern().size(); ++ i) {
-      ImGui::DragFloat(fmt::format("shot {}", i).c_str(), &config::ShotPattern()[i], 0.01f);
-    }
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::pericaliya::primary;
-
-    ImGui::Text("--- pericaliya::primary ---");
-    ImGui::PushID("pericaliya::primary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileExplosionRadius", &config::ProjectileExplosionRadius(), 0.01f);
-    ImGui::DragFloat("projectileExplosionForce", &config::ProjectileExplosionForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::pericaliya::secondary;
-    ImGui::Text("--- pericaliya::secondary ---");
-    ImGui::PushID("pericaliya::secondary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileExplosionRadius", &config::ProjectileExplosionRadius(), 0.01f);
-    ImGui::DragFloat("projectileExplosionForce", &config::ProjectileExplosionForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    ImGui::DragFloat("redirectionMinimumThreshold", &config::RedirectionMinimumThreshold(), 0.01f);
-    for (size_t i = 0ul; i < config::ShotPattern().size(); ++ i) {
-      ImGui::DragFloat(fmt::format("shot {}", i).c_str(), &config::ShotPattern()[i], 0.01f);
-    }
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::zeusStinger::primary;
-    ImGui::Text("--- zeusStinger::primary ---");
-    ImGui::PushID("zeusStinger::primary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileForce", &config::ProjectileForce(), 0.01f);
-    ImGui::DragFloat("projectileDamage", &config::ProjectileDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::zeusStinger::secondary;
-    ImGui::Text("--- zeusStinger::secondary ---");
-    ImGui::PushID("zeusStinger::secondary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileVelocityFriction", &config::ProjectileVelocityFriction(), 0.01f);
-    ImGui::DragFloat("projectileLifetime", &config::ProjectileLifetime(), 0.01f);
-    ImGui::DragFloat("projectileExplosionRadius", &config::ProjectileExplosionRadius(), 0.01f);
-    ImGui::DragFloat("projectileExplosionForce", &config::ProjectileExplosionForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    ImGui::DragFloat("redirectionMinimumThreshold", &config::RedirectionMinimumThreshold(), 0.01f);
-    for (size_t i = 0ul; i < config::ShotPattern().size(); ++ i) {
-      ImGui::DragFloat(fmt::format("shot {}", i).c_str(), &config::ShotPattern()[i], 0.01f);
-    }
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::badFetus::primary;
-    ImGui::Text("--- badFetus::primary ---");
-    ImGui::PushID("badFetus::primary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileForce", &config::ProjectileForce(), 0.01f);
-    ImGui::DragFloat("projectileCooldown", &config::ProjectileCooldown(), 0.01f);
-    ImGui::DragFloat("projectileDamage", &config::ProjectileDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::badFetus::secondary;
-    ImGui::Text("--- badFetus::secondary ---");
-    ImGui::PushID("badFetus::secondary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileVelocityFriction", &config::ProjectileVelocityFriction(), 0.01f);
-    ImGui::DragFloat("projectileLifetime", &config::ProjectileLifetime(), 0.01f);
-    ImGui::DragFloat("projectileExplosionRadius", &config::ProjectileExplosionRadius(), 0.01f);
-    ImGui::DragFloat("projectileExplosionForce", &config::ProjectileExplosionForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::badFetus::combo;
-    ImGui::Text("--- badFetus::combo ---");
-    ImGui::PushID("badFetus::combo");
-    ImGui::DragFloat("velocityFriction", &config::VelocityFriction(), 0.01f);
-    ImGui::DragFloat("explosionRadius", &config::ExplosionRadius(), 0.01f);
-    ImGui::DragFloat("explosionForce", &config::ExplosionForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::manshredder::primary;
-    ImGui::Text("--- manshredder::primary ---");
-    ImGui::PushID("manshredder::primary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileForce", &config::ProjectileForce(), 0.01f);
-    ImGui::DragFloat("projectileCooldown", &config::ProjectileCooldown(), 0.01f);
-    ImGui::DragFloat("projectileDamage", &config::ProjectileDamage(), 0.01f);
-    ImGui::DragFloat("projectileDistance", &config::ProjectileDistance(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::manshredder::secondary;
-    ImGui::Text("--- manshredder::secondary ---");
-    ImGui::PushID("manshredder::secondary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileExplosionRadius", &config::ProjectileExplosionRadius(), 0.01f);
-    ImGui::DragFloat("projectileExplosionForce", &config::ProjectileExplosionForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::wallbanger::primary;
-    ImGui::Text("--- wallbanger::primary ---");
-    ImGui::PushID("wallbanger::primary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileVelocity", &config::ProjectileVelocity(), 0.01f);
-    ImGui::DragFloat("projectileForce", &config::ProjectileForce(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMin", &config::ProjectileSplashDamageMin(), 0.01f);
-    ImGui::DragFloat("projectileSplashDamageMax", &config::ProjectileSplashDamageMax(), 0.01f);
-    ImGui::DragFloat("projectileDirectDamage", &config::ProjectileDirectDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::wallbanger::secondary;
-
-    ImGui::Text("--- wallbanger::secondary ---");
-    ImGui::PushID("wallbanger::secondary");
-    ImGui::DragFloat("dischargeCooldown", &config::DischargeCooldown(), 0.01f);
-    ImGui::DragFloat("projectileForce", &config::ProjectileForce(), 0.01f);
-    ImGui::DragFloat("projectileDamage", &config::ProjectileDamage(), 0.01f);
-    ImGui::PopID();
-  }
-
-  {
-    namespace config = plugin::config::weapon;
-
-    ImGui::Text("--- config::weapon ---");
-    ImGui::PushID("config::weapon");
-    ImGui::DragFloat("weaponSwitchCooldown", &config::WeaponSwitchCooldown(), 0.01f);
-    ImGui::PopID();
-  }
-
-  ImGui::End();
-}
-
 
 //------------------------------------------------------------------------------
 namespace plugin::config {
   namespace volnias::primary {
-    float & ChargeupPreBeginThreshold() {
-      static float chargeupPreBeginThreshold = 100.0f;
+    int32_t & ChargeupPreBeginThreshold() {
+      static int32_t chargeupPreBeginThreshold = 100;
       return chargeupPreBeginThreshold;
     }
 
-    float & ChargeupBeginThreshold() {
-      static float chargeupBeginThreshold = 1000.0f;
+    int32_t & ChargeupBeginThreshold() {
+      static int32_t chargeupBeginThreshold = 1000;
       return chargeupBeginThreshold;
     }
 
-    float & ChargeupDelta() {
-      static float chargeupDelta = 100.0f;
+    int32_t & ChargeupDelta() {
+      static int32_t chargeupDelta = 100;
       return chargeupDelta;
     }
 
-    float & ChargeupTimerEnd() {
-      static float chargeupTimerEnd = 400.0f;
+    int32_t & ChargeupTimerEnd() {
+      static int32_t chargeupTimerEnd = 400;
       return chargeupTimerEnd;
     }
 
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 300.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 300;
       return dischargeCooldown;
     }
 
@@ -304,65 +46,65 @@ namespace plugin::config {
       return projectileForce;
     }
 
-    float & ProjectileDamage() {
-      static float projectileDamage = 10.0f;
+    int32_t & ProjectileDamage() {
+      static int32_t projectileDamage = 10;
       return projectileDamage;
     }
 
     float & Knockback() {
-      static float knockback = 0.7f;
+      static float knockback = 0.0f;
       return knockback;
     }
 
   }
 
   namespace volnias::secondary {
-    uint8_t & MaxChargedShots() {
-      static uint8_t maxChargedShots = 5;
+    int32_t & MaxChargedShots() {
+      static int32_t maxChargedShots = 5;
       return maxChargedShots;
     }
 
-    float & ChargeupDelta() {
-      static float chargeupDelta = 600.0f;
+    int32_t & ChargeupDelta() {
+      static int32_t chargeupDelta = 600;
       return chargeupDelta;
     }
 
-    float & ChargeupMaxThreshold() {
-      static float chargeupMaxThreshold = 6000.0f;
+    int32_t & ChargeupMaxThreshold() {
+      static int32_t chargeupMaxThreshold = 6000;
       return chargeupMaxThreshold;
     }
 
-    float & ChargeupTimerStart() {
-      static float chargeupTimerStart = 400.0f;
+    int32_t & ChargeupTimerStart() {
+      static int32_t chargeupTimerStart = 400;
       return chargeupTimerStart;
     }
 
-    float & DischargeDelta() {
-      static float dischargeDelta = 40.0f;
+    int32_t & DischargeDelta() {
+      static int32_t dischargeDelta = 40;
       return dischargeDelta;
     }
 
 
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 300.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 300;
       return dischargeCooldown;
     }
 
-  };
+  }
 
   namespace grannibal::primary {
-    float & MuzzleTrailTimer() {
-      static float muzzleTrailTimer = 70.0f;
+    int32_t & MuzzleTrailTimer() {
+      static int32_t muzzleTrailTimer = 70;
       return muzzleTrailTimer;
     }
 
-    uint32_t & MuzzleTrailParticles() {
-      static uint32_t muzzleTrailParticles = 4;
+    int32_t & MuzzleTrailParticles() {
+      static int32_t muzzleTrailParticles = 4;
       return muzzleTrailParticles;
     }
 
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -371,8 +113,8 @@ namespace plugin::config {
       return projectileVelocity;
     }
 
-    float & ProjectileExplosionRadius() {
-      static float projectileExplosionRadius = 96.0f;
+    int32_t & ProjectileExplosionRadius() {
+      static int32_t projectileExplosionRadius = 96;
       return projectileExplosionRadius;
     }
 
@@ -381,26 +123,26 @@ namespace plugin::config {
       return projectileExplosionForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 50.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 50;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 20.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 20;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 80.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 80;
       return projectileDirectDamage;
     }
 
-  };
+  }
 
   namespace grannibal::secondary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -409,8 +151,8 @@ namespace plugin::config {
       return projectileVelocity;
     }
 
-    float & ProjectileExplosionRadius() {
-      static float projectileExplosionRadius = 96.0f;
+    int32_t & ProjectileExplosionRadius() {
+      static int32_t projectileExplosionRadius = 96;
       return projectileExplosionRadius;
     }
 
@@ -419,29 +161,29 @@ namespace plugin::config {
       return projectileExplosionForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 50.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 50;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 20.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 20;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 80.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 80;
       return projectileDirectDamage;
     }
 
 
-    uint32_t & Bounces() {
-      static uint32_t bounces = 2u;
+    int32_t & Bounces() {
+      static int32_t bounces = 2u;
       return bounces;
     }
 
     float & ProjectileVelocityFriction() {
-      static float projectileVelocityFriction = 0.7f;
+      static float projectileVelocityFriction = 0.0f;
       return projectileVelocityFriction;
     }
 
@@ -458,13 +200,13 @@ namespace plugin::config {
       return projectileForce;
     }
 
-    float & ProjectileDamage() {
-      static float projectileDamage = 10.0f;
+    int32_t & ProjectileDamage() {
+      static int32_t projectileDamage = 10;
       return projectileDamage;
     }
 
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 150.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 150;
       return dischargeCooldown;
     }
 
@@ -481,26 +223,26 @@ namespace plugin::config {
       return projectileForce;
     }
 
-    float & ProjectileDamage() {
-      static float projectileDamage = 10.0f;
+    int32_t & ProjectileDamage() {
+      static int32_t projectileDamage = 10;
       return projectileDamage;
     }
 
     std::vector<float> & ShotPattern() {
-      static std::vector<float> shotPattern = { -0.1f, 0.0f, +0.1f };
+      static std::vector<float> shotPattern = { -0.1f, 0.0f, +0.1 };
       return shotPattern;
     }
 
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
-  };
+  }
 
   namespace pericaliya::primary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -509,8 +251,8 @@ namespace plugin::config {
       return projectileVelocity;
     }
 
-    float & ProjectileExplosionRadius() {
-      static float projectileExplosionRadius = 96.0f;
+    int32_t & ProjectileExplosionRadius() {
+      static int32_t projectileExplosionRadius = 96;
       return projectileExplosionRadius;
     }
 
@@ -519,26 +261,26 @@ namespace plugin::config {
       return projectileExplosionForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 50.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 50;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 20.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 20;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 80.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 80;
       return projectileDirectDamage;
     }
 
-  };
+  }
 
   namespace pericaliya::secondary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -547,8 +289,8 @@ namespace plugin::config {
       return projectileVelocity;
     }
 
-    float & ProjectileExplosionRadius() {
-      static float projectileExplosionRadius = 96.0f;
+    int32_t & ProjectileExplosionRadius() {
+      static int32_t projectileExplosionRadius = 96;
       return projectileExplosionRadius;
     }
 
@@ -557,38 +299,38 @@ namespace plugin::config {
       return projectileExplosionForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 50.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 50;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 20.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 20;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 80.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 80;
       return projectileDirectDamage;
     }
 
 
-    float & RedirectionMinimumThreshold() {
-      static float redirectionMinimumThreshold = 100.0f;
+    int32_t & RedirectionMinimumThreshold() {
+      static int32_t redirectionMinimumThreshold = 100;
       return redirectionMinimumThreshold;
     }
 
 
     std::vector<float> & ShotPattern() {
-      static std::vector<float> shotPattern = { -0.2f, 0.0f, +0.2f };
+      static std::vector<float> shotPattern = { -0.2f, 0.0f, +0.2 };
       return shotPattern;
     }
 
   }
 
   namespace zeusStinger::primary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -597,16 +339,16 @@ namespace plugin::config {
       return projectileForce;
     }
 
-    float & ProjectileDamage() {
-      static float projectileDamage = 80.0f;
+    int32_t & ProjectileDamage() {
+      static int32_t projectileDamage = 80;
       return projectileDamage;
     }
 
-  };
+  }
 
   namespace zeusStinger::secondary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -616,17 +358,17 @@ namespace plugin::config {
     }
 
     float & ProjectileVelocityFriction() {
-      static float projectileVelocityFriction = 0.9f;
+      static float projectileVelocityFriction = 0.0f;
       return projectileVelocityFriction;
     }
 
-    float & ProjectileLifetime() {
-      static float projectileLifetime = 4000.0f;
+    int32_t & ProjectileLifetime() {
+      static int32_t projectileLifetime = 4000;
       return projectileLifetime;
     }
 
-    float & ProjectileExplosionRadius() {
-      static float projectileExplosionRadius = 96.0f;
+    int32_t & ProjectileExplosionRadius() {
+      static int32_t projectileExplosionRadius = 96;
       return projectileExplosionRadius;
     }
 
@@ -635,61 +377,61 @@ namespace plugin::config {
       return projectileExplosionForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 50.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 50;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 20.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 20;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 80.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 80;
       return projectileDirectDamage;
     }
 
 
-    float & RedirectionMinimumThreshold() {
-      static float redirectionMinimumThreshold = 100.0f;
+    int32_t & RedirectionMinimumThreshold() {
+      static int32_t redirectionMinimumThreshold = 100;
       return redirectionMinimumThreshold;
     }
 
 
     std::vector<float> & ShotPattern() {
-      static std::vector<float> shotPattern = { -0.2f, 0.0f, +0.2f };
+      static std::vector<float> shotPattern = { -0.2f, 0.0f, +0.2 };
       return shotPattern;
     }
 
   }
 
   namespace badFetus::primary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
     float & ProjectileForce() {
-      static float projectileForce = -0.4f;
+      static float projectileForce = -0.0f;
       return projectileForce;
     }
 
-    float & ProjectileCooldown() {
-      static float projectileCooldown = 100.0f;
+    int32_t & ProjectileCooldown() {
+      static int32_t projectileCooldown = 100;
       return projectileCooldown;
     }
 
-    float & ProjectileDamage() {
-      static float projectileDamage = 80.0f;
+    int32_t & ProjectileDamage() {
+      static int32_t projectileDamage = 80;
       return projectileDamage;
     }
 
-  };
+  }
 
   namespace badFetus::secondary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -699,17 +441,17 @@ namespace plugin::config {
     }
 
     float & ProjectileVelocityFriction() {
-      static float projectileVelocityFriction = 0.9f;
+      static float projectileVelocityFriction = 0.0f;
       return projectileVelocityFriction;
     }
 
-    float & ProjectileLifetime() {
-      static float projectileLifetime = 4000.0f;
+    int32_t & ProjectileLifetime() {
+      static int32_t projectileLifetime = 4000;
       return projectileLifetime;
     }
 
-    float & ProjectileExplosionRadius() {
-      static float projectileExplosionRadius = 96.0f;
+    int32_t & ProjectileExplosionRadius() {
+      static int32_t projectileExplosionRadius = 96;
       return projectileExplosionRadius;
     }
 
@@ -718,18 +460,18 @@ namespace plugin::config {
       return projectileExplosionForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 50.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 50;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 20.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 20;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 80.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 80;
       return projectileDirectDamage;
     }
 
@@ -737,12 +479,12 @@ namespace plugin::config {
 
   namespace badFetus::combo {
     float & VelocityFriction() {
-      static float velocityFriction = 0.5f;
+      static float velocityFriction = 0.0f;
       return velocityFriction;
     }
 
-    float & ExplosionRadius() {
-      static float explosionRadius = 64.0f;
+    int32_t & ExplosionRadius() {
+      static int32_t explosionRadius = 64;
       return explosionRadius;
     }
 
@@ -751,54 +493,54 @@ namespace plugin::config {
       return explosionForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 10.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 10;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 60.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 60;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 20.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 20;
       return projectileDirectDamage;
     }
 
   }
 
   namespace manshredder::primary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 80.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 80;
       return dischargeCooldown;
     }
 
     float & ProjectileForce() {
-      static float projectileForce = 0.4f;
+      static float projectileForce = 0.0f;
       return projectileForce;
     }
 
-    float & ProjectileCooldown() {
-      static float projectileCooldown = 80.0f;
+    int32_t & ProjectileCooldown() {
+      static int32_t projectileCooldown = 80;
       return projectileCooldown;
     }
 
-    float & ProjectileDamage() {
-      static float projectileDamage = 80.0f;
+    int32_t & ProjectileDamage() {
+      static int32_t projectileDamage = 80;
       return projectileDamage;
     }
 
-    float & ProjectileDistance() {
-      static float projectileDistance = 32.0f;
+    int32_t & ProjectileDistance() {
+      static int32_t projectileDistance = 32;
       return projectileDistance;
     }
 
-  };
+  }
 
   namespace manshredder::secondary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -807,8 +549,8 @@ namespace plugin::config {
       return projectileVelocity;
     }
 
-    float & ProjectileExplosionRadius() {
-      static float projectileExplosionRadius = 96.0f;
+    int32_t & ProjectileExplosionRadius() {
+      static int32_t projectileExplosionRadius = 96;
       return projectileExplosionRadius;
     }
 
@@ -817,26 +559,26 @@ namespace plugin::config {
       return projectileExplosionForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 50.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 50;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 20.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 20;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 80.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 80;
       return projectileDirectDamage;
     }
 
-  };
+  }
 
   namespace wallbanger::primary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
@@ -850,45 +592,371 @@ namespace plugin::config {
       return projectileForce;
     }
 
-    float & ProjectileSplashDamageMin() {
-      static float projectileSplashDamageMin = 50.0f;
+    int32_t & ProjectileSplashDamageMin() {
+      static int32_t projectileSplashDamageMin = 50;
       return projectileSplashDamageMin;
     }
 
-    float & ProjectileSplashDamageMax() {
-      static float projectileSplashDamageMax = 20.0f;
+    int32_t & ProjectileSplashDamageMax() {
+      static int32_t projectileSplashDamageMax = 20;
       return projectileSplashDamageMax;
     }
 
-    float & ProjectileDirectDamage() {
-      static float projectileDirectDamage = 80.0f;
+    int32_t & ProjectileDirectDamage() {
+      static int32_t projectileDirectDamage = 80;
       return projectileDirectDamage;
     }
 
-  };
+  }
 
   namespace wallbanger::secondary {
-    float & DischargeCooldown() {
-      static float dischargeCooldown = 1000.0f;
+    int32_t & DischargeCooldown() {
+      static int32_t dischargeCooldown = 1000;
       return dischargeCooldown;
     }
 
     float & ProjectileForce() {
-      static float projectileForce = 0.4f;
+      static float projectileForce = 0.0f;
       return projectileForce;
     }
 
-    float & ProjectileDamage() {
-      static float projectileDamage = 80.0f;
+    int32_t & ProjectileDamage() {
+      static int32_t projectileDamage = 80;
       return projectileDamage;
     }
 
-  };
+  }
 
   namespace weapon {
-    float & WeaponSwitchCooldown() {
-      static float weaponSwitchCooldown = 300.0f;
+    int32_t & WeaponSwitchCooldown() {
+      static int32_t weaponSwitchCooldown = 300;
       return weaponSwitchCooldown;
     }
-  };
+  }
+}
+
+namespace {
+
+cJSON * LoadJsonFile(std::string const & filename) {
+  // load file
+  auto file = std::ifstream{filename};
+  if (file.eof() || !file.good()) {
+    spdlog::error("could not load spritesheet '{}'", filename);
+    return nullptr;
+  }
+
+  auto str =
+    std::string {
+      std::istreambuf_iterator<char>(file)
+    , std::istreambuf_iterator<char>()
+    };
+
+  auto fileDataJson = cJSON_Parse(str.c_str());
+
+  if (fileDataJson == nullptr) {
+    spdlog::critical(
+      " -- failed to parse json for '{}'; '{}'"
+    , filename
+    , cJSON_GetErrorPtr()
+    );
+  }
+
+  return fileDataJson;
+}
+
+void ApplyToConfig(
+  std::function<void(float & value, std::string const & label)> fnFloat
+, std::function<void(int32_t & value, std::string const & label)> fnInt
+, std::function<void(std::vector<float> & value, std::string const & label)>
+    fnVectorFloat
+) {
+  {
+    namespace config = plugin::config::volnias::primary;
+    fnInt(config::ChargeupPreBeginThreshold(), "volnias::primary::chargeupPreBeginThreshold");
+    fnInt(config::ChargeupBeginThreshold(), "volnias::primary::chargeupBeginThreshold");
+    fnInt(config::ChargeupDelta(), "volnias::primary::chargeupDelta");
+    fnInt(config::ChargeupTimerEnd(), "volnias::primary::chargeupTimerEnd");
+    fnInt(config::DischargeCooldown(), "volnias::primary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "volnias::primary::projectileVelocity");
+    fnFloat(config::ProjectileForce(), "volnias::primary::projectileForce");
+    fnInt(config::ProjectileDamage(), "volnias::primary::projectileDamage");
+    fnFloat(config::Knockback(), "volnias::primary::knockback");
+  }
+
+  {
+    namespace config = plugin::config::volnias::secondary;
+    fnInt(config::MaxChargedShots(), "volnias::secondary::maxChargedShots");
+    fnInt(config::ChargeupDelta(), "volnias::secondary::chargeupDelta");
+    fnInt(config::ChargeupMaxThreshold(), "volnias::secondary::chargeupMaxThreshold");
+    fnInt(config::ChargeupTimerStart(), "volnias::secondary::chargeupTimerStart");
+    fnInt(config::DischargeDelta(), "volnias::secondary::dischargeDelta");
+
+    fnInt(config::DischargeCooldown(), "volnias::secondary::dischargeCooldown");
+  }
+
+  {
+    namespace config = plugin::config::grannibal::primary;
+    fnInt(config::MuzzleTrailTimer(), "grannibal::primary::muzzleTrailTimer");
+    fnInt(config::MuzzleTrailParticles(), "grannibal::primary::muzzleTrailParticles");
+
+    fnInt(config::DischargeCooldown(), "grannibal::primary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "grannibal::primary::projectileVelocity");
+    fnInt(config::ProjectileExplosionRadius(), "grannibal::primary::projectileExplosionRadius");
+    fnFloat(config::ProjectileExplosionForce(), "grannibal::primary::projectileExplosionForce");
+    fnInt(config::ProjectileSplashDamageMin(), "grannibal::primary::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "grannibal::primary::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "grannibal::primary::projectileDirectDamage");
+  }
+
+  {
+    namespace config = plugin::config::grannibal::secondary;
+    fnInt(config::DischargeCooldown(), "grannibal::secondary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "grannibal::secondary::projectileVelocity");
+    fnInt(config::ProjectileExplosionRadius(), "grannibal::secondary::projectileExplosionRadius");
+    fnFloat(config::ProjectileExplosionForce(), "grannibal::secondary::projectileExplosionForce");
+    fnInt(config::ProjectileSplashDamageMin(), "grannibal::secondary::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "grannibal::secondary::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "grannibal::secondary::projectileDirectDamage");
+
+    fnInt(config::Bounces(), "grannibal::secondary::bounces");
+    fnFloat(config::ProjectileVelocityFriction(), "grannibal::secondary::projectileVelocityFriction");
+  }
+
+  {
+    namespace config = plugin::config::dopplerBeam::primary;
+    fnFloat(config::ProjectileVelocity(), "dopplerBeam::primary::projectileVelocity");
+    fnFloat(config::ProjectileForce(), "dopplerBeam::primary::projectileForce");
+    fnInt(config::ProjectileDamage(), "dopplerBeam::primary::projectileDamage");
+    fnInt(config::DischargeCooldown(), "dopplerBeam::primary::dischargeCooldown");
+  }
+
+  {
+    namespace config = plugin::config::dopplerBeam::secondary;
+    fnFloat(config::ProjectileVelocity(), "dopplerBeam::secondary::projectileVelocity");
+    fnFloat(config::ProjectileForce(), "dopplerBeam::secondary::projectileForce");
+    fnInt(config::ProjectileDamage(), "dopplerBeam::secondary::projectileDamage");
+    fnVectorFloat(config::ShotPattern(), "dopplerBeam::secondary::shotPattern");
+    fnInt(config::DischargeCooldown(), "dopplerBeam::secondary::dischargeCooldown");
+  }
+
+  {
+    namespace config = plugin::config::pericaliya::primary;
+    fnInt(config::DischargeCooldown(), "pericaliya::primary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "pericaliya::primary::projectileVelocity");
+    fnInt(config::ProjectileExplosionRadius(), "pericaliya::primary::projectileExplosionRadius");
+    fnFloat(config::ProjectileExplosionForce(), "pericaliya::primary::projectileExplosionForce");
+    fnInt(config::ProjectileSplashDamageMin(), "pericaliya::primary::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "pericaliya::primary::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "pericaliya::primary::projectileDirectDamage");
+  }
+
+  {
+    namespace config = plugin::config::pericaliya::secondary;
+    fnInt(config::DischargeCooldown(), "pericaliya::secondary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "pericaliya::secondary::projectileVelocity");
+    fnInt(config::ProjectileExplosionRadius(), "pericaliya::secondary::projectileExplosionRadius");
+    fnFloat(config::ProjectileExplosionForce(), "pericaliya::secondary::projectileExplosionForce");
+    fnInt(config::ProjectileSplashDamageMin(), "pericaliya::secondary::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "pericaliya::secondary::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "pericaliya::secondary::projectileDirectDamage");
+
+    fnInt(config::RedirectionMinimumThreshold(), "pericaliya::secondary::redirectionMinimumThreshold");
+
+    fnVectorFloat(config::ShotPattern(), "pericaliya::secondary::shotPattern");
+  }
+
+  {
+    namespace config = plugin::config::zeusStinger::primary;
+    fnInt(config::DischargeCooldown(), "zeusStinger::primary::dischargeCooldown");
+    fnFloat(config::ProjectileForce(), "zeusStinger::primary::projectileForce");
+    fnInt(config::ProjectileDamage(), "zeusStinger::primary::projectileDamage");
+  }
+
+  {
+    namespace config = plugin::config::zeusStinger::secondary;
+    fnInt(config::DischargeCooldown(), "zeusStinger::secondary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "zeusStinger::secondary::projectileVelocity");
+    fnFloat(config::ProjectileVelocityFriction(), "zeusStinger::secondary::projectileVelocityFriction");
+    fnInt(config::ProjectileLifetime(), "zeusStinger::secondary::projectileLifetime");
+    fnInt(config::ProjectileExplosionRadius(), "zeusStinger::secondary::projectileExplosionRadius");
+    fnFloat(config::ProjectileExplosionForce(), "zeusStinger::secondary::projectileExplosionForce");
+    fnInt(config::ProjectileSplashDamageMin(), "zeusStinger::secondary::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "zeusStinger::secondary::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "zeusStinger::secondary::projectileDirectDamage");
+
+    fnInt(config::RedirectionMinimumThreshold(), "zeusStinger::secondary::redirectionMinimumThreshold");
+
+    fnVectorFloat(config::ShotPattern(), "zeusStinger::secondary::shotPattern");
+  }
+
+  {
+    namespace config = plugin::config::badFetus::primary;
+    fnInt(config::DischargeCooldown(), "badFetus::primary::dischargeCooldown");
+    fnFloat(config::ProjectileForce(), "badFetus::primary::projectileForce");
+    fnInt(config::ProjectileCooldown(), "badFetus::primary::projectileCooldown");
+    fnInt(config::ProjectileDamage(), "badFetus::primary::projectileDamage");
+  }
+
+  {
+    namespace config = plugin::config::badFetus::secondary;
+    fnInt(config::DischargeCooldown(), "badFetus::secondary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "badFetus::secondary::projectileVelocity");
+    fnFloat(config::ProjectileVelocityFriction(), "badFetus::secondary::projectileVelocityFriction");
+    fnInt(config::ProjectileLifetime(), "badFetus::secondary::projectileLifetime");
+    fnInt(config::ProjectileExplosionRadius(), "badFetus::secondary::projectileExplosionRadius");
+    fnFloat(config::ProjectileExplosionForce(), "badFetus::secondary::projectileExplosionForce");
+    fnInt(config::ProjectileSplashDamageMin(), "badFetus::secondary::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "badFetus::secondary::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "badFetus::secondary::projectileDirectDamage");
+  }
+
+  {
+    namespace config = plugin::config::badFetus::combo;
+    fnFloat(config::VelocityFriction(), "badFetus::combo::velocityFriction");
+    fnInt(config::ExplosionRadius(), "badFetus::combo::explosionRadius");
+    fnFloat(config::ExplosionForce(), "badFetus::combo::explosionForce");
+    fnInt(config::ProjectileSplashDamageMin(), "badFetus::combo::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "badFetus::combo::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "badFetus::combo::projectileDirectDamage");
+  }
+
+  {
+    namespace config = plugin::config::manshredder::primary;
+    fnInt(config::DischargeCooldown(), "manshredder::primary::dischargeCooldown");
+    fnFloat(config::ProjectileForce(), "manshredder::primary::projectileForce");
+    fnInt(config::ProjectileCooldown(), "manshredder::primary::projectileCooldown");
+    fnInt(config::ProjectileDamage(), "manshredder::primary::projectileDamage");
+    fnInt(config::ProjectileDistance(), "manshredder::primary::projectileDistance");
+  }
+
+  {
+    namespace config = plugin::config::manshredder::secondary;
+    fnInt(config::DischargeCooldown(), "manshredder::secondary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "manshredder::secondary::projectileVelocity");
+    fnInt(config::ProjectileExplosionRadius(), "manshredder::secondary::projectileExplosionRadius");
+    fnFloat(config::ProjectileExplosionForce(), "manshredder::secondary::projectileExplosionForce");
+    fnInt(config::ProjectileSplashDamageMin(), "manshredder::secondary::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "manshredder::secondary::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "manshredder::secondary::projectileDirectDamage");
+  }
+
+  {
+    namespace config = plugin::config::wallbanger::primary;
+    fnInt(config::DischargeCooldown(), "wallbanger::primary::dischargeCooldown");
+    fnFloat(config::ProjectileVelocity(), "wallbanger::primary::projectileVelocity");
+    fnFloat(config::ProjectileForce(), "wallbanger::primary::projectileForce");
+    fnInt(config::ProjectileSplashDamageMin(), "wallbanger::primary::projectileSplashDamageMin");
+    fnInt(config::ProjectileSplashDamageMax(), "wallbanger::primary::projectileSplashDamageMax");
+    fnInt(config::ProjectileDirectDamage(), "wallbanger::primary::projectileDirectDamage");
+  }
+
+  {
+    namespace config = plugin::config::wallbanger::secondary;
+    fnInt(config::DischargeCooldown(), "wallbanger::secondary::dischargeCooldown");
+    fnFloat(config::ProjectileForce(), "wallbanger::secondary::projectileForce");
+    fnInt(config::ProjectileDamage(), "wallbanger::secondary::projectileDamage");
+  }
+
+  {
+    namespace config = plugin::config::weapon;
+    fnInt(config::WeaponSwitchCooldown(), "weapon::weaponSwitchCooldown");
+  }
+}
+
+}
+
+void plugin::config::RenderImGui() {
+  ImGui::Begin("weapon config");
+
+  ImGui::PushItemWidth(64.0f);
+  ::ApplyToConfig(
+    [](float & value, std::string const & label) -> void {
+      ImGui::DragFloat(label.c_str(), &value, 0.005f);
+    }
+  , [](int32_t & value, std::string const & label) -> void {
+      pul::imgui::DragInt(label.c_str(), &value, 0.005f);
+    }
+  , [](std::vector<float> & value, std::string const & label) ->void{
+      for (size_t i = 0ul; i < value.size(); ++ i) {
+        ImGui::DragFloat(
+          (label + "-" + std::to_string(i)).c_str(), &value[i], 0.005f
+        );
+      }
+    }
+  );
+  ImGui::PopItemWidth();
+
+  ImGui::End();
+}
+
+void plugin::config::SaveConfig() {
+
+  cJSON * configJson = cJSON_CreateObject();
+
+  ::ApplyToConfig(
+    [&configJson](float & value, std::string const & label) -> void {
+      cJSON_AddItemToObject(
+        configJson, label.c_str()
+      , cJSON_CreateNumber(static_cast<double>(value))
+      );
+    }
+  , [&configJson](int32_t & value, std::string const & label) -> void {
+      cJSON_AddItemToObject(configJson, label.c_str(), cJSON_CreateInt(value));
+    }
+  , [&configJson](std::vector<float> & value, std::string const & label) ->void{
+      for (size_t i = 0ul; i < value.size(); ++ i) {
+        cJSON_AddItemToObject(
+          configJson, (label + "-" + std::to_string(i)).c_str()
+        , cJSON_CreateNumber(static_cast<double>(value[i]))
+        );
+      }
+    }
+  );
+
+  { // -- save file
+    auto jsonStr = cJSON_Print(configJson);
+
+    auto configFilename = "assets/base/config.json";
+
+    spdlog::info("saving json: '{}'", configFilename);
+
+    auto file = std::ofstream{configFilename};
+    if (file.good()) {
+      file << jsonStr;
+    } else {
+      spdlog::error("could not save file");
+    }
+  }
+}
+
+void plugin::config::LoadConfig() {
+  cJSON * configJson = ::LoadJsonFile("assets/base/config.json");
+
+  ::ApplyToConfig(
+    [&configJson](float & value, std::string const & label) -> void {
+      value =
+        static_cast<float>(
+          cJSON_GetObjectItemCaseSensitive(configJson, label.c_str())
+            ->valuedouble
+        );
+    }
+  , [&configJson](int32_t & value, std::string const & label) -> void {
+      value =
+        static_cast<int32_t>(
+          cJSON_GetObjectItemCaseSensitive(configJson, label.c_str())
+            ->valueint
+        );
+    }
+  , [&configJson](std::vector<float> & value, std::string const & label) ->void{
+      for (size_t i = 0ul; i < value.size(); ++ i) {
+        value[i] =
+          static_cast<float>(
+            cJSON_GetObjectItemCaseSensitive(
+              configJson
+            , (label + "-" + std::to_string(i)).c_str()
+            )->valuedouble
+          );
+      }
+    }
+  );
 }
