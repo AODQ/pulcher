@@ -39,7 +39,7 @@ void pul::controls::UpdateControls(
     auto lo = current.lookOffset;
     auto ld = current.lookDirection;
     auto la = current.lookAngle;
-    current.movementHorizontal = {};
+    current = {};
     current.lookOffset = lo;
     current.lookDirection = ld;
     current.lookAngle = la;
@@ -93,15 +93,15 @@ void pul::controls::UpdateControls(
     for (auto const & output : keymap.outputs) {
       using Type = Controller::ControlOutputType;
       switch (output) {
-        case Type::Jump:             current.jump             = active; break;
-        case Type::Dash:             current.dash             = active; break;
-        case Type::Crouch:           current.crouch           = active; break;
-        case Type::Walk:             current.walk             = active; break;
-        case Type::Taunt:            current.taunt            = active; break;
-        case Type::ShootPrimary:     current.shootPrimary     = active; break;
-        case Type::ShootSecondary:   current.shootSecondary   = active; break;
-        case Type::WeaponSwitchNext: current.weaponSwitchNext = active; break;
-        case Type::WeaponSwitchPrev: current.weaponSwitchPrev = active; break;
+        case Type::Jump:             current.jump             |= active; break;
+        case Type::Dash:             current.dash             |= active; break;
+        case Type::Crouch:           current.crouch           |= active; break;
+        case Type::Walk:             current.walk             |= active; break;
+        case Type::Taunt:            current.taunt            |= active; break;
+        case Type::ShootPrimary:     current.shootPrimary     |= active; break;
+        case Type::ShootSecondary:   current.shootSecondary   |= active; break;
+        case Type::WeaponSwitchNext: current.weaponSwitchNext |= active; break;
+        case Type::WeaponSwitchPrev: current.weaponSwitchPrev |= active; break;
         case Type::Up:
           if (!active) { break; }
           current.movementVertical = pul::controls::Controller::Movement::Up;
