@@ -75,8 +75,6 @@ void pul::controls::UpdateControls(
 
     switch (keymap.type) {
       case Controller::Keymap::Type::Keyboard:
-        spdlog::debug("keymap value {} pressed {}",
-          keymap.value, glfwGetKey(window, keymap.value) == GLFW_PRESS);
         active = glfwGetKey(window, keymap.value) == GLFW_PRESS;
       break;
       case Controller::Keymap::Type::Mouse:

@@ -1,10 +1,14 @@
 #pragma once
 
+#include <pulcher-core/map.hpp>
+
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
 
 #include <array>
 #include <vector>
+
+namespace pul::physics { struct Tileset; }
 
 namespace pul::physics {
 
@@ -12,6 +16,7 @@ namespace pul::physics {
     Point  = 0x10000000
   , Ray    = 0x20000000
   , Circle = 0x40000000
+  , Aabb   = 0x80000000
   };
 
   struct IntersectorPoint {
@@ -28,6 +33,13 @@ namespace pul::physics {
     // inputs
     glm::i32vec2 origin;
     float radius;
+  };
+
+  struct IntersectorAabb {
+    static IntersectorType constexpr type = IntersectorType::Aabb;
+
+    glm::vec2 origin;
+    glm::vec2 dimensions;
   };
 
   struct IntersectorRay {
@@ -80,6 +92,22 @@ namespace pul::physics {
       , pul::physics::IntersectionResults
       >
     > intersectorRays;
+  };
+
+  struct TilemapLayer {
+    std::vector<pul::physics::Tileset const *> tilesets;
+
+    struct TileInfo {
+      size_t imageTileIdx = -1ul;
+      size_t tilesetIdx = -1ul;
+      pul::core::TileOrientation orientation = pul::core::TileOrientation::None;
+      glm::vec2 origin;
+
+      bool Valid() const { return tilesetIdx != -1ul; }
+    };
+
+    std::vector<TileInfo> tileInfo;
+    uint32_t width;
   };
 
 }

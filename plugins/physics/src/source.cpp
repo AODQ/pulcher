@@ -21,6 +21,7 @@
 namespace {
 
 bool showPhysicsQueries = false;
+bool showHitboxes = false;
 
 struct DebugRenderInfo {
   sg_buffer bufferOrigin;
@@ -250,26 +251,10 @@ void LoadSokolInfo() {
 // words, while there may be multiple tilesets contributing to the
 // collision layer, there is still only one collision layer
 
-struct TilemapLayer {
-  std::vector<pul::physics::Tileset const *> tilesets;
-
-  struct TileInfo {
-    size_t imageTileIdx = -1ul;
-    size_t tilesetIdx = -1ul;
-    pul::core::TileOrientation orientation = pul::core::TileOrientation::None;
-    glm::vec2 origin;
-
-    bool Valid() const { return tilesetIdx != -1ul; }
-  };
-
-  std::vector<TileInfo> tileInfo;
-  uint32_t width;
-};
-
-TilemapLayer tilemapLayer;
+pul::physics::TilemapLayer tilemapLayer;
 
 float CalculateSdfDistance(
-  TilemapLayer::TileInfo const & tileInfo
+  pul::physics::TilemapLayer::TileInfo const & tileInfo
 , glm::u32vec2 texel
 ) {
   if (tileInfo.tilesetIdx == -1ul) { return 0.0f; }
@@ -653,6 +638,17 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
   return intersectionResults.collision;
 }
 
+PUL_PLUGIN_DECL pul::physics::TilemapLayer * Physics_TilemapLayer() {
+  return &tilemapLayer;
+}
+
+PUL_PLUGIN_DECL bool Physics_IntersectionAabb(
+  pul::core::SceneBundle & scene
+, pul::physics::IntersectorAabb const & aabb
+, pul::physics::IntersectionResults & intersectionResults
+) {
+}
+
 PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
   pul::core::SceneBundle & scene
 , pul::physics::IntersectorPoint const & point
@@ -742,69 +738,79 @@ PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle & scene) {
     sg_draw(0, queries.intersectorPoints.size(), 1);
   }
 
-  if (::showPhysicsQueries && queries.intersectorRays.size() > 0ul) {
+
+  bool const showQueries = ::showHitboxes || ::showPhysicsQueries;
+
+  if (showQueries && queries.intersectorRays.size() > 0ul) {
     size_t drawCount = 0ul;
     { // -- update buffers
       std::vector<glm::vec2> lines;
       std::vector<float> collisions;
       lines.reserve(queries.intersectorRays.size()*2);
       // update queries
-      for (auto & query : queries.intersectorRays) {
-        auto & queryRay = std::get<0>(query);
-        auto & queryResult = std::get<1>(query);
-        bool collision = queryResult.collision;
-        lines.emplace_back(queryRay.beginOrigin);
-        lines.emplace_back(collision ? queryResult.origin : queryRay.endOrigin);
-        collisions.emplace_back(static_cast<float>(collision));
-        collisions.emplace_back(static_cast<float>(collision));
+      if (::showPhysicsQueries) {
+        for (auto & query : queries.intersectorRays) {
+          auto & queryRay = std::get<0>(query);
+          auto & queryResult = std::get<1>(query);
+          bool collision = queryResult.collision;
+          lines.emplace_back(queryRay.beginOrigin);
+          lines.emplace_back(
+            collision ? queryResult.origin : queryRay.endOrigin
+          );
+          collisions.emplace_back(static_cast<float>(collision));
+          collisions.emplace_back(static_cast<float>(collision));
+        }
       }
 
-      // update hitboxes
-      auto view =
-        registry.view<
-          pul::core::ComponentHitboxAABB, pul::core::ComponentOrigin
-        >();
+      if (::showHitboxes) {
+        // update hitboxes
+        auto view =
+          registry.view<
+            pul::core::ComponentHitboxAABB, pul::core::ComponentOrigin
+          >();
 
-      for (auto & entity : view) {
-        // get origin/dimensions, for dimensions multiply by half in order to
-        // get its "radius" or whatever
-        auto const & dim =
-          glm::vec2(
-            view.get<pul::core::ComponentHitboxAABB>(entity).dimensions
-          ) * 0.5f
-        ;
-        auto const & origin =
-          view.get<pul::core::ComponentOrigin>(entity).origin;
+        for (auto & entity : view) {
+          // get origin/dimensions, for dimensions multiply by half in order to
+          // get its "radius" or whatever
+          auto const & dim =
+            glm::vec2(
+              view.get<pul::core::ComponentHitboxAABB>(entity).dimensions
+            ) * 0.5f
+          ;
+          auto const & origin =
+            view.get<pul::core::ComponentOrigin>(entity).origin;
 
-        auto const * damageable =
-          registry.try_get<pul::core::ComponentDamageable>(entity)
-        ;
+          auto const * damageable =
+            registry.try_get<pul::core::ComponentDamageable>(entity)
+          ;
 
-        bool hasCollision = damageable && !damageable->frameDamageInfos.empty();
+          bool const hasCollision =
+            damageable && !damageable->frameDamageInfos.empty();
 
-        // top
-        lines.emplace_back(origin + glm::vec2(-dim.x, -dim.y));
-        lines.emplace_back(origin + glm::vec2(+dim.x, -dim.y));
-        collisions.emplace_back(hasCollision);
-        collisions.emplace_back(hasCollision);
+          // top
+          lines.emplace_back(origin + glm::vec2(-dim.x, -dim.y));
+          lines.emplace_back(origin + glm::vec2(+dim.x, -dim.y));
+          collisions.emplace_back(hasCollision);
+          collisions.emplace_back(hasCollision);
 
-        // bottom
-        lines.emplace_back(origin + glm::vec2(-dim.x, +dim.y));
-        lines.emplace_back(origin + glm::vec2(+dim.x, +dim.y));
-        collisions.emplace_back(hasCollision);
-        collisions.emplace_back(hasCollision);
+          // bottom
+          lines.emplace_back(origin + glm::vec2(-dim.x, +dim.y));
+          lines.emplace_back(origin + glm::vec2(+dim.x, +dim.y));
+          collisions.emplace_back(hasCollision);
+          collisions.emplace_back(hasCollision);
 
-        // left
-        lines.emplace_back(origin + glm::vec2(-dim.x, -dim.y));
-        lines.emplace_back(origin + glm::vec2(-dim.x, +dim.y));
-        collisions.emplace_back(hasCollision);
-        collisions.emplace_back(hasCollision);
+          // left
+          lines.emplace_back(origin + glm::vec2(-dim.x, -dim.y));
+          lines.emplace_back(origin + glm::vec2(-dim.x, +dim.y));
+          collisions.emplace_back(hasCollision);
+          collisions.emplace_back(hasCollision);
 
-        // right
-        lines.emplace_back(origin + glm::vec2(+dim.x, -dim.y));
-        lines.emplace_back(origin + glm::vec2(+dim.x, +dim.y));
-        collisions.emplace_back(hasCollision);
-        collisions.emplace_back(hasCollision);
+          // right
+          lines.emplace_back(origin + glm::vec2(+dim.x, -dim.y));
+          lines.emplace_back(origin + glm::vec2(+dim.x, +dim.y));
+          collisions.emplace_back(hasCollision);
+          collisions.emplace_back(hasCollision);
+        }
       }
 
       sg_update_buffer(
@@ -852,6 +858,7 @@ PUL_PLUGIN_DECL void Physics_UiRender(pul::core::SceneBundle &) {
   pul::imgui::Text("tile info size {}", ::tilemapLayer.tileInfo.size());
 
   ImGui::Checkbox("show physics queries", &::showPhysicsQueries);
+  ImGui::Checkbox("show hitboxes", &::showHitboxes);
 
   ImGui::End();
 }

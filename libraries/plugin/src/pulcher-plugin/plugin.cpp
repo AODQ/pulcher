@@ -168,6 +168,7 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
         unit.InverseSceneIntersectionRaycast
       , "Physics_InverseSceneIntersectionRaycast"
       );
+      ctx.LoadFunction(unit.TilemapLayer,        "Physics_TilemapLayer");
       ctx.LoadFunction(unit.IntersectionPoint,   "Physics_IntersectionPoint");
       ctx.LoadFunction(unit.RenderDebug,         "Physics_RenderDebug");
       ctx.LoadFunction(unit.UiRender,            "Physics_UiRender");

@@ -13,6 +13,9 @@
 #include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/log.hpp>
+#include <pulcher-util/math.hpp>
+
+#include <cute/cute_c2.hpp>
 
 #include <entt/entt.hpp>
 #include <imgui/imgui.hpp>
@@ -330,153 +333,214 @@ void UpdatePlayerPhysics(
 , glm::vec2 & playerOrigin
 , pul::core::ComponentHitboxAABB &
 ) {
-  glm::vec2 groundedFloorOrigin = playerOrigin - glm::vec2(0, 2);
 
-  auto ray =
-    pul::physics::IntersectorRay::Construct(
-      groundedFloorOrigin
-    , groundedFloorOrigin + glm::vec2(player.velocity)
-    );
+  static c2AABB aabb;
+  aabb.min.x = playerOrigin.x - 10.0f;
+  aabb.min.y = playerOrigin.y - 48.0f;
+  aabb.max.x = playerOrigin.x + 10.0f;
+  aabb.max.y = playerOrigin.y - 22.0f;
+
+
+  size_t tileIdx;
+  glm::u32vec2 texelOrigin;
+  auto & tilemapLayer = *plugin.physics.TilemapLayer();
   if (
-    pul::physics::IntersectionResults results;
-    !plugin.physics.IntersectionRaycast(scene, ray, results)
+    !pul::util::CalculateTileIndices(
+      tileIdx, texelOrigin, playerOrigin - glm::vec2(0.0f, 30.0f)
+    , tilemapLayer.width, tilemapLayer.tileInfo.size()
+    )
   ) {
-    // check if we can step down a slope
-    if (player.grounded && player.velocity.x != 0.0f) {
-      glm::vec2 offset =
-        groundedFloorOrigin + glm::vec2(player.velocity.x, 0.0f);
-
-      auto stepRay =
-        pul::physics::IntersectorRay::Construct(
-          glm::round(offset + glm::vec2(0.0f, 0.0f))
-        , glm::round(offset + glm::vec2(0.0f, ::slopeStepDownHeight))
-        );
-      if (
-        pul::physics::IntersectionResults stepResults;
-          plugin.physics.IntersectionRaycast(scene, stepRay, stepResults)
-       &&
-          static_cast<int32_t>(stepResults.origin.y)
-       != static_cast<int32_t>(glm::round(offset.y))
-      ) {
-        playerOrigin.x += player.velocity.x;
-        playerOrigin.y = stepResults.origin.y;
-        player.velocity.y = 0.0f;
-        player.grounded = true;
-        return;
-      }
-    }
-
-    playerOrigin += player.velocity;
-
-  } else {
-
-    // in case we want to store our velocity to attempt slope climbing
-    bool attemptStoreSlopeVelocity = false;
-
-    // check if we can step up to the specified slope
-    if (player.grounded && player.velocity.x != 0.0f) {
-      glm::vec2 offset = ray.endOrigin;
-
-      auto stepRay =
-        pul::physics::IntersectorRay::Construct(
-          glm::round(offset + glm::vec2(0.0f, -slopeStepUpHeight))
-        , glm::round(offset)
-        );
-
-      if (
-        pul::physics::IntersectionResults stepResults;
-        plugin.physics.IntersectionRaycast(scene, stepRay, stepResults)
-      ) {
-        // it needs to intersect at a pixel that's not the 'ceil' of the step-up
-        // height, as otherwise it is not a floor
-        if (
-            static_cast<int32_t>(glm::round(stepResults.origin.y))
-         != static_cast<int32_t>(glm::round(offset.y - slopeStepUpHeight))
-        ) {
-          playerOrigin.y = stepResults.origin.y + 1.0f;
-
-          // store velocity
-          playerOrigin.x += player.velocity.x;
-
-          player.velocity.y = 0.0f;
-          player.grounded = true;
-          return;
-        }
-      }
-    }
-
-    // first 'clamp' the player to some bounds
-    if (ray.beginOrigin.x < ray.endOrigin.x) {
-      playerOrigin.x = results.origin.x - 1.0f;
-    } else if (ray.beginOrigin.x > ray.endOrigin.x) {
-      playerOrigin.x = results.origin.x + 1.0f;
-    }
-
-    if (ray.beginOrigin.y < ray.endOrigin.y) {
-      playerOrigin.y = results.origin.y;
-    } else if (ray.beginOrigin.y > ray.endOrigin.y) {
-      // the groundedFloorOrigin is -(0, 2), so we need to account for that
-      playerOrigin.y = results.origin.y + 2.0f;
-    }
-
-    // then check how the velocity should be redirected
-    auto rayY =
-      pul::physics::IntersectorRay::Construct(
-        playerOrigin + glm::vec2(0.0f, +1.0)
-      , playerOrigin + glm::vec2(0.0f, -3.0f)
-      );
-    if (
-      pul::physics::IntersectionResults resultsY;
-      plugin.physics.IntersectionRaycast(scene, rayY, resultsY)
-    ) {
-      player.prevAirVelocity = player.velocity.y;
-      // if there is an intersection check
-      if (playerOrigin.y < resultsY.origin.y) {
-        player.velocity.y = glm::min(0.0f, player.velocity.y);
-      } else if (playerOrigin.y > resultsY.origin.y) {
-        player.velocity.y = glm::max(0.0f, player.velocity.y);
-      } else {
-        player.velocity.y = 0.0f;
-      }
-    }
-
-    auto rayX =
-      pul::physics::IntersectorRay::Construct(
-        glm::round(playerOrigin + glm::vec2(+2.0f, -2.0))
-      , glm::round(playerOrigin + glm::vec2(-2.0f, -2.0f))
-      );
-    if (
-      pul::physics::IntersectionResults resultsX;
-        !attemptStoreSlopeVelocity
-      && plugin.physics.IntersectionRaycast(scene, rayX, resultsX)
-    ) {
-      // if there is an intersection check
-      if (glm::round(playerOrigin.x) < resultsX.origin.x) {
-        playerOrigin.x = resultsX.origin.x-2;
-        player.velocity.x = 0.0f;
-      } else if (glm::round(playerOrigin.x) > resultsX.origin.x) {
-        playerOrigin.x = resultsX.origin.x+2;
-        player.velocity.x = 0.0f;
-      } else {
-        /* player.velocity.x = 0.0f; */
-      }
-    }
+    return;
   }
 
-  // lazy head check
-  if (!player.grounded) {
-    auto rayHead =
-      pul::physics::IntersectorRay::Construct(
-        groundedFloorOrigin - glm::vec2(0, 8.0f)
-      , groundedFloorOrigin - glm::vec2(0, 40.0f)
-      );
-    if (
-      pul::physics::IntersectionResults resultsHead;
-      plugin.physics.IntersectionRaycast(scene, rayHead, resultsHead)
-    ) {
-      player.velocity.y = glm::max(0.0f, player.velocity.y);
-    }
+  PUL_ASSERT_CMP(tilemapLayer.tileInfo.size(), >, tileIdx, return;);
+  auto const & tileInfo = tilemapLayer.tileInfo[tileIdx];
+
+  static c2AABB aabb2;
+  aabb2.min.x = tileInfo.origin.x - 16.0f;
+  aabb2.min.y = tileInfo.origin.y - 16.0f;
+  aabb2.max.x = tileInfo.origin.x + 16.0f;
+  aabb2.max.y = tileInfo.origin.y + 16.0f;
+
+  spdlog::debug("tile origin: {}, my origin: {}", tileInfo.origin, playerOrigin);
+
+  int hit = c2AABBtoAABB(aabb, aabb2);
+  if (hit) {
+    player.velocity.x = 0.0f;
+    spdlog::debug("hit");
   }
+
+  playerOrigin.x += player.velocity.x;
+
+
+  /* // if no velocity do nothing */
+  /* if (player.velocity == glm::vec2(0.0f)) { return; } */
+
+  /* // have a "diamond" around player to validate its position; */
+  /* // first forward pick points, clamping player origin based off */
+  /* // the closest intersection */
+
+  /* // then apply connect points to clamp the player off from the environment */
+  /* // order: */
+  /* //      0      * */
+  /* //     / \    1  4 */
+  /* //    1   3  *    * */
+  /* //     \ /    2  3 */
+  /* //      2      * */
+
+  /* std::array<glm::vec2, 4> constexpr pickPoints = { */
+  /*   glm::vec2(0.0f, -48.0f) */
+  /* , glm::vec2(-10.0f, -22.0f) */
+  /* , glm::vec2(0.0f, -4.0f) */
+  /* , glm::vec2(+10.0f, -22.0f) */
+  /* }; */
+
+  /* { */
+  /*   auto wallPoint = */
+  /*     pul::physics::IntersectorPoint{ */
+  /*       glm::round(pickPoints[1] + playerOrigin - glm::vec2(3.0f, 0.0f)) */
+  /*     } */
+  /*   ; */
+
+  /*   pul::physics::IntersectionResults results; */
+  /*   player.wallClingLeft = */
+  /*     plugin.physics.IntersectionPoint(scene, wallPoint, results); */
+
+  /*   if (player.wallClingLeft) */
+  /*     { player.velocity.x = glm::max(player.velocity.x, 0.0f); } */
+
+  /*   if (player.grounded) */
+  /*     { player.wallClingLeft = false; } */
+  /* } */
+
+  /* { */
+  /*   auto wallPoint = */
+  /*     pul::physics::IntersectorPoint{ */
+  /*       glm::round(pickPoints[3] + playerOrigin + glm::vec2(3.0f, 0.0f)) */
+  /*     } */
+  /*   ; */
+
+  /*   pul::physics::IntersectionResults results; */
+  /*   player.wallClingRight = */
+  /*     plugin.physics.IntersectionPoint(scene, wallPoint, results); */
+  /*   if (player.wallClingRight) */
+  /*     { player.velocity.x = glm::min(player.velocity.x, 0.0f); } */
+
+  /*   if (player.grounded) */
+  /*     { player.wallClingRight = false; } */
+  /* } */
+
+  /* pul::physics::IntersectionResults static pointResults; */
+  /* size_t closestIntersection = -1ul; */
+
+  /* for (size_t i = 0; i < pickPoints.size(); ++ i) { */
+  /*   auto pointRay = */
+  /*     pul::physics::IntersectorRay::Construct( */
+  /*       glm::round(pickPoints[i] + playerOrigin) */
+  /*     , glm::round(pickPoints[i] + playerOrigin + glm::vec2(player.velocity)) */
+  /*     ); */
+  /*   pul::physics::IntersectionResults static tempPointResults; */
+  /*   plugin.physics.IntersectionRaycast(scene, pointRay, tempPointResults); */
+
+  /*   // TODO pick shortest length */
+  /*   if (tempPointResults.collision) { */
+  /*     closestIntersection = i; */
+  /*     pointResults = std::move(tempPointResults); */
+  /*   } */
+  /* } */
+
+  /* if (closestIntersection == -1ul) { */
+  /*   playerOrigin += player.velocity; */
+  /* } else { */
+  /*   glm::vec2 intersectionNormal = glm::vec2(0.0f); */
+
+  /*   { // calculate normal (TODO this should be precomputed) */
+  /*     for (auto point : std::vector<glm::vec2>{ */
+  /*       { -1.0f, -1.0f }, { +0.0f, -1.0f }, { +1.0f, -1.0f } */
+  /*     , { -1.0f, +0.0f },                   { +1.0f, +0.0f } */
+  /*     , { -1.0f, +1.0f }, { +0.0f, +1.0f }, { +1.0f, +1.0f } */
+  /*     }) { */
+  /*       auto pointInt = */
+  /*         pul::physics::IntersectorPoint{ */
+  /*           glm::i32vec2(glm::vec2(pointResults.origin) + point) */
+  /*         }; */
+  /*       if ( */
+  /*         pul::physics::IntersectionResults pointResult; */
+  /*         plugin.physics.IntersectionPoint(scene, pointInt, pointResult) */
+  /*       ) { */
+  /*         intersectionNormal += point; */
+  /*       } */
+  /*     } */
+  /*     if (intersectionNormal  == glm::vec2(0.0)) { */
+  /*       player.velocity = glm::vec2(0.01f); */
+  /*       intersectionNormal = glm::vec2(1.0f); */
+  /*     } */
+
+  /*     intersectionNormal = glm::normalize(intersectionNormal); */
+  /*   } */
+
+  /*   glm::vec2 const targetDirection = */ 
+  /*     glm::reflect(glm::normalize(player.velocity), -intersectionNormal); */
+
+  /*   if (player.jumping && player.hasReleasedJump) { */
+  /*     player.storedVelocity = */
+  /*         targetDirection */
+  /*       * glm::length(player.storedVelocity) */
+  /*     ; */
+  /*   } */
+
+  /*   player.velocity = */
+  /*     targetDirection */
+  /*   * glm::length(player.velocity) */
+  /*   ; */
+
+  /*   if ( */
+  /*       intersectionNormal == glm::vec2(0.0f, -1.0f) */
+  /*    || intersectionNormal == glm::vec2(0.0f, 1.0f) */
+  /*   ) { */
+  /*     player.velocity.y = 0.0f; */
+  /*     player.storedVelocity.y = 0.0f; */
+  /*   } else if ( */
+  /*       intersectionNormal == glm::vec2(1.0f, 0.0f) */
+  /*    || intersectionNormal == glm::vec2(-1.0f, 0.0f) */
+  /*   ) { */
+  /*     player.velocity.x = 0.0f; */
+  /*     player.storedVelocity.x = 0.0f; */
+  /*   } else { */
+  /*     player.velocity *= 0.5f; */
+  /*   } */
+
+  /*   playerOrigin = */
+  /*     glm::vec2(pointResults.origin) - pickPoints[closestIntersection] */
+  /*   - intersectionNormal */
+  /*   ; */
+  /* } */
+
+  /* // now apply the border */
+  /* //      0      * */
+  /* //     / \    1  4 */
+  /* //    1   3  *    * <<< */
+  /* //     \ /    2  3 */
+  /* //      2      * */
+
+  /* for (int i = 0; i < 4; ++ i) { */
+  /*   glm::vec2 const point0 = pickPoints[i], point1 = pickPoints[(i+1)%4]; */
+  /*   auto borderRay = */
+  /*     pul::physics::IntersectorRay::Construct( */
+  /*       glm::round(point0 + playerOrigin) */
+  /*     , glm::round(point1 + playerOrigin) */
+  /*     ); */
+  /*   pul::physics::IntersectionResults borderResults; */
+  /*   plugin.physics.IntersectionRaycast(scene, borderRay, borderResults); */
+
+  /*   if (borderResults.collision) { */
+  /*     // get the origin of the intersection in releation to center of player */
+  /*     glm::vec2 origin = */
+  /*       glm::vec2(borderResults.origin) - playerOrigin - glm::vec2(0.0f, 32.0f); */
+
+  /*     playerOrigin -= origin; */
+  /*   } */
+  /* } */
 }
 
 void UpdatePlayerWeapon(
@@ -774,25 +838,6 @@ void plugin::entity::UpdatePlayer(
     point.origin = playerOrigin + glm::vec2(0.0f, 1.0f);
     pul::physics::IntersectionResults results;
     player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
-  }
-
-  player.wallClingLeft = false;
-  player.wallClingRight = false;
-
-  if (!player.grounded) {
-    pul::physics::IntersectorPoint point;
-    point.origin = playerOrigin + glm::vec2(-3.0f, -4.0f);
-    pul::physics::IntersectionResults results;
-    player.wallClingLeft =
-      plugin.physics.IntersectionPoint(scene, point, results);
-  }
-
-  if (!player.grounded) {
-    pul::physics::IntersectorPoint point;
-    point.origin = playerOrigin + glm::vec2(+3.0f, -4.0f);
-    pul::physics::IntersectionResults results;
-    player.wallClingRight =
-      plugin.physics.IntersectionPoint(scene, point, results);
   }
 
   bool const frameStartGrounded = player.grounded;

@@ -16,6 +16,7 @@ target_link_libraries(
   PRIVATE
     EnTT cjson pulcher-core pulcher-gfx pulcher-physics pulcher-plugin
     pulcher-controls pulcher-animation pulcher-audio
+    cute
 )
 
 set_target_properties(

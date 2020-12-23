@@ -15,9 +15,11 @@ namespace pul::core { struct SceneBundle; }
 namespace pul::gfx { struct Image; }
 namespace pul::physics { struct EntityIntersectionResults; }
 namespace pul::physics { struct IntersectionResults; }
+namespace pul::physics { struct IntersectorAabb; }
 namespace pul::physics { struct IntersectorCircle; }
 namespace pul::physics { struct IntersectorPoint; }
 namespace pul::physics { struct IntersectorRay; }
+namespace pul::physics { struct TilemapLayer; }
 namespace pul::physics { struct Tileset; }
 namespace pul::plugin { struct Info; }
 
@@ -132,6 +134,14 @@ namespace pul::plugin {
     , pul::physics::IntersectorRay const & ray
     , pul::physics::IntersectionResults & intersectionResults
     ) = nullptr;
+    pul::physics::TilemapLayer * (*TilemapLayer)() = nullptr;
+
+    bool (*IntersectionAabb)(
+      pul::core::SceneBundle & scene
+    , pul::physics::IntersectorAabb const & ray
+    , pul::physics::IntersectionResults & intersectionResults
+    ) = nullptr;
+
     bool (*IntersectionPoint)(
       pul::core::SceneBundle & scene
     , pul::physics::IntersectorPoint const & ray
