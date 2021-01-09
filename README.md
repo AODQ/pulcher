@@ -4,9 +4,11 @@
 
 The game is processed at a logical 90 frames per second, with 1 frame of latency to allow for interpolation to render at 90+ frames. The engine is built "from scratch", though it mostly just ties multiple libraries together. The engine is basically not seperable from the game, or, a different perspective, they are the same entity. However, it's not some hard-coded nightmare, and in the future it is definitely possible that the two are seperable.
 
-Sokol is used to render OpenGL & EnTT is used for the entity-component system. These both drive the majority of Pulcher functionality. ImGui is used for development to allow prototyping of functionality to be very fast, which combined with hot-reloadable plugins make developing Pulcher very painless & easy.
+Sokol is used to render OpenGL3.2 & EnTT is used for the entity-component system. These both drive the majority of Pulcher functionality. ImGui is used for development to allow prototyping of functionality to be very fast, which combined with hot-reloadable plugins make developing Pulcher very painless & easy.
 
 # Code Philosphy
+
+Code should be simple and data-oriented. There should be minimal implicit behavior, including hidden heap allocations. OO patterns like polymorphism & inheritance are also discouraged. It should be fast to compile code, so headers should generally avoid including other headers, favoring forward-declarations. Also dependencies should be minimal & carefully chosen, and built along-side the project. All code, with an exception to files that exist to hold data, should be 80-column width.
 
 # Layout
 
@@ -65,11 +67,17 @@ cmake -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release -DPULCHER_PLA
 
 Pulcher is officially built against Clang, but should also build against GCC without warnings.
 
-I haven't tried building Pulcher on Windows, though besides possible MSVC errors, it shouldn't be difficult to set it up. But you probably won't be able to produce Linux binaries with MSVC, so your best option is most likely to be to use the Windows Subsystem for Linux to build Linux binaries.
+I haven't tried building Pulcher on Windows, though besides possible MSVC errors, it shouldn't be difficult to set it up. But you probably won't be able to produce Linux binaries with MSVC, your best option is most likely to be to use the Windows Subsystem for Linux to build Linux binaries.
  
 # Creating Plugins
 
 The best way to mod Pulcher is to use plugins. This is still in the design phase. Most likely how this will work is that for a plugin `PluginTest`, it must provide a C-ABI compatible functions;
 
   - `void UiRender(pul::plugin::Info const *, pul::core::SceneBundle *);` - updates ImGui for developer purposes
-  - `void Update(pul::plugin::Info const *, pul::core::SceneBundle *);` - updates the game @ 90Hz
+  - `void Initialize(); - called when plugin is initialized
+  - `void MapInitialize(pul::core::SceneBundle *); - called when map is initialized, will probably also contain map information to load custom entities
+  - `void Update(pul::plugin::Info const *, pul::core::SceneBundle *);` - updates the game @ 90Hz, used to update game-related logic
+  - `void Render(pul::core::SceneBundle *);` - used to provide custom rendering of the scene, can be called at any varying rate, thus the plugin
+                                                 itself must handle its own interpolation, but items within SceneBundle will already be interpolated
+
+Plugins should generally communicate to Pulcher by creating entities.
