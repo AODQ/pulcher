@@ -1,9 +1,9 @@
 //  entity plugin
 
-#include <plugin-entity/config.hpp>
-#include <plugin-entity/cursor.hpp>
-#include <plugin-entity/player.hpp>
-#include <plugin-entity/weapon.hpp>
+#include <plugin-base/entity/config.hpp>
+#include <plugin-base/entity/cursor.hpp>
+#include <plugin-base/entity/player.hpp>
+#include <plugin-base/entity/weapon.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-controls/controls.hpp>

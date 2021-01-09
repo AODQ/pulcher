@@ -1,5 +1,5 @@
-#include <plugin-entity/config.hpp>
-#include <plugin-entity/weapon.hpp>
+#include <plugin-base/entity/config.hpp>
+#include <plugin-base/entity/weapon.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>

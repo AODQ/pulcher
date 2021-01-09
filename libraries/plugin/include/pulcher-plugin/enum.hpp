@@ -10,8 +10,9 @@ namespace pul::plugin {
   , Entity
   , Map
   , Physics
-  , Size
   , UserInterface
+  , Base
+  , Size
   };
 }
 

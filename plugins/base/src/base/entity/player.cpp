@@ -1,6 +1,7 @@
-#include <plugin-entity/player.hpp>
+#include <plugin-base/entity/player.hpp>
 
-#include <plugin-entity/weapon.hpp>
+#include <plugin-base/entity/weapon.hpp>
+
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
@@ -339,7 +340,6 @@ void UpdatePlayerPhysics(
   aabb.min.y = playerOrigin.y - 48.0f;
   aabb.max.x = playerOrigin.x + 10.0f;
   aabb.max.y = playerOrigin.y - 22.0f;
-
 
   size_t tileIdx;
   glm::u32vec2 texelOrigin;

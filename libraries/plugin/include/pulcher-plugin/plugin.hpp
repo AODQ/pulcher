@@ -166,6 +166,8 @@ namespace pul::plugin {
   , std::string const & filename
   );
 
+  // TODO load mod plugins
+
   void FreePlugins();
 
   // check if plugins need to be reloaded

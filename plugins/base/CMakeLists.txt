@@ -1,26 +1,31 @@
-add_library(plugin-entity SHARED)
+add_library(plugin-base SHARED)
 
-target_include_directories(plugin-entity PUBLIC "include/")
+target_include_directories(plugin-base PUBLIC "include/")
 target_sources(
-  plugin-entity
+  plugin-base
   PRIVATE
-    src/plugin-entity/config.cpp
-    src/plugin-entity/cursor.cpp
-    src/plugin-entity/player.cpp
-    src/plugin-entity/source.cpp
-    src/plugin-entity/weapon.cpp
+    src/base/animation/animation.cpp
+    src/base/audio/audio.cpp
+    src/base/entity/config.cpp
+    src/base/entity/cursor.cpp
+    src/base/entity/entity.cpp
+    src/base/entity/player.cpp
+    src/base/entity/weapon.cpp
+    src/base/map/map.cpp
+    src/base/physics/physics.cpp
+    src/base/ui/ui.cpp
 )
 
 target_link_libraries(
-  plugin-entity
+  plugin-base
   PRIVATE
     EnTT cjson pulcher-core pulcher-gfx pulcher-physics pulcher-plugin
     pulcher-controls pulcher-animation pulcher-audio
-    cute
+    cute fmod
 )
 
 set_target_properties(
-  plugin-entity
+  plugin-base
     PROPERTIES
       COMPILE_FLAGS
         "-Wshadow -Wdouble-promotion -Wall -Wformat=2 -Wextra -Wpedantic \
@@ -30,7 +35,7 @@ set_target_properties(
 )
 
 install(
-  TARGETS plugin-entity
+  TARGETS plugin-base
   LIBRARY NAMELINK_SKIP
   LIBRARY
     DESTINATION bin/plugins/

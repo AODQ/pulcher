@@ -556,33 +556,8 @@ pul::plugin::Info InitializePlugins() {
   pul::plugin::Info plugins;
 
   pul::plugin::LoadPlugin(
-    plugins, pul::plugin::Type::UserInterface
-  , "plugins/ui-base.pulcher-plugin"
-  );
-
-  pul::plugin::LoadPlugin(
-    plugins, pul::plugin::Type::Map
-  , "plugins/plugin-map.pulcher-plugin"
-  );
-
-  pul::plugin::LoadPlugin(
-    plugins, pul::plugin::Type::Physics
-  , "plugins/plugin-physics.pulcher-plugin"
-  );
-
-  pul::plugin::LoadPlugin(
-    plugins, pul::plugin::Type::Entity
-  , "plugins/plugin-entity.pulcher-plugin"
-  );
-
-  pul::plugin::LoadPlugin(
-    plugins, pul::plugin::Type::Animation
-  , "plugins/plugin-animation.pulcher-plugin"
-  );
-
-  pul::plugin::LoadPlugin(
-    plugins, pul::plugin::Type::Audio
-  , "plugins/plugin-audio.pulcher-plugin"
+    plugins, pul::plugin::Type::Base
+  , "plugins/plugin-base.pulcher-plugin"
   );
 
   return plugins;

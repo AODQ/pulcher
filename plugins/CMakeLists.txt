@@ -1,6 +1,1 @@
-add_subdirectory(animation)
-add_subdirectory(audio)
-add_subdirectory(entity)
-add_subdirectory(map)
-add_subdirectory(physics)
-add_subdirectory(ui)
+add_subdirectory(base)

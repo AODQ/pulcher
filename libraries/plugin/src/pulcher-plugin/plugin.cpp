@@ -204,7 +204,19 @@ bool pul::plugin::LoadPlugin(
   }
 
   // -- load functions to respective plugin type
-  ::LoadPluginFunctions(plugin, *pluginEnd);
+  if (type == pul::plugin::Type::Base) {
+    for (
+      size_t i = 0ul;
+      i < static_cast<size_t>(pul::plugin::Type::Size);
+      ++ i
+    ) {
+      pluginEnd->type = static_cast<pul::plugin::Type>(i);
+      ::LoadPluginFunctions(plugin, *pluginEnd);
+    }
+    pluginEnd->type = pul::plugin::Type::Base;
+  } else {
+    ::LoadPluginFunctions(plugin, *pluginEnd);
+  }
 
   return true;
 }
@@ -217,6 +229,18 @@ void pul::plugin::UpdatePlugins(pul::plugin::Info & plugin) {
   for (auto & pluginIt : ::plugins) {
     pluginIt->Reload();
 
-    ::LoadPluginFunctions(plugin, *pluginIt);
+    if (pluginIt->type == pul::plugin::Type::Base) {
+      for (
+        size_t i = 0ul;
+        i < static_cast<size_t>(pul::plugin::Type::Size);
+        ++ i
+      ) {
+        pluginIt->type = static_cast<pul::plugin::Type>(i);
+        ::LoadPluginFunctions(plugin, *pluginIt);
+      }
+      pluginIt->type = pul::plugin::Type::Base;
+    } else {
+      ::LoadPluginFunctions(plugin, *pluginIt);
+    }
   }
 }

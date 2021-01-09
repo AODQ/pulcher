@@ -1,4 +1,4 @@
-#include <plugin-entity/cursor.hpp>
+#include <plugin-base/entity/cursor.hpp>
 
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/hud.hpp>

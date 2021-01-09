@@ -1,4 +1,4 @@
-#include <plugin-entity/config.hpp>
+#include <plugin-base/entity/config.hpp>
 
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-util/log.hpp>
