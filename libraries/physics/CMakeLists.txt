@@ -20,5 +20,4 @@ set_target_properties(
 target_link_libraries(
   pulcher-physics
     PUBLIC glm pulcher-util EnTT pulcher-core
-    PRIVATE cute
 )
