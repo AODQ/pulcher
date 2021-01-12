@@ -22,8 +22,19 @@ namespace pul::controls {
     enum class ControlOutputType {
       Jump, Dash, Crouch, Walk
     , Taunt, ShootPrimary, ShootSecondary
-    , WeaponSwitchNext, WeaponSwitchPrev
     , Up, Down, Left, Right
+    , WeaponSwitchNext, WeaponSwitchPrev
+    // must match to pul::core::WeaponType
+    , WeaponSwitchManshredder
+    , WeaponSwitchDopplerBeam
+    , WeaponSwitchVolnias
+    , WeaponSwitchGrannibal
+    , WeaponSwitchZeusStinger
+    , WeaponSwitchBadFetus
+    , WeaponSwitchPericaliya
+    , WeaponSwitchWallbanger
+    , WeaponSwitchPMF
+    , WeaponSwitchUnarmed
     };
 
     struct Keymap {
@@ -53,7 +64,12 @@ namespace pul::controls {
 
       bool shootPrimary = false, shootSecondary = false;
 
+      // below two lines should be unused, they're cached internally to avoid
+      //   button repeats
       bool weaponSwitchPrev = false, weaponSwitchNext = false;
+      uint32_t weaponSwitchToTypeRequested = -1u;
+
+      uint32_t weaponSwitchToType = -1u;
 
       int16_t weaponSwitch = 0;
 

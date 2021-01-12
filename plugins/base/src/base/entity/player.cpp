@@ -517,6 +517,12 @@ void UpdatePlayerWeapon(
     player.inventory.ChangeWeapon(controller.weaponSwitch);
   }
 
+  if (controller.weaponSwitchToType != -1u) {
+    player.inventory.ChangeWeapon(
+      static_cast<pul::core::WeaponType>(controller.weaponSwitchToType)
+    );
+  }
+
   auto & weapon = player.inventory.weapons[Idx(player.inventory.currentWeapon)];
   (void)weapon;
 

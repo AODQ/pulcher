@@ -137,6 +137,33 @@ void pul::controls::UpdateControls(
           current.movementHorizontal =
             pul::controls::Controller::Movement::Right;
         break;
+
+        case Type::WeaponSwitchManshredder:
+        case Type::WeaponSwitchDopplerBeam:
+        case Type::WeaponSwitchVolnias:
+        case Type::WeaponSwitchGrannibal:
+        case Type::WeaponSwitchZeusStinger:
+        case Type::WeaponSwitchBadFetus:
+        case Type::WeaponSwitchPericaliya:
+        case Type::WeaponSwitchWallbanger:
+        case Type::WeaponSwitchPMF:
+        case Type::WeaponSwitchUnarmed:
+          if (!active) { break; }
+          if (current.weaponSwitchToTypeRequested != -1u) { break; }
+          current.weaponSwitchToTypeRequested =
+              static_cast<uint32_t>(output)
+            - static_cast<uint32_t>(Type::WeaponSwitchManshredder)
+          ;
+
+          if (
+              controller.previous.weaponSwitchToTypeRequested
+           == current.weaponSwitchToTypeRequested
+          ) {
+            break;
+          }
+
+          current.weaponSwitchToType = current.weaponSwitchToTypeRequested;
+        break;
       }
     }
 
@@ -276,6 +303,47 @@ void pul::controls::LoadControllerConfig(
         , { "down",             Controller::ControlOutputType::Down            }
         , { "left",             Controller::ControlOutputType::Left            }
         , { "right",            Controller::ControlOutputType::Right           }
+
+        , {
+            "weapon-switch-type-manshredder",
+            Controller::ControlOutputType::WeaponSwitchManshredder
+          }
+        , {
+            "weapon-switch-type-doppler-beam",
+            Controller::ControlOutputType::WeaponSwitchDopplerBeam
+          }
+        , {
+            "weapon-switch-type-volnias",
+            Controller::ControlOutputType::WeaponSwitchVolnias
+          }
+        , {
+            "weapon-switch-type-grannibal",
+            Controller::ControlOutputType::WeaponSwitchGrannibal
+          }
+        , {
+            "weapon-switch-type-zeus-stinger",
+            Controller::ControlOutputType::WeaponSwitchZeusStinger
+          }
+        , {
+            "weapon-switch-type-bad-fetus",
+            Controller::ControlOutputType::WeaponSwitchBadFetus
+          }
+        , {
+            "weapon-switch-type-pericaliya",
+            Controller::ControlOutputType::WeaponSwitchPericaliya
+          }
+        , {
+            "weapon-switch-type-wallbanger",
+            Controller::ControlOutputType::WeaponSwitchWallbanger
+          }
+        , {
+            "weapon-switch-type-pmf",
+            Controller::ControlOutputType::WeaponSwitchPMF
+          }
+        , {
+            "weapon-switch-type-unarmed",
+            Controller::ControlOutputType::WeaponSwitchUnarmed
+          }
         }};
 
       if (auto val = strToOutput.find(outputStr); val != strToOutput.end()) {
