@@ -20,7 +20,7 @@ Assets directory is private, if you want to create your own assets the structure
  - `assets/base/controller.config` ; json file for controller input (meant to be modified by user)
  - `assets/base/map/*.json` ; Tiled maps
  - `assets/base/spritesheets/data.json` ; json list of files that contain spritesheet information
- 
+
 Docs directory provides documentation on the codebase, game-related documentation goes to https://github.com/AODQ/pulcher-binaries/wiki .
 
 Libraries directory contains code to build static libraries that are useful to Pulcher in a generic manner;
@@ -35,18 +35,18 @@ Libraries directory contains code to build static libraries that are useful to P
   - `libraries/plugin` gives plugin information, such as function pointers, along with being able to load, reload, and free plugins
   - `libraries/util` provides generic non-Pulcher specific functionality
 
-Plugins directory contains dynamic libraries that provide known C-ABI functions to Pulcher, which allows for hot-reloading and quick prototyping. Right now they are split into multiple plugins, though in the future I believe I will merge them all into a single `Pulcher` plugin, allowing modders in the future to create their own plugins that grab assets from `assets/plugin-name/`. Every plugin has an associated `UiRender` function that allows plugins to render out to ImGui (enabled only for developer builds);
+Plugins directory contains dynamic libraries that provide known C-ABI functions to Pulcher, which allows for hot-reloading and quick prototyping. Right now there is one single base plugin, which provides functionality for the base engine; extensions can be created by modders in the future to create their own plugins, which I assume will grab assets from `assets/plugin-name/`. See Creating Plugins section for more details;
 
- - `plugins/animation` contains the implementation of the animation system, which is very flexible & drives most of the animated components of Pulcher.
- - `plugins/audio` contains implementation of audio
- - `plugins/entity` contains implementation of Pulcher entities (weapons, players, etc)
- - `plugins/map` contains implementation of the Pulcher map, including loading & rendering.
- - `plugins/ui` contains `UiDispatch` function, that along with containing some ImGui behavior (diagnostics, controls, etc) will dispatch every plugins `UiRender`
- 
+ - `plugins/base/animation` contains the implementation of the animation system, which is very flexible & drives most of the animated components of Pulcher.
+ - `plugins/base/audio` contains implementation of audio
+ - `plugins/base/entity` contains implementation of Pulcher entities (weapons, players, etc)
+ - `plugins/base/map` contains implementation of the Pulcher map, including loading & rendering.
+ - `plugins/base/ui` contains `UiDispatch` function, that along with containing some ImGui behavior (diagnostics, controls, etc) will dispatch every plugins `UiRender`
+
 The scripts directory contains generic scripts, mostly to quickly set up a development environment, updating the binaries repository, & testing that each binary launches.
 
 `third-party` ; submodule repository of third-party libraries; some point to other submodules. Many of them have modifications.
- 
+
 # Building
 
 The build system uses only CMake. It relies on pulling from a lot of third-party repos, even if the library already exists on the system, which is not the best way to handle CMake in the majority of usecases. However, since Pulcher plans to be released in binary-form, it's most convenient for developers/modders IMHO that the libraries under `third-party` is built along-side Pulcher.
@@ -68,7 +68,7 @@ cmake -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release -DPULCHER_PLA
 Pulcher is officially built against Clang, but should also build against GCC without warnings.
 
 I haven't tried building Pulcher on Windows, though besides possible MSVC errors, it shouldn't be difficult to set it up. But you probably won't be able to produce Linux binaries with MSVC, your best option is most likely to be to use the Windows Subsystem for Linux to build Linux binaries.
- 
+
 # Creating Plugins
 
 The best way to mod Pulcher is to use plugins. This is still in the design phase. Most likely how this will work is that for a plugin `PluginTest`, it must provide a C-ABI compatible functions;
