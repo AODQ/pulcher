@@ -511,27 +511,10 @@ void UpdatePlayerWeapon(
 ) {
   auto const & registry = scene.EnttRegistry();
   auto const & controller = controls.current;
-  auto const & controllerPrev = controls.previous;
+  /* auto const & controllerPrev = controls.previous; */
 
-  if (!controllerPrev.weaponSwitchNext && controller.weaponSwitchNext) {
-    player.inventory.ChangeWeapon(
-      static_cast<pul::core::WeaponType>(
-        (Idx(player.inventory.currentWeapon)+1)
-      % Idx(pul::core::WeaponType::Size)
-      )
-    );
-  }
-
-  if (!controllerPrev.weaponSwitchPrev && controller.weaponSwitchPrev) {
-    player.inventory.ChangeWeapon(
-      static_cast<pul::core::WeaponType>(
-        (
-          Idx(pul::core::WeaponType::Size)
-        + Idx(player.inventory.currentWeapon)-1
-        )
-      % Idx(pul::core::WeaponType::Size)
-      )
-    );
+  if (controller.weaponSwitch) {
+    player.inventory.ChangeWeapon(controller.weaponSwitch);
   }
 
   auto & weapon = player.inventory.weapons[Idx(player.inventory.currentWeapon)];

@@ -22,4 +22,5 @@ target_link_libraries(
     glm pulcher-util
   PRIVATE
     glfw cjson
+    imgui # for mousewheel/input callbacks
 )

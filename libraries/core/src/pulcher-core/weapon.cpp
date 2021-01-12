@@ -1,5 +1,7 @@
 #include <pulcher-core/weapon.hpp>
 
+#include <pulcher-util/log.hpp>
+
 void pul::core::Inventory::ChangeWeapon(pul::core::WeaponType type) {
   auto & current = weapons[Idx(currentWeapon)];
   auto & requested = weapons[Idx(type)];
@@ -25,6 +27,52 @@ void pul::core::Inventory::ChangeWeapon(pul::core::WeaponType type) {
     currentWeapon = WeaponType::Unarmed;
   } else {
     currentWeapon = type;
+  }
+}
+
+void pul::core::Inventory::ChangeWeapon(int32_t offset) {
+  // clamp to a sensible amount
+  offset =
+    glm::clamp(
+      offset,
+      -Idx(pul::core::WeaponType::Size),
+      +Idx(pul::core::WeaponType::Size)
+    );
+
+  // iterate to 0 (from - or +), manually to allow non-selectable weapons to be
+  // skipped over
+  while (glm::abs(offset) != 0) {
+    auto const reqType = 
+      static_cast<pul::core::WeaponType>(
+          (
+            Idx(currentWeapon)
+          + glm::sign(offset)
+          + Idx(pul::core::WeaponType::Size)
+          )
+        % Idx(pul::core::WeaponType::Size)
+      );
+
+    auto const & current = weapons[Idx(currentWeapon)];
+    auto const & requested = weapons[Idx(reqType)];
+
+    // iterate to next weapon now as it's no longer referenced
+
+    // check if not possible (no ammo or not picked up), only if possible
+    // update the offset
+    if (
+        reqType == WeaponType::Unarmed
+     || (
+            requested.pickedUp
+         && requested.ammunition > 0
+         && current.cooldown <= 0
+        )
+    ) {
+      offset += -glm::sign(offset);
+    }
+
+    // save previous weapon, swap to current
+    previousWeapon = currentWeapon;
+    currentWeapon = reqType;
   }
 }
 

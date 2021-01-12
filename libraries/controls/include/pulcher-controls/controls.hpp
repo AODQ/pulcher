@@ -53,7 +53,9 @@ namespace pul::controls {
 
       bool shootPrimary = false, shootSecondary = false;
 
-      bool weaponSwitchNext = false, weaponSwitchPrev = false;
+      bool weaponSwitchPrev = false, weaponSwitchNext = false;
+
+      int16_t weaponSwitch = 0;
 
       glm::vec2 lookDirection = { 0.0f, 0.0f };
       glm::vec2 lookOffset = { 0.0f, 0.0f };
@@ -74,5 +76,8 @@ namespace pul::controls {
     pul::controls::Controller controller;
   };
 
-  void LoadControllerConfig(pul::controls::Controller & controller);
+  void LoadControllerConfig(
+    GLFWwindow * window
+  , pul::controls::Controller & controller
+  );
 }

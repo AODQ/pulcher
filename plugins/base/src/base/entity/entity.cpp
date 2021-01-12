@@ -476,7 +476,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           controller.current.crouch = true;
         }
         if (distribution(generator) < 10) {
-          controller.current.weaponSwitchNext = true;
+          controller.current.weaponSwitch += 1;
         }
         if (distribution(generator) < 10) {
           controller.current.shootPrimary = true;

@@ -101,6 +101,8 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
 
     ImGui::Columns(1);
 
+    ImGui::Text("weapon switch %d", current.weaponSwitch);
+
   ImGui::End();
 
   plugin.animation.UiRender(plugin, sceneBundle);

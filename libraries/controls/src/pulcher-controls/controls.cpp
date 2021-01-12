@@ -4,9 +4,17 @@
 
 #include <cjson/cJSON.h>
 #include <GLFW/glfw3.h>
+#include <imgui/imgui_impl_glfw.hpp>
 
 #include <filesystem>
 #include <fstream>
+
+namespace
+{
+  int16_t glfwMouseWheel;
+
+  bool imguiHidden = false;
+}
 
 void pul::controls::UpdateControls(
   GLFWwindow * window
@@ -15,14 +23,13 @@ void pul::controls::UpdateControls(
 , bool /*wantCaptureKeyboard*/, bool wantCaptureMouse
 ) {
 
-  static bool hidden = false;
-
   static bool prevF = false;
 
   if (!prevF && glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-    hidden ^= 1;
+    imguiHidden ^= 1;
     glfwSetInputMode(
-      window, GLFW_CURSOR, hidden ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
+      window, GLFW_CURSOR
+    , imguiHidden ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
     );
   }
 
@@ -60,7 +67,7 @@ void pul::controls::UpdateControls(
     current.lookOffset = current.lookDirection * length;
 
     // make sure mouse stays in radius
-    if (length == 400.0f && hidden) {
+    if (length == 400.0f && imguiHidden) {
       glfwSetCursorPos(
         window,
         static_cast<double>(current.lookOffset.x + playerCenterX),
@@ -98,8 +105,20 @@ void pul::controls::UpdateControls(
         case Type::Taunt:            current.taunt            |= active; break;
         case Type::ShootPrimary:     current.shootPrimary     |= active; break;
         case Type::ShootSecondary:   current.shootSecondary   |= active; break;
-        case Type::WeaponSwitchNext: current.weaponSwitchNext |= active; break;
-        case Type::WeaponSwitchPrev: current.weaponSwitchPrev |= active; break;
+        case Type::WeaponSwitchNext:
+          if (!active) { break; }
+          if (!controller.previous.weaponSwitchNext) {
+            current.weaponSwitch += 1;
+          }
+          current.weaponSwitchNext = true;
+        break;
+        case Type::WeaponSwitchPrev:
+          if (!active) { break; }
+          if (!controller.previous.weaponSwitchPrev) {
+            current.weaponSwitch -= 1;
+          }
+          current.weaponSwitchPrev = true;
+        break;
         case Type::Up:
           if (!active) { break; }
           current.movementVertical = pul::controls::Controller::Movement::Up;
@@ -120,6 +139,9 @@ void pul::controls::UpdateControls(
         break;
       }
     }
+
+    current.weaponSwitch += ::glfwMouseWheel;
+    ::glfwMouseWheel = 0;
   }
 
   // -0- process input computations
@@ -160,9 +182,26 @@ cJSON * LoadJsonFile(std::string const & filename) {
 }
 }
 
+extern "C" {
+void ScrollCallback(GLFWwindow * window, double xoffset, double yoffset) {
+
+  // update imgui or game
+  if (!::imguiHidden) {
+    ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+    return;
+  }
+
+  ::glfwMouseWheel += static_cast<int16_t>(yoffset);
+}
+}
+
 void pul::controls::LoadControllerConfig(
-  pul::controls::Controller & controller
+  GLFWwindow * window
+, pul::controls::Controller & controller
 ) {
+  // -0- set scroll callback
+  glfwSetScrollCallback(window, ::ScrollCallback);
+
   // -0- get file, might have to copy one from assets if it doesn't exist
 
   spdlog::debug("loading controller config");
@@ -224,19 +263,19 @@ void pul::controls::LoadControllerConfig(
 
       static std::map<std::string, Controller::ControlOutputType> const
         strToOutput {{
-          { "jump", Controller::ControlOutputType::Jump }
-        , { "dash", Controller::ControlOutputType::Dash }
-        , { "crouch", Controller::ControlOutputType::Crouch }
-        , { "walk", Controller::ControlOutputType::Walk }
-        , { "taunt", Controller::ControlOutputType::Taunt }
-        , { "shoot-primary", Controller::ControlOutputType::ShootPrimary }
-        , { "shoot-secondary", Controller::ControlOutputType::ShootSecondary }
+          { "jump",             Controller::ControlOutputType::Jump            }
+        , { "dash",             Controller::ControlOutputType::Dash            }
+        , { "crouch",           Controller::ControlOutputType::Crouch          }
+        , { "walk",             Controller::ControlOutputType::Walk            }
+        , { "taunt",            Controller::ControlOutputType::Taunt           }
+        , { "shoot-primary",    Controller::ControlOutputType::ShootPrimary    }
+        , { "shoot-secondary",  Controller::ControlOutputType::ShootSecondary  }
         , {"weapon-switch-next",Controller::ControlOutputType::WeaponSwitchNext}
         , {"weapon-switch-prev",Controller::ControlOutputType::WeaponSwitchPrev}
-        , { "up", Controller::ControlOutputType::Up }
-        , { "down", Controller::ControlOutputType::Down }
-        , { "left", Controller::ControlOutputType::Left }
-        , { "right", Controller::ControlOutputType::Right }
+        , { "up",               Controller::ControlOutputType::Up              }
+        , { "down",             Controller::ControlOutputType::Down            }
+        , { "left",             Controller::ControlOutputType::Left            }
+        , { "right",            Controller::ControlOutputType::Right           }
         }};
 
       if (auto val = strToOutput.find(outputStr); val != strToOutput.end()) {

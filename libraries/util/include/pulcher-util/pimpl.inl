@@ -18,7 +18,10 @@ pul::util::pimpl<PIMPL_SPECIALIZE>::pimpl(Args && ... args)
   : m{std::make_unique<PIMPL_SPECIALIZE>(std::forward<Args>(args)...)}
 {}
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdtor-name"
 template <> pul::util::pimpl<PIMPL_SPECIALIZE>::~pimpl() {}
+#pragma GCC diagnostic pop
 
 template <>
 PIMPL_SPECIALIZE * pul::util::pimpl<PIMPL_SPECIALIZE>::operator->()

@@ -8,17 +8,18 @@ namespace pul::core {
   , Size
   };
 
+  // ordered by preferred "weapon switch/swap"
   enum class WeaponType {
-    BadFetus
+    Manshredder
   , DopplerBeam
+  , Volnias
   , Grannibal
-  , Manshredder
+  , ZeusStinger
+  , BadFetus
   , Pericaliya
+  , Wallbanger
   , PMF
   , Unarmed
-  , Volnias
-  , Wallbanger
-  , ZeusStinger
   , Size
   };
 }

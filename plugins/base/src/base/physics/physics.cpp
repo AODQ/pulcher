@@ -643,10 +643,11 @@ PUL_PLUGIN_DECL pul::physics::TilemapLayer * Physics_TilemapLayer() {
 }
 
 PUL_PLUGIN_DECL bool Physics_IntersectionAabb(
-  pul::core::SceneBundle & scene
-, pul::physics::IntersectorAabb const & aabb
-, pul::physics::IntersectionResults & intersectionResults
+  pul::core::SceneBundle &
+, pul::physics::IntersectorAabb const &
+, pul::physics::IntersectionResults &
 ) {
+  return false;
 }
 
 PUL_PLUGIN_DECL bool Physics_IntersectionPoint(

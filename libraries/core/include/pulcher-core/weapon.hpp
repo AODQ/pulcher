@@ -13,17 +13,18 @@ namespace pul::core {
     size_t requiredHands = 0;
   };
 
+  // must be orderd by WeaponType
   std::array<ImmutableWeaponInfo, Idx(WeaponType::Size)> constexpr weaponInfo {{
-    { WeaponType::BadFetus, 1 }
+    { WeaponType::Manshredder, 1 }
   , { WeaponType::DopplerBeam, 2 }
-  , { WeaponType::Grannibal, 2 }
-  , { WeaponType::Manshredder, 1 }
-  , { WeaponType::Pericaliya, 1 }
-  , { WeaponType::PMF, 1 }
-  , { WeaponType::Unarmed, 0 }
-  , { WeaponType::Volnias, 2 }
-  , { WeaponType::Wallbanger, 1 }
-  , { WeaponType::ZeusStinger, 2 }
+  , { WeaponType::Volnias,     2 }
+  , { WeaponType::Grannibal,   1 }
+  , { WeaponType::ZeusStinger, 1 }
+  , { WeaponType::BadFetus,    1 }
+  , { WeaponType::Pericaliya,  0 }
+  , { WeaponType::Wallbanger,  2 }
+  , { WeaponType::PMF,         1 }
+  , { WeaponType::Unarmed,     2 }
   }};
 
   struct WeaponInfo {
@@ -72,10 +73,18 @@ namespace pul::core {
       float dischargingTimer = 0.0f;
     };
 
+    // Must be ordered by WeaponType
     std::variant<
-      WiBadFetus, WiDopplerBeam, WiGrannibal, WiManshredder
-    , WiPericaliya, WiPMF, WiUnarmed, WiVolnias, WiWallbanger
+      WiManshredder
+    , WiDopplerBeam
+    , WiVolnias
+    , WiGrannibal
     , WiZeusStinger
+    , WiBadFetus
+    , WiPericaliya
+    , WiWallbanger
+    , WiPMF
+    , WiUnarmed
     > info { WiUnarmed{} };
 
     bool pickedUp = false;
@@ -84,17 +93,18 @@ namespace pul::core {
   };
 
   struct Inventory {
+    // Must be ordered by WeaponType
     std::array<WeaponInfo, Idx(WeaponType::Size)> weapons {{
-      { WeaponType::BadFetus,    WeaponInfo::WiBadFetus{} }
+      { WeaponType::Manshredder, WeaponInfo::WiManshredder{} }
     , { WeaponType::DopplerBeam, WeaponInfo::WiDopplerBeam{} }
-    , { WeaponType::Grannibal,   WeaponInfo::WiGrannibal{} }
-    , { WeaponType::Manshredder, WeaponInfo::WiManshredder{} }
-    , { WeaponType::Pericaliya,  WeaponInfo::WiPericaliya{} }
-    , { WeaponType::PMF,         WeaponInfo::WiPMF{} }
-    , { WeaponType::Unarmed,     WeaponInfo::WiUnarmed{}, true }
-    , { WeaponType::Volnias,     WeaponInfo::WiVolnias{} }
-    , { WeaponType::Wallbanger,  WeaponInfo::WiWallbanger{} }
+    , { WeaponType::Volnias,     WeaponInfo::WiVolnias{}     }
+    , { WeaponType::Grannibal,   WeaponInfo::WiGrannibal{}   }
     , { WeaponType::ZeusStinger, WeaponInfo::WiZeusStinger{} }
+    , { WeaponType::BadFetus,    WeaponInfo::WiBadFetus{}    }
+    , { WeaponType::Pericaliya,  WeaponInfo::WiPericaliya{}  }
+    , { WeaponType::Wallbanger,  WeaponInfo::WiWallbanger{}  }
+    , { WeaponType::PMF,         WeaponInfo::WiPMF{}         }
+    , { WeaponType::Unarmed,     WeaponInfo::WiUnarmed{},    true }
     }};
 
     WeaponType
@@ -103,6 +113,7 @@ namespace pul::core {
     ;
 
     void ChangeWeapon(WeaponType);
+    void ChangeWeapon(int32_t offset);
   };
 }
 
