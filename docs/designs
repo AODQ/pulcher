@@ -12,7 +12,7 @@ For now only Linux supports hot-reloading; Windows builds link against the
 plugins dynamically standardly through ".dll" files and not the ".plugin" (tho
 they are the same).
 
-"Logic" components are ran at 90-FPS (11.1 ms/frame), but rendering/audio
+"Logic" components are ran at 90-FPS (11.0 ms/frame), but rendering/audio
 backends can run as high as framerate as possible. Just about everything
 logic-wise will be trippled-buffered which will allow for rendering to
 interpolate between these frames

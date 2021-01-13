@@ -437,6 +437,8 @@ void UpdatePlayerPhysics(
       intersectionNormal = glm::normalize(intersectionNormal);
     }
 
+    spdlog::debug("normal: {}", intersectionNormal);
+
     glm::vec2 const targetDirection = 
       glm::reflect(glm::normalize(player.velocity), -intersectionNormal);
 
@@ -481,24 +483,24 @@ void UpdatePlayerPhysics(
   //     \ /    2  3
   //      2      *
 
-  for (int i = 0; i < 4; ++ i) {
-    glm::vec2 const point0 = pickPoints[i], point1 = pickPoints[(i+1)%4];
-    auto borderRay =
-      pul::physics::IntersectorRay::Construct(
-        glm::round(point0 + playerOrigin)
-      , glm::round(point1 + playerOrigin)
-      );
-    pul::physics::IntersectionResults borderResults;
-    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
+  /* for (int i = 0; i < 4; ++ i) { */
+  /*   glm::vec2 const point0 = pickPoints[i], point1 = pickPoints[(i+1)%4]; */
+  /*   auto borderRay = */
+  /*     pul::physics::IntersectorRay::Construct( */
+  /*       glm::round(point0 + playerOrigin) */
+  /*     , glm::round(point1 + playerOrigin) */
+  /*     ); */
+  /*   pul::physics::IntersectionResults borderResults; */
+  /*   plugin.physics.IntersectionRaycast(scene, borderRay, borderResults); */
 
-    if (borderResults.collision) {
-      // get the origin of the intersection in releation to center of player
-      glm::vec2 origin =
-        glm::vec2(borderResults.origin) - playerOrigin - glm::vec2(0.0f, 32.0f);
+  /*   if (borderResults.collision) { */
+  /*     // get the origin of the intersection in releation to center of player */
+  /*     glm::vec2 origin = */
+  /*       glm::vec2(borderResults.origin) - playerOrigin - glm::vec2(0.0f, 32.0f); */
 
-      playerOrigin -= origin;
-    }
-  }
+  /*     playerOrigin -= origin; */
+  /*   } */
+  /* } */
 }
 
 void UpdatePlayerWeapon(
@@ -782,7 +784,7 @@ void plugin::entity::UpdatePlayer(
   // gravity/ground check
   if (player.affectedByGravity) {
     pul::physics::IntersectorPoint point;
-    point.origin = playerOrigin + glm::vec2(0.0f, 1.0f);
+    point.origin = playerOrigin + glm::vec2(0.0f, -3.0f);
     pul::physics::IntersectionResults results;
     player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
   }

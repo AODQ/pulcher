@@ -68,7 +68,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   }) {
     auto const str =
         std::string{"assets/base/audio/sfx/pickups/"}
-      + std::get<1>(pickup) + ".wav"
+      + std::get<1>(pickup) + ".ogg"
     ;
 
     FMOD_ASSERT(
@@ -86,7 +86,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/misc/player-spawn.wav"
+    , "assets/base/audio/sfx/misc/player-spawn.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundSpawn[0]
@@ -96,7 +96,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/pickups/pick-health2.wav"
+    , "assets/base/audio/sfx/pickups/pick-health2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundSpawn[1]
@@ -106,7 +106,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/land-normal1.wav"
+    , "assets/base/audio/sfx/player/land-normal1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundLandEnv[0]
@@ -116,7 +116,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/land-normal1.wav"
+    , "assets/base/audio/sfx/player/land-normal1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundLandEnv[1]
@@ -126,7 +126,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/land-normal1.wav"
+    , "assets/base/audio/sfx/player/land-normal1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundLandEnv[2]
@@ -136,7 +136,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/land1.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/land1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundLand[0]
@@ -146,7 +146,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/land2.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/land2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundLand[1]
@@ -156,7 +156,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/land3.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/land3.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundLand[2]
@@ -166,7 +166,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/dash1.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/dash1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundDash[0]
@@ -176,7 +176,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/dash2.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/dash2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundDash[1]
@@ -186,7 +186,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/dash3.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/dash3.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundDash[2]
@@ -197,7 +197,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/taunt1.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundTaunt[0]
@@ -206,7 +206,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/taunt2.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundTaunt[1]
@@ -215,7 +215,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/taunt3.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt3.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundTaunt[2]
@@ -224,7 +224,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/taunt4.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt4.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundTaunt[3]
@@ -233,7 +233,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/taunt5.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/taunt5.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundTaunt[4]
@@ -243,7 +243,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-charge1.wav"
+    , "assets/base/audio/sfx/weapons/volnias-charge1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolnias[0]
@@ -252,7 +252,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-charge2.wav"
+    , "assets/base/audio/sfx/weapons/volnias-charge2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolnias[1]
@@ -261,7 +261,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-end.wav"
+    , "assets/base/audio/sfx/weapons/volnias-end.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolnias[2]
@@ -270,7 +270,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-prefire1.wav"
+    , "assets/base/audio/sfx/weapons/volnias-prefire1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolnias[3]
@@ -279,7 +279,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-prefire2.wav"
+    , "assets/base/audio/sfx/weapons/volnias-prefire2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolnias[4]
@@ -289,7 +289,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-fire1.wav"
+    , "assets/base/audio/sfx/weapons/volnias-fire1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolniasFire[0]
@@ -299,7 +299,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-fire2.wav"
+    , "assets/base/audio/sfx/weapons/volnias-fire2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolniasFire[1]
@@ -309,7 +309,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-fire3.wav"
+    , "assets/base/audio/sfx/weapons/volnias-fire3.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolniasFire[2]
@@ -319,7 +319,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-fire4.wav"
+    , "assets/base/audio/sfx/weapons/volnias-fire4.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolniasFire[3]
@@ -329,7 +329,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-hit1.wav"
+    , "assets/base/audio/sfx/weapons/volnias-hit1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolniasHit[0]
@@ -339,7 +339,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-hit2.wav"
+    , "assets/base/audio/sfx/weapons/volnias-hit2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolniasHit[1]
@@ -349,7 +349,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/weapons/volnias-hit3.wav"
+    , "assets/base/audio/sfx/weapons/volnias-hit3.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundVolniasHit[2]
@@ -360,7 +360,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/step-normal1.wav"
+    , "assets/base/audio/sfx/player/step-normal1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundStep[0]
@@ -370,7 +370,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/step-normal2.wav"
+    , "assets/base/audio/sfx/player/step-normal2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundStep[1]
@@ -380,7 +380,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/step-normal3.wav"
+    , "assets/base/audio/sfx/player/step-normal3.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundStep[2]
@@ -390,7 +390,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/slide1.wav"
+    , "assets/base/audio/sfx/player/slide1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundSlide[0]
@@ -400,7 +400,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/slide2.wav"
+    , "assets/base/audio/sfx/player/slide2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundSlide[1]
@@ -410,7 +410,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/player/slide3.wav"
+    , "assets/base/audio/sfx/player/slide3.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundSlide[2]
@@ -420,7 +420,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/jump1.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/jump1.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundJump[0]
@@ -430,7 +430,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/jump2.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/jump2.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundJump[1]
@@ -440,7 +440,7 @@ PUL_PLUGIN_DECL void Audio_LoadAudio(
   FMOD_ASSERT(
     FMOD_System_CreateSound(
       ::fmodSystem
-    , "assets/base/audio/sfx/characters/nygelstromn/jump3.wav"
+    , "assets/base/audio/sfx/characters/nygelstromn/jump3.ogg"
     , FMOD_LOOP_OFF | FMOD_2D
     , nullptr
     , &::fmodSoundJump[2]

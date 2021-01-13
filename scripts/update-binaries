@@ -1,13 +1,13 @@
 #!/usr/bin/sh
 
 commitM="$*"
-pushd ../build/pulcher-binaries
+pushd ../pulcher-binaries
 git stash
 git checkout linux
-cp -r ../install-release-linux/bin/plugins/ .
-cp ../install-release-linux/bin/imgui.ini .
-cp ../install-release-linux/bin/pulcher-client .
-cp -r ../install-release-linux/lib/ .
+cp -r ../multibuild/install-release-linux/bin/plugins/ .
+cp ../multibuild/install-release-linux/bin/imgui.ini .
+cp ../multibuild/install-release-linux/bin/pulcher-client .
+cp -r ../multibuild/install-release-linux/lib/ .
 
 git add plugins/
 git add imgui.ini
@@ -18,13 +18,13 @@ git commit -m "${commitM}"
 git push
 popd
 
-pushd ../build/pulcher-binaries
+pushd ../pulcher-binaries
 git stash
 git checkout win64
-cp -r ../install-release-win64/bin/plugins/ .
-cp ../install-release-win64/bin/imgui.ini .
-cp ../install-release-win64/bin/pulcher-client.exe .
-cp -r ../install-release-win64/bin/*.dll .
+cp -r ../multibuild/install-release-win64/bin/plugins/ .
+cp ../multibuild/install-release-win64/bin/imgui.ini .
+cp ../multibuild/install-release-win64/bin/pulcher-client.exe .
+cp -r ../multibuild/install-release-win64/bin/*.dll .
 
 git add plugins/
 git add imgui.ini

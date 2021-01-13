@@ -39,10 +39,12 @@ void pul::core::Inventory::ChangeWeapon(int32_t offset) {
       +Idx(pul::core::WeaponType::Size)
     );
 
-  // iterate to 0 (from - or +), manually to allow non-selectable weapons to be
-  // skipped over
-  while (glm::abs(offset) != 0) {
-    auto const reqType = 
+  const auto totalIters = glm::abs(offset);
+
+  const auto savedCurrentWeapon = currentWeapon;
+
+  for (int32_t iter = 0; iter < totalIters;) {
+    auto const reqType =
       static_cast<pul::core::WeaponType>(
           (
             Idx(currentWeapon)
@@ -57,8 +59,10 @@ void pul::core::Inventory::ChangeWeapon(int32_t offset) {
 
     // iterate to next weapon now as it's no longer referenced
 
+    spdlog::debug("reqType {}", ToStr(reqType));
+
     // check if not possible (no ammo or not picked up), only if possible
-    // update the offset
+    // update the iteration
     if (
         reqType == WeaponType::Unarmed
      || (
@@ -67,12 +71,15 @@ void pul::core::Inventory::ChangeWeapon(int32_t offset) {
          && current.cooldown <= 0
         )
     ) {
-      offset += -glm::sign(offset);
+      ++ iter;
     }
 
-    // save previous weapon, swap to current
-    previousWeapon = currentWeapon;
     currentWeapon = reqType;
+  }
+
+  // save previous weapon only if weapon actually changed
+  if (savedCurrentWeapon != currentWeapon) {
+      previousWeapon = savedCurrentWeapon;
   }
 }
 

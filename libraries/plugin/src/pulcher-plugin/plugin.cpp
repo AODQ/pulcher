@@ -108,71 +108,68 @@ void Plugin::Open() {
 std::vector<std::unique_ptr<Plugin>> plugins;
 
 void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
-  switch (ctx.type) {
-    default: spdlog::critical("Unknown type in LoadPluginFunctions"); break;
-    case pul::plugin::Type::Animation: {
-      auto & unit = plugin.animation;
-      ctx.LoadFunction(unit.ConstructInstance, "Animation_ConstructInstance");
-      ctx.LoadFunction(unit.LoadAnimations,    "Animation_LoadAnimations");
-      ctx.LoadFunction(unit.Shutdown,          "Animation_Shutdown");
-      ctx.LoadFunction(unit.UpdateFrame,       "Animation_UpdateFrame");
-      ctx.LoadFunction(unit.RenderAnimations,  "Animation_RenderAnimations");
-      ctx.LoadFunction(unit.UpdateCache,       "Animation_UpdateCache");
-      ctx.LoadFunction(
-        unit.UpdateCacheWithPrecalculatedMatrix
-      , "Animation_UpdateCacheWithPrecalculatedMatrix"
-      );
-      ctx.LoadFunction(unit.UiRender,          "Animation_UiRender");
-    } break;
-    case pul::plugin::Type::Audio: {
-      auto & unit = plugin.audio;
-      ctx.LoadFunction(unit.LoadAudio, "Audio_LoadAudio");
-      ctx.LoadFunction(unit.Update,    "Audio_Update");
-      ctx.LoadFunction(unit.Shutdown,  "Audio_Shutdown");
-      ctx.LoadFunction(unit.UiRender,  "Audio_UiRender");
-    } break;
-    case pul::plugin::Type::Entity: {
-      auto & unit = plugin.entity;
-      ctx.LoadFunction(unit.EntityRender, "Entity_EntityRender");
-      ctx.LoadFunction(unit.EntityUpdate, "Entity_EntityUpdate");
-      ctx.LoadFunction(unit.Shutdown,     "Entity_Shutdown");
-      ctx.LoadFunction(unit.StartScene,   "Entity_StartScene");
-      ctx.LoadFunction(unit.UiRender,     "Entity_UiRender");
-    } break;
-    case pul::plugin::Type::UserInterface: {
-      auto & unit = plugin.userInterface;
-      ctx.LoadFunction(unit.UiDispatch, "Ui_UiDispatch");
-    } break;
-    case pul::plugin::Type::Map: {
-      auto & unit = plugin.map;
-      ctx.LoadFunction(unit.LoadMap,     "Map_LoadMap");
-      ctx.LoadFunction(unit.Render,   "Map_Render");
-      ctx.LoadFunction(unit.UiRender, "Map_UiRender");
-      ctx.LoadFunction(unit.Shutdown, "Map_Shutdown");
-    } break;
-    case pul::plugin::Type::Physics: {
-      auto & unit = plugin.physics;
-      ctx.LoadFunction(
-        unit.EntityIntersectionRaycast,
-        "Physics_EntityIntersectionRaycast"
-      );
-      ctx.LoadFunction(
-        unit.EntityIntersectionCircle,
-        "Physics_EntityIntersectionCircle"
-      );
-      ctx.LoadFunction(unit.ProcessTileset,      "Physics_ProcessTileset");
-      ctx.LoadFunction(unit.ClearMapGeometry,    "Physics_ClearMapGeometry");
-      ctx.LoadFunction(unit.LoadMapGeometry,     "Physics_LoadMapGeometry");
-      ctx.LoadFunction(unit.IntersectionRaycast, "Physics_IntersectionRaycast");
-      ctx.LoadFunction(
-        unit.InverseSceneIntersectionRaycast
-      , "Physics_InverseSceneIntersectionRaycast"
-      );
-      ctx.LoadFunction(unit.TilemapLayer,        "Physics_TilemapLayer");
-      ctx.LoadFunction(unit.IntersectionPoint,   "Physics_IntersectionPoint");
-      ctx.LoadFunction(unit.RenderDebug,         "Physics_RenderDebug");
-      ctx.LoadFunction(unit.UiRender,            "Physics_UiRender");
-    } break;
+  {
+    auto & unit = plugin.animation;
+    ctx.LoadFunction(unit.ConstructInstance, "Animation_ConstructInstance");
+    ctx.LoadFunction(unit.LoadAnimations,    "Animation_LoadAnimations");
+    ctx.LoadFunction(unit.Shutdown,          "Animation_Shutdown");
+    ctx.LoadFunction(unit.UpdateFrame,       "Animation_UpdateFrame");
+    ctx.LoadFunction(unit.RenderAnimations,  "Animation_RenderAnimations");
+    ctx.LoadFunction(unit.UpdateCache,       "Animation_UpdateCache");
+    ctx.LoadFunction(
+      unit.UpdateCacheWithPrecalculatedMatrix
+    , "Animation_UpdateCacheWithPrecalculatedMatrix"
+    );
+    ctx.LoadFunction(unit.UiRender,          "Animation_UiRender");
+  }
+  {
+    auto & unit = plugin.audio;
+    ctx.LoadFunction(unit.LoadAudio, "Audio_LoadAudio");
+    ctx.LoadFunction(unit.Update,    "Audio_Update");
+    ctx.LoadFunction(unit.Shutdown,  "Audio_Shutdown");
+    ctx.LoadFunction(unit.UiRender,  "Audio_UiRender");
+  }
+  {
+    auto & unit = plugin.entity;
+    ctx.LoadFunction(unit.EntityRender, "Entity_EntityRender");
+    ctx.LoadFunction(unit.EntityUpdate, "Entity_EntityUpdate");
+    ctx.LoadFunction(unit.Shutdown,     "Entity_Shutdown");
+    ctx.LoadFunction(unit.StartScene,   "Entity_StartScene");
+    ctx.LoadFunction(unit.UiRender,     "Entity_UiRender");
+  }
+  {
+    auto & unit = plugin.userInterface;
+    ctx.LoadFunction(unit.UiDispatch, "Ui_UiDispatch");
+  }
+  {
+    auto & unit = plugin.map;
+    ctx.LoadFunction(unit.LoadMap,     "Map_LoadMap");
+    ctx.LoadFunction(unit.Render,   "Map_Render");
+    ctx.LoadFunction(unit.UiRender, "Map_UiRender");
+    ctx.LoadFunction(unit.Shutdown, "Map_Shutdown");
+  }
+  {
+    auto & unit = plugin.physics;
+    ctx.LoadFunction(
+      unit.EntityIntersectionRaycast,
+      "Physics_EntityIntersectionRaycast"
+    );
+    ctx.LoadFunction(
+      unit.EntityIntersectionCircle,
+      "Physics_EntityIntersectionCircle"
+    );
+    ctx.LoadFunction(unit.ProcessTileset,      "Physics_ProcessTileset");
+    ctx.LoadFunction(unit.ClearMapGeometry,    "Physics_ClearMapGeometry");
+    ctx.LoadFunction(unit.LoadMapGeometry,     "Physics_LoadMapGeometry");
+    ctx.LoadFunction(unit.IntersectionRaycast, "Physics_IntersectionRaycast");
+    ctx.LoadFunction(
+      unit.InverseSceneIntersectionRaycast
+    , "Physics_InverseSceneIntersectionRaycast"
+    );
+    ctx.LoadFunction(unit.TilemapLayer,        "Physics_TilemapLayer");
+    ctx.LoadFunction(unit.IntersectionPoint,   "Physics_IntersectionPoint");
+    ctx.LoadFunction(unit.RenderDebug,         "Physics_RenderDebug");
+    ctx.LoadFunction(unit.UiRender,            "Physics_UiRender");
   }
 }
 
@@ -204,19 +201,7 @@ bool pul::plugin::LoadPlugin(
   }
 
   // -- load functions to respective plugin type
-  if (type == pul::plugin::Type::Base) {
-    for (
-      size_t i = 0ul;
-      i < static_cast<size_t>(pul::plugin::Type::Size);
-      ++ i
-    ) {
-      pluginEnd->type = static_cast<pul::plugin::Type>(i);
-      ::LoadPluginFunctions(plugin, *pluginEnd);
-    }
-    pluginEnd->type = pul::plugin::Type::Base;
-  } else {
-    ::LoadPluginFunctions(plugin, *pluginEnd);
-  }
+  ::LoadPluginFunctions(plugin, *pluginEnd);
 
   return true;
 }
@@ -229,18 +214,6 @@ void pul::plugin::UpdatePlugins(pul::plugin::Info & plugin) {
   for (auto & pluginIt : ::plugins) {
     pluginIt->Reload();
 
-    if (pluginIt->type == pul::plugin::Type::Base) {
-      for (
-        size_t i = 0ul;
-        i < static_cast<size_t>(pul::plugin::Type::Size);
-        ++ i
-      ) {
-        pluginIt->type = static_cast<pul::plugin::Type>(i);
-        ::LoadPluginFunctions(plugin, *pluginIt);
-      }
-      pluginIt->type = pul::plugin::Type::Base;
-    } else {
-      ::LoadPluginFunctions(plugin, *pluginIt);
-    }
+    ::LoadPluginFunctions(plugin, *pluginIt);
   }
 }
