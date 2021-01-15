@@ -8,6 +8,8 @@ The game is processed at a logical 90 frames per second, with 1 frame of latency
 
 Sokol is used to render OpenGL3.2 & EnTT is used for the entity-component system. These both drive the majority of Pulcher functionality. ImGui is used for development to allow prototyping of functionality to be very fast, which combined with hot-reloadable plugins make developing Pulcher very painless & easy.
 
+[![physx](https://img.youtube.com/vi/M27mRWE0eLg/0.jpg)](https://www.youtube.com/watch?v=M27mRWE0eLg&feature=youtu.be)
+
 # Code Philosphy
 
 Code should be simple and data-oriented. There should be minimal implicit behavior, including hidden heap allocations. OO patterns like polymorphism & inheritance are also discouraged. It should be fast to compile code, so headers should generally avoid including other headers, favoring forward-declarations. Also dependencies should be minimal & carefully chosen, and built along-side the project. All code, with an exception to files that exist to hold data, should be 80-column width.
