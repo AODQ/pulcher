@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#if defined(__unix__)
+#if defined(__unix__) || defined(__APPLE__)
   #include <dlfcn.h>
 #elif defined(_WIN32) || defined(_WIN64)
   #include <errhandlingapi.h>
@@ -19,7 +19,7 @@
 
 namespace {
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
   using PluginHandle = void *;
 #elif defined(_WIN64) || defined(_WIN32)
   using PluginHandle = ::HMODULE;
@@ -50,7 +50,7 @@ Plugin::~Plugin() {
 }
 
 template <typename T> void Plugin::LoadFunction(T & fn, char const * label) {
-  #if defined(__unix__)
+  #if defined(__unix__) || defined(__APPLE__)
     fn = reinterpret_cast<T>(::dlsym(this->data, label));
     if (!fn) {
       spdlog::critical(
@@ -77,7 +77,7 @@ void Plugin::Reload() {
 
 void Plugin::Close() {
   if (!this->data) { return; }
-  #if defined(__unix__)
+  #if defined(__unix__) || defined(__APPLE__)
     ::dlclose(this->data);
   #elif defined(_WIN32) || defined(_WIN64)
     ::FreeLibrary(this->data);
@@ -86,7 +86,7 @@ void Plugin::Close() {
 }
 
 void Plugin::Open() {
-  #if defined(__unix__)
+  #if defined(__unix__) || defined(__APPLE__)
     this->data = ::dlopen(this->filename.c_str(), RTLD_LAZY | RTLD_LOCAL);
     if (!this->data) {
       spdlog::critical(

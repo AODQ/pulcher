@@ -13,7 +13,7 @@ namespace pul::network {
   };
 
   enum struct OperatingSystem : uint8_t {
-    Linux, Win32, Win64
+    Linux, macOS, Win32, Win64
   };
 
   enum struct PacketType : uint16_t {
@@ -161,6 +161,8 @@ namespace pul::network {
   constexpr OperatingSystem currentOperatingSystem =
     #if defined(__unix__)
       pul::network::OperatingSystem::Linux
+    #elif defined(__APPLE__)
+      pul::network::OperatingSystem::macOS
     #elif defined(_WIN64)
       pul::network::OperatingSystem::Win64
     #elif defined(_WIN32)

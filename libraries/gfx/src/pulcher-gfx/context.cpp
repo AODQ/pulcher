@@ -90,6 +90,8 @@ bool pul::gfx::InitializeContext(pul::core::Config & config) {
 
   #ifdef __unix__
     char const * windowTitle = "Pulcher (Linux)";
+  #elif defined(__APPLE__)
+    char const * windowTitle = "Pulcher (macOS)";
   #elif _WIN64
     char const * windowTitle = "Pulcher (Win64)";
   #endif
