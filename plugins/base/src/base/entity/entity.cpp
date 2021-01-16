@@ -52,10 +52,10 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   plugin::entity::ConstructPlayer(playerEntity, plugin, scene, true);
 
   // bot/AI
-  for (size_t i = 0; i < 0; ++ i) {
-    entt::entity botEntity;
-    plugin::entity::ConstructPlayer(botEntity, plugin, scene, false);
-  }
+  /* for (size_t i = 0; i < 0; ++ i) { */
+  /*   entt::entity botEntity; */
+  /*   plugin::entity::ConstructPlayer(botEntity, plugin, scene, false); */
+  /* } */
 }
 
 PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {

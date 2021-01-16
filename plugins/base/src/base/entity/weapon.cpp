@@ -166,37 +166,40 @@ void CreateBadFetusLinkedBeam(
               );
 
               {
-                pul::core::ComponentParticleGrenade particle;
+                pul::core::ComponentParticleGrenade particleGrenade;
 
                 plugin.animation.ConstructInstance(
-                  scene, particle.animationInstance, scene.AnimationSystem()
+                  scene, particleGrenade.animationInstance
+                , scene.AnimationSystem()
                 , "bad-fetus-explosion"
                 );
 
-                particle
+                particleGrenade
                   .animationInstance
                   .pieceToState["particle"]
                   .Apply("bad-fetus-explosion", true);
 
-                particle.origin = animComponent.instance.origin;
-                particle.velocity = accel;
-                particle.velocityFriction = config::VelocityFriction();
-                particle.gravityAffected = false;
-                particle.useBounces = true;
-                particle.bounces = 0;
-                particle.bounceAnimation = "bad-fetus-explosion";
+                particleGrenade.origin = animComponent.instance.origin;
+                particleGrenade.velocity = accel;
+                particleGrenade.velocityFriction = config::VelocityFriction();
+                particleGrenade.gravityAffected = false;
+                particleGrenade.useBounces = true;
+                particleGrenade.bounces = 0;
+                particleGrenade.bounceAnimation = "bad-fetus-explosion";
 
-                particle.damage.damagePlayer = true;
-                particle.damage.ignoredPlayer = playerEntity;
-                particle.damage.explosionRadius    = config::ExplosionRadius();
-                particle.damage.explosionForce     = config::ExplosionForce();
-                particle.damage.playerSplashDamage =
+                particleGrenade.damage.damagePlayer = true;
+                particleGrenade.damage.ignoredPlayer = playerEntity;
+                particleGrenade.damage.explosionRadius =
+                  config::ExplosionRadius();
+                particleGrenade.damage.explosionForce =
+                  config::ExplosionForce();
+                particleGrenade.damage.playerSplashDamage =
                   config::ProjectileSplashDamageMax();
-                particle.damage.playerDirectDamage =
+                particleGrenade.damage.playerDirectDamage =
                   config::ProjectileDirectDamage();
 
                 registry.emplace<pul::core::ComponentParticleGrenade>(
-                  badFetusProjectileEntity, std::move(particle)
+                  badFetusProjectileEntity, std::move(particleGrenade)
                 );
               }
             }
@@ -208,7 +211,7 @@ void CreateBadFetusLinkedBeam(
         }
 
         // -- update animation origin/direction
-        auto const & weaponState =
+        auto const & weaponStatePlaceholder =
           playerAnim
             .pieceToState["weapon-placeholder"];
 
@@ -219,10 +222,14 @@ void CreateBadFetusLinkedBeam(
         auto & animState = animInstance.pieceToState["particle"];
         animState.flip = weaponFlip;
 
-        auto const & weaponMatrix = weaponState.cachedLocalSkeletalMatrix;
+        auto const & weaponMatrixPlaceholder =
+          weaponStatePlaceholder.cachedLocalSkeletalMatrix;
+
         plugin
           .animation
-          .UpdateCacheWithPrecalculatedMatrix(animInstance, weaponMatrix);
+          .UpdateCacheWithPrecalculatedMatrix(
+            animInstance, weaponMatrixPlaceholder
+          );
 
         // -- update animation clipping
         animState.uvCoordWrap.x = 1.0f;
@@ -232,7 +239,7 @@ void CreateBadFetusLinkedBeam(
         auto const beginOrigin =
             animInstance.origin
           + glm::vec2(
-                weaponMatrix
+                weaponMatrixPlaceholder
               * glm::vec3(0.0f, 0.0f, 1.0f)
             )
         ;
@@ -2271,7 +2278,8 @@ void plugin::entity::PlayerFireManshredder(
 void plugin::entity::FireManshredderPrimary(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
-, glm::vec2 const & origin, glm::vec2 const & direction, float const angle
+, glm::vec2 const & projOrigin, glm::vec2 const & projDirection
+, float const angle
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
@@ -2298,7 +2306,7 @@ void plugin::entity::FireManshredderPrimary(
       state.angle = angle;
       state.flip = flip;
 
-      instance.origin = origin - glm::vec2(-20.0f, -20.0f)*direction;
+      instance.origin = projOrigin - glm::vec2(-20.0f, -20.0f)*projDirection;
 
       registry.emplace<pul::animation::ComponentInstance>(
         manshredderProjectileEntity, std::move(instance)

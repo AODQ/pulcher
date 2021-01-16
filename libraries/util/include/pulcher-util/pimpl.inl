@@ -19,6 +19,7 @@ pul::util::pimpl<PIMPL_SPECIALIZE>::pimpl(Args && ... args)
 {}
 
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wdtor-name"
 template <> pul::util::pimpl<PIMPL_SPECIALIZE>::~pimpl() {}
 #pragma GCC diagnostic pop

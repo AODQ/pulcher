@@ -76,11 +76,12 @@ void ConstructComponentCursor(ComponentCursor & self) {
 
         origin = vertexArray[gl_VertexID%6];
 
-        //                    ___________
+        /*                    ___________
         //                  /      |     \
         // compose: ------ (  -----+----- )
         //                  \      |     /
         //                    ----------
+        */
 
         // line to crosshair: 0..6
         // crosshair circle: 6..12
