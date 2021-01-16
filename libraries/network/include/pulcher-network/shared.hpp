@@ -2,6 +2,7 @@
 
 #include <enet/enet.h>
 
+#include <array>
 #include <cstdint>
 #include <functional>
 
