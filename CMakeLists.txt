@@ -5,7 +5,7 @@ cmake_policy(VERSION 3.0)
 #   etc) to allow pulcher to be portable across various distros
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-set(CMAKE_INSTALL_RPATH "$ORIGIN/lib;$ORIGIN")
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/")
 
 if (PULCHER_PLATFORM STREQUAL "Win64")
   message("*-- compiling for Windows 64-bit platform")
