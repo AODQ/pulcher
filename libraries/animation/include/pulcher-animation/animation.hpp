@@ -4,6 +4,7 @@
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-util/log.hpp>
 
+#include <array>
 #include <cstdint>
 #include <map>
 #include <memory>

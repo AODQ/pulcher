@@ -41,6 +41,8 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
   ImGuiIO & io = ImGui::GetIO();
   #ifdef __unix__
     ImGui::Text("Platform: Linux");
+  #elif defined(__APPLE__)
+    ImGui::Text("Platform: macOS");
   #elif _WIN64
     ImGui::Text("Platform: Windows64");
   #elif _WIN32

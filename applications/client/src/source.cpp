@@ -409,7 +409,7 @@ void ProcessRendering(
       ImGui::PopStyleColor();
 
       // updating files while they're open only works on linux, not Win64
-      #ifdef __unix__
+      #if defined(__unix__) || defined(__APPLE__)
         if (ImGui::Button("Click to update")) {
           {
             auto proc = TinyProcessLib::Process("git stash");
@@ -584,6 +584,8 @@ int main(int argc, char const ** argv) {
 
   #ifdef __unix__
     spdlog::info("-- running on Linux platform --");
+  #elif defined(__APPLE__)
+    spdlog::info("-- running on macOS platform --");
   #elif _WIN64
     spdlog::info("-- running on Windows 64 platform --");
   #elif _WIN32
