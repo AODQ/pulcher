@@ -71,6 +71,13 @@ cmake -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release -DPULCHER_PLA
 
 Pulcher is officially built against Clang, but should also build against GCC without warnings.
 
+To build on Mac, use clang and CMake, similar to the above example for building on Linux, except specify the `PULCHER_PLATFORM` as macOS
+```
+cmake -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release -DPULCHER_PLATFORM=macOS ../repo
+``` 
+
+MacOS support is limited, and there maybe be dependency issues, in particular be sure to install/update GLFW on your system with homebrew.
+
 I haven't tried building Pulcher on Windows, though besides possible MSVC errors, it shouldn't be difficult to set it up. But you probably won't be able to produce Linux binaries with MSVC, your best option is most likely to be to use the Windows Subsystem for Linux to build Linux binaries.
 
 # Creating Plugins
