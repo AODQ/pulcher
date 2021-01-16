@@ -196,7 +196,7 @@ bool pul::plugin::LoadPlugin(
   // check plugin loaded
   if (!pluginEnd->data) {
     ::plugins.pop_back();
-    spdlog::error("shared object file could not load correctly");
+    spdlog::error("shared object file {} could not load correctly", file);
     return false;
   }
 
