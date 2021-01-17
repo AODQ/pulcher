@@ -721,10 +721,15 @@ PUL_PLUGIN_DECL void Map_LoadMap(
   cJSON_Delete(map);
 }
 
-PUL_PLUGIN_DECL void Map_Render(pul::core::SceneBundle & scene) {
+PUL_PLUGIN_DECL void Map_Render(
+  pul::core::SceneBundle const & scene
+, pul::core::RenderBundleInstance const & renderBundle
+) {
   sg_apply_pipeline(pipeline);
 
-  glm::vec2 cameraOrigin = scene.cameraOrigin;
+  spdlog::debug("ms delta interp {}", renderBundle.msDeltaInterp);
+
+  glm::vec2 cameraOrigin = renderBundle.cameraOrigin;
 
   sg_apply_uniforms(
     SG_SHADERSTAGE_VS

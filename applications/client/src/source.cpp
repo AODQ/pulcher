@@ -241,9 +241,11 @@ void ProcessLogic(
 
 // this has no framerate cap, but it most provide a minimal of 90 framerate
 void ProcessRendering(
-  pul::plugin::Info & plugin, pul::core::SceneBundle & scene
-, float deltaMs
-, size_t numCpuFrames
+  pul::plugin::Info & plugin
+, pul::core::SceneBundle & scene
+, pul::core::RenderBundleInstance const & renderBundle
+, float const deltaMs
+, size_t const numCpuFrames
 ) {
   pul::gfx::StartFrame(deltaMs);
 
@@ -261,7 +263,7 @@ void ProcessRendering(
 
     sg_begin_pass(pul::gfx::ScenePass(), &passAction);
 
-    plugin.map.Render(scene);
+    plugin.map.Render(scene, renderBundle);
     plugin.animation.RenderAnimations(plugin, scene);
     plugin.physics.RenderDebug(scene);
 
@@ -607,6 +609,8 @@ int main(int argc, char const ** argv) {
   , sceneBundle.PlayerController()
   );
 
+  auto renderBundle = pul::core::RenderBundle::Construct(sceneBundle);
+
   ImGuiApplyStyling();
 
   auto timePreviousFrameBegin = std::chrono::high_resolution_clock::now();
@@ -630,15 +634,26 @@ int main(int argc, char const ** argv) {
       msToCalculate += deltaMs;
       size_t calculatedFrames = 0ul;
       while (msToCalculate >= sceneBundle.calculatedMsPerFrame) {
+        // -- process logic
         ++ calculatedFrames;
         msToCalculate -= sceneBundle.calculatedMsPerFrame;
         ::ProcessLogic(plugin, sceneBundle);
+
+        // -- update render bundle
+        renderBundle.Update(sceneBundle);
       }
 
       sceneBundle.numCpuFrames = calculatedFrames;
 
       // -- rendering, unlimited Hz
-      ::ProcessRendering(plugin, sceneBundle, deltaMs, calculatedFrames);
+      ::ProcessRendering(
+        plugin, sceneBundle
+      , renderBundle.Interpolate(
+          msToCalculate / sceneBundle.calculatedMsPerFrame
+        )
+      , deltaMs
+      , calculatedFrames
+      );
 
       // -- audio, unlimited Hz
       plugin.audio.Update(plugin, sceneBundle);

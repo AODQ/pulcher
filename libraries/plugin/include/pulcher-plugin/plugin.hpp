@@ -11,6 +11,7 @@
 namespace pul::animation { struct Instance; }
 namespace pul::animation { struct System; }
 namespace pul::core { enum class TileOrientation : size_t; }
+namespace pul::core { struct RenderBundleInstance; }
 namespace pul::core { struct SceneBundle; }
 namespace pul::gfx { struct Image; }
 namespace pul::physics { struct EntityIntersectionResults; }
@@ -95,7 +96,10 @@ namespace pul::plugin {
       pul::plugin::Info const & info, pul::core::SceneBundle &
     , char const * filename
     ) = nullptr;
-    void (*Render)(pul::core::SceneBundle &) = nullptr;
+    void (*Render)(
+      pul::core::SceneBundle const &
+    , pul::core::RenderBundleInstance const &
+    ) = nullptr;
     void (*UiRender)(pul::core::SceneBundle &) = nullptr;
     void (*Shutdown)() = nullptr;
   };
@@ -147,7 +151,7 @@ namespace pul::plugin {
     , pul::physics::IntersectorPoint const & ray
     , pul::physics::IntersectionResults & intersectionResults
     ) = nullptr;
-    void (*RenderDebug)(pul::core::SceneBundle &) = nullptr;
+    void (*RenderDebug)(pul::core::SceneBundle const &) = nullptr;
     void (*UiRender)(pul::core::SceneBundle &) = nullptr;
   };
 

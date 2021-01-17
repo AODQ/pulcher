@@ -63,3 +63,54 @@ pul::core::HudInfo & pul::core::SceneBundle::Hud() {
 entt::registry & pul::core::SceneBundle::EnttRegistry() {
   return impl->enttRegistry;
 }
+
+//------------------------------------------------------------------------------
+
+pul::core::RenderBundle pul::core::RenderBundle::Construct(
+  SceneBundle const & scene
+) {
+  pul::core::RenderBundle self;
+
+  // update current & copy to previous to make both instances valid
+  self.Update(scene);
+  self.previous = self.current;
+
+  return self;
+}
+
+void pul::core::RenderBundle::Update(pul::core::SceneBundle const & scene) {
+
+  previous = std::move(current);
+
+  current.playerOrigin = scene.playerOrigin;
+  current.cameraOrigin = scene.cameraOrigin;
+  current.playerCenter = scene.playerCenter;
+}
+
+pul::core::RenderBundleInstance
+pul::core::RenderBundle::Interpolate(
+  float const msDeltaInterp
+) {
+  pul::core::RenderBundleInstance instance;
+
+  instance.playerOrigin =
+    glm::mix(previous.playerOrigin, current.playerOrigin, msDeltaInterp);
+
+  instance.cameraOrigin =
+    glm::mix(
+      glm::vec2(previous.cameraOrigin)
+    , glm::vec2(current.cameraOrigin)
+    , msDeltaInterp
+    );
+
+  instance.playerCenter =
+    glm::mix(
+      glm::vec2(previous.cameraOrigin)
+    , glm::vec2(current.cameraOrigin)
+    , msDeltaInterp
+    );
+
+  instance.msDeltaInterp = msDeltaInterp;
+
+  return instance;
+}

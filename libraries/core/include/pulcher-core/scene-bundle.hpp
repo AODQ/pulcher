@@ -19,7 +19,7 @@ namespace pul::core { struct HudInfo; }
 namespace pul::physics { struct DebugQueries; }
 
 namespace pul::core {
-  struct SceneBundle {
+  struct SceneBundle final {
     glm::vec2 playerOrigin = {};
     glm::i32vec2 cameraOrigin = {};
 
@@ -49,5 +49,24 @@ namespace pul::core {
     pul::util::pimpl<Impl> impl;
 
     static SceneBundle Construct();
+  };
+
+  struct RenderBundleInstance final {
+    glm::vec2 playerOrigin;
+    glm::vec2 cameraOrigin;
+
+    glm::vec2 playerCenter;
+
+    // 0 .. 1, ms delta interpolation. only used from instances created by
+    //   RenderBundle::Interpolate
+    float msDeltaInterp;
+  };
+
+  struct RenderBundle final {
+    RenderBundleInstance previous, current;
+
+    static RenderBundle Construct(SceneBundle const &);
+    void Update(SceneBundle const &);
+    RenderBundleInstance Interpolate(float const msDeltaInterp);
   };
 }
