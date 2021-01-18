@@ -93,24 +93,30 @@ pul::core::RenderBundle::Interpolate(
 ) {
   pul::core::RenderBundleInstance instance;
 
+  float interp = msDeltaInterp;
+
+  if (!debugUseInterpolation) {
+    interp = 1.0f;
+  }
+
   instance.playerOrigin =
-    glm::mix(previous.playerOrigin, current.playerOrigin, msDeltaInterp);
+    glm::mix(previous.playerOrigin, current.playerOrigin, interp);
 
   instance.cameraOrigin =
     glm::mix(
       glm::vec2(previous.cameraOrigin)
     , glm::vec2(current.cameraOrigin)
-    , msDeltaInterp
+    , interp
     );
 
   instance.playerCenter =
     glm::mix(
       glm::vec2(previous.cameraOrigin)
     , glm::vec2(current.cameraOrigin)
-    , msDeltaInterp
+    , interp
     );
 
-  instance.msDeltaInterp = msDeltaInterp;
+  instance.msDeltaInterp = interp;
 
   return instance;
 }

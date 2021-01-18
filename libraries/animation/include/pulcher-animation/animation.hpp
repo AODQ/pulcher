@@ -142,6 +142,9 @@ namespace pul::animation {
 
     sg_pipeline sgPipeline;
     sg_shader sgProgram;
+
+    std::unique_ptr<pul::gfx::SgBuffer> sgBuffer = {};
+    sg_bindings sgBindings = {};
   };
 
   struct Instance {
@@ -181,9 +184,6 @@ namespace pul::animation {
 
     glm::vec2 origin = glm::vec2(0.0);
 
-    std::unique_ptr<pul::gfx::SgBuffer> sgBufferOrigin = {};
-    std::unique_ptr<pul::gfx::SgBuffer> sgBufferUvCoord = {};
-    sg_bindings sgBindings = {};
     size_t drawCallCount = 0ul;
 
     bool visible = true;

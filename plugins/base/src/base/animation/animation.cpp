@@ -490,33 +490,33 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
 
     ::ComputeVertices(scene, animationInstance, true);
 
-    { // -- origin
-      sg_buffer_desc desc = {};
-      desc.size = vertexBufferSize * sizeof(glm::vec3);
-      desc.usage = SG_USAGE_STREAM;
-      desc.content = nullptr;
-      desc.label = "origin buffer";
-      animationInstance.sgBufferOrigin = std::make_unique<pul::gfx::SgBuffer>();
-      animationInstance.sgBufferOrigin->buffer = sg_make_buffer(&desc);
-    }
+    /* { // -- origin */
+    /*   sg_buffer_desc desc = {}; */
+    /*   desc.size = vertexBufferSize * sizeof(glm::vec3); */
+    /*   desc.usage = SG_USAGE_STREAM; */
+    /*   desc.content = nullptr; */
+    /*   desc.label = "origin buffer"; */
+    /*   animationInstance.sgBufferOrigin = std::make_unique<pul::gfx::SgBuffer>(); */
+    /*   animationInstance.sgBufferOrigin->buffer = sg_make_buffer(&desc); */
+    /* } */
 
-    { // -- uv coord
-      sg_buffer_desc desc = {};
-      desc.size = vertexBufferSize * sizeof(glm::vec2);
-      desc.usage = SG_USAGE_STREAM;
-      desc.content = nullptr;
-      desc.label = "uv coord buffer";
-      animationInstance.sgBufferUvCoord = std::make_unique<pul::gfx::SgBuffer>();
-      animationInstance.sgBufferUvCoord->buffer = sg_make_buffer(&desc);
-    }
+    /* { // -- uv coord */
+    /*   sg_buffer_desc desc = {}; */
+    /*   desc.size = vertexBufferSize * sizeof(glm::vec2); */
+    /*   desc.usage = SG_USAGE_STREAM; */
+    /*   desc.content = nullptr; */
+    /*   desc.label = "uv coord buffer"; */
+    /*   animationInstance.sgBufferUvCoord = std::make_unique<pul::gfx::SgBuffer>(); */
+    /*   animationInstance.sgBufferUvCoord->buffer = sg_make_buffer(&desc); */
+    /* } */
 
     // bindings
-    animationInstance.sgBindings.vertex_buffers[0] =
-      *animationInstance.sgBufferOrigin;
-    animationInstance.sgBindings.vertex_buffers[1] =
-      *animationInstance.sgBufferUvCoord;
-    animationInstance.sgBindings.fs_images[0] =
-      animationInstance.animator->spritesheet.Image();
+    /* animationInstance.sgBindings.vertex_buffers[0] = */
+    /*   *animationSystem.sgBuffer; */
+    /* animationInstance.sgBindings.vertex_buffers[1] = */
+    /*   *animationInstance.sgBufferUvCoord; */
+    /* animationInstance.sgBindings.fs_images[0] = */
+    /*   animationInstance.animator->spritesheet.Image(); */
 
     // get draw call count
     animationInstance.drawCallCount = vertexBufferSize;
@@ -1199,6 +1199,23 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
 
   auto & animationSystem = scene.AnimationSystem();
 
+  { // -- create 50MB buffer
+    sg_buffer_desc desc = {};
+    desc.size = 4096 * 4096 * 4;
+    desc.usage = SG_USAGE_STREAM;
+    desc.content = nullptr;
+    desc.label = "animation buffer";
+
+    animationSystem.sgBuffer = std::make_unique<pul::gfx::SgBuffer>();
+    animationSystem.sgBuffer->buffer = sg_make_buffer(&desc);
+    animationSystem.sgBindings.vertex_buffers[0] =
+      *animationSystem.sgBuffer;
+    /* animationInstance.sgBindings.vertex_buffers[1] = */
+    /*   *animationInstance.sgBufferUvCoord; */
+    /* animationInstance.sgBindings.fs_images[0] = */
+    /*   animationInstance.animator->spritesheet.Image(); */
+  }
+
   { // load animations
     cJSON * spritesheetDataJson =
       ::LoadJsonFile("assets/base/spritesheets/data.json");
@@ -1236,8 +1253,8 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
     desc.vs.uniform_blocks[3].uniforms[0].name = "textureResolution";
     desc.vs.uniform_blocks[3].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
-    desc.fs.images[0].name = "baseSampler";
-    desc.fs.images[0].type = SG_IMAGETYPE_2D;
+    /* desc.fs.images[0].name = "baseSampler"; */
+    /* desc.fs.images[0].type = SG_IMAGETYPE_2D; */
 
     desc.vs.source = PUL_SHADER(
       layout(location = 0) in vec3 inOrigin;
@@ -1273,7 +1290,7 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
     );
 
     desc.fs.source = PUL_SHADER(
-      uniform sampler2D baseSampler;
+      //uniform sampler2D baseSampler;
 
       in vec2 uvCoord;
       in vec2 vertexCoord;
@@ -1281,7 +1298,8 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
       out vec4 outColor;
 
       void main() {
-        outColor = texture(baseSampler, uvCoord);
+        /* outColor = texture(baseSampler, uvCoord); */
+        outColor = vec4(uvCoord, 0.5f, 1.0f);
         if (outColor.a < 0.1f)
           { discard; }
         if (
@@ -1297,18 +1315,18 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
   { // -- sokol pipeline
     sg_pipeline_desc desc = {};
 
-    desc.layout.buffers[0].stride = 0u;
+    desc.layout.buffers[0].stride = sizeof(glm::vec4)*2;
     desc.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
-    desc.layout.buffers[0].step_rate = 6u;
+    desc.layout.buffers[0].step_rate = 1u;
     desc.layout.attrs[0].buffer_index = 0;
     desc.layout.attrs[0].offset = 0;
     desc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
 
-    desc.layout.buffers[1].stride = 0u;
+    desc.layout.buffers[1].stride = sizeof(glm::vec4)*2;
     desc.layout.buffers[1].step_func = SG_VERTEXSTEP_PER_VERTEX;
     desc.layout.buffers[1].step_rate = 1u;
-    desc.layout.attrs[1].buffer_index = 1;
-    desc.layout.attrs[1].offset = 0;
+    desc.layout.attrs[1].buffer_index = 0;
+    desc.layout.attrs[1].offset = sizeof(glm::vec4);
     desc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
 
     desc.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
@@ -1376,77 +1394,81 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
   pul::plugin::Info const &, pul::core::SceneBundle & scene
 ) {
   auto & registry = scene.EnttRegistry();
-  { // -- render sokol animations
+  // -- render sokol animations
 
-    // bind pipeline & global uniforms
-    sg_apply_pipeline(scene.AnimationSystem().sgPipeline);
+  auto & animationSystem = scene.AnimationSystem();
 
-    sg_apply_uniforms(
-      SG_SHADERSTAGE_VS
-    , 1
-    , &scene.config.framebufferDimFloat.x
-    , sizeof(float) * 2ul
-    );
+  // bind pipeline & global uniforms
+  sg_apply_pipeline(animationSystem.sgPipeline);
 
-    auto cameraOrigin = glm::vec2(scene.cameraOrigin);
+  sg_apply_uniforms(
+    SG_SHADERSTAGE_VS
+  , 1
+  , &scene.config.framebufferDimFloat.x
+  , sizeof(float) * 2ul
+  );
 
-    sg_apply_uniforms(
-      SG_SHADERSTAGE_VS
-    , 2
-    , &cameraOrigin.x
-    , sizeof(float) * 2ul
-    );
+  auto cameraOrigin = glm::vec2(scene.cameraOrigin);
 
-    // render each component
-    auto view = registry.view<pul::animation::ComponentInstance>();
-    for (auto entity : view) {
-      auto & self = view.get<pul::animation::ComponentInstance>(entity);
+  sg_apply_uniforms(
+    SG_SHADERSTAGE_VS
+  , 2
+  , &cameraOrigin.x
+  , sizeof(float) * 2ul
+  );
 
-      if (self.instance.automaticCachedMatrixCalculation)
-        { self.instance.hasCalculatedCachedInfo = false; }
+  std::vector<glm::vec4> bufferData;
 
-      if (
-          !self.instance.visible
-       || self.instance.drawCallCount == 0ul
-      ) { continue; }
+  // record each component to a buffer
+  auto view = registry.view<pul::animation::ComponentInstance>();
+  for (auto entity : view) {
+    auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
-      sg_apply_bindings(self.instance.sgBindings);
+    if (self.instance.automaticCachedMatrixCalculation)
+      { self.instance.hasCalculatedCachedInfo = false; }
 
-      sg_apply_uniforms(
-        SG_SHADERSTAGE_VS
-      , 0
-      , &self.instance.origin.x
-      , sizeof(float) * 2ul
+    if (
+        !self.instance.visible
+     || self.instance.drawCallCount == 0ul
+    ) { continue; }
+
+    for (size_t it = 0; it < self.instance.originBufferData.size(); ++ it) {
+      auto const origin =
+        self.instance.originBufferData[it]
+      + glm::vec3(self.instance.origin, 0.0f)
+      ;
+
+      bufferData.emplace_back(glm::vec4(origin, 0.0f));
+      bufferData.emplace_back(
+        glm::vec4(self.instance.uvCoordBufferData[it], 0.0f, 0.0f)
       );
-
-      glm::vec2 resolution =
-        glm::vec2(
-          self.instance.animator->spritesheet.width
-        , self.instance.animator->spritesheet.height
-        );
-
-      sg_apply_uniforms(
-        SG_SHADERSTAGE_VS
-      , 3
-      , &resolution.x
-      , sizeof(float) * 2ul
-      );
-
-      // must update entire animation buffer
-      sg_update_buffer(
-        *self.instance.sgBufferUvCoord,
-        self.instance.uvCoordBufferData.data(),
-        self.instance.uvCoordBufferData.size() * sizeof(glm::vec2)
-      );
-      sg_update_buffer(
-        *self.instance.sgBufferOrigin,
-        self.instance.originBufferData.data(),
-        self.instance.originBufferData.size() * sizeof(glm::vec3)
-      );
-
-      sg_draw(0, self.instance.drawCallCount, 1);
     }
   }
+
+  sg_update_buffer(
+    *animationSystem.sgBuffer
+  , bufferData.data(), bufferData.size() * sizeof(glm::vec4)
+  );
+
+  sg_apply_bindings(animationSystem.sgBindings);
+
+  /* glm::vec2 const resolution = */
+  /*   glm::vec2( */
+  /*     self.instance.animator->spritesheet.width */
+  /*   , self.instance.animator->spritesheet.height */
+  /*   ); */
+
+  /* sg_apply_uniforms( */
+  /*   SG_SHADERSTAGE_VS */
+  /* , 3 */
+  /* , &resolution.x */
+  /* , sizeof(float) * 2ul */
+  /* ); */
+
+  sg_draw(0, bufferData.size() / 2, 1);
+
+    /* sg_draw(0, self.instance.drawCallCount, 1); */
+  /* } */
 }
 
 PUL_PLUGIN_DECL void Animation_UpdateCache(

@@ -243,7 +243,8 @@ void ProcessLogic(
 void ProcessRendering(
   pul::plugin::Info & plugin
 , pul::core::SceneBundle & scene
-, pul::core::RenderBundleInstance const & renderBundle
+, pul::core::RenderBundle & renderBundle
+, pul::core::RenderBundleInstance const & renderInterp
 , float const deltaMs
 , size_t const numCpuFrames
 ) {
@@ -263,7 +264,7 @@ void ProcessRendering(
 
     sg_begin_pass(pul::gfx::ScenePass(), &passAction);
 
-    plugin.map.Render(scene, renderBundle);
+    plugin.map.Render(scene, renderInterp);
     plugin.animation.RenderAnimations(plugin, scene);
     plugin.physics.RenderDebug(scene);
 
@@ -339,6 +340,10 @@ void ProcessRendering(
     );
     ImGui::ColorEdit3("screen clear", &screenClearColor.x);
     pul::imgui::Text("CPU frames {}", numCpuFrames);
+
+    ImGui::Checkbox(
+      "interpolate rendering {}", &renderBundle.debugUseInterpolation
+    );
 
     ImGui::End();
 
@@ -645,12 +650,15 @@ int main(int argc, char const ** argv) {
 
       sceneBundle.numCpuFrames = calculatedFrames;
 
+      auto renderBundleInterp =
+        renderBundle.Interpolate(
+          msToCalculate / sceneBundle.calculatedMsPerFrame
+        );
+
       // -- rendering, unlimited Hz
       ::ProcessRendering(
         plugin, sceneBundle
-      , renderBundle.Interpolate(
-          msToCalculate / sceneBundle.calculatedMsPerFrame
-        )
+      , renderBundle, renderBundleInterp
       , deltaMs
       , calculatedFrames
       );
