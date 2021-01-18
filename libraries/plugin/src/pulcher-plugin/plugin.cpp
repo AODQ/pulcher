@@ -26,10 +26,10 @@ namespace {
 #endif
 
 struct Plugin {
-  Plugin(char const * filename, pul::plugin::Type type);
+  Plugin(std::filesystem::path filepath, pul::plugin::Type type);
   ~Plugin();
 
-  std::filesystem::path filename;
+  std::filesystem::path filepath;
   PluginHandle data = nullptr;
   pul::plugin::Type type;
 
@@ -39,8 +39,11 @@ struct Plugin {
   void Open();
 };
 
-Plugin::Plugin(char const * filename_, pul::plugin::Type type_)
-  : filename(filename_), type(type_)
+// list of unique plugins currently loaded by process
+std::vector<std::unique_ptr<Plugin>> plugins;
+
+Plugin::Plugin(std::filesystem::path filepath_, pul::plugin::Type type_)
+  : filepath(filepath_), type(type_)
 {
   this->Open();
 }
@@ -78,17 +81,17 @@ void Plugin::Reload() {
 void Plugin::Close() {
   if (!this->data) { return; }
   #if defined(__unix__) || defined(__APPLE__)
-    spdlog::info("closing plugin {} {}", this->data, this->filename.c_str());
+    spdlog::info("closing plugin {} {}", this->data, this->filepath.native());
     if (::dlclose(this->data)) {
       spdlog::critical(
-        "Failed to close plugin '{}': {}", this->filename.c_str(), ::dlerror()
+        "Failed to close plugin '{}': {}", this->filepath.native(), ::dlerror()
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
     if (::FreeLibrary(this->data)) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}"
-      , this->filename.c_str(), ::GetLastError()
+      , this->filepath.native(), ::GetLastError()
       );
     }
   #endif
@@ -97,27 +100,34 @@ void Plugin::Close() {
 
 void Plugin::Open() {
   #if defined(__unix__) || defined(__APPLE__)
-    this->data = ::dlopen(this->filename.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-    spdlog::info("opening {} : {}", this->data, this->filename.c_str());
+    this->data = ::dlopen(this->filepath.c_str(), RTLD_LAZY | RTLD_LOCAL);
+    spdlog::info("opening {} : {}", this->data, this->filepath.native());
     if (!this->data) {
       spdlog::critical(
-        "Failed to load plugin '{}'; {}", this->filename.c_str(), ::dlerror()
+        "Failed to load plugin '{}'; {}", this->filepath.native(), ::dlerror()
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
-    this->data = ::LoadLibraryA(this->filename.c_str());
+    this->data = ::LoadLibraryA(this->filepath.c_str());
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}"
-      , this->filename.c_str(), ::GetLastError()
+      , this->filepath.native(), ::GetLastError()
       );
     }
   #endif
+
+  // check if handle already exists in plugins, as each plugin must be unique
+  for (auto & plugin : ::plugins) {
+    if (&*plugin == this) { continue; }
+    if (plugin->data == this->data) {
+      spdlog::critical("plugin {} already loaded", this->filepath.native());
+      break;
+    }
+  }
 }
 
 // --
-
-std::vector<std::unique_ptr<Plugin>> plugins;
 
 void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
   spdlog::info("reloading plugins..");
@@ -197,14 +207,14 @@ bool pul::plugin::LoadPlugin(
   // first find if the plugin has already been loaded, if that's the case then
   // error
   for (auto & pluginIt : plugins) {
-    if (pluginIt->filename == file) {
-      spdlog::error("Plugin '{}' already loaded", pluginIt->filename.c_str());
+    if (pluginIt->filepath == file) {
+      spdlog::error("Plugin '{}' already loaded", pluginIt->filepath.native());
       return false;
     }
   }
 
   // -- load plugin
-  ::plugins.emplace_back(std::make_unique<Plugin>(file.c_str(), type));
+  ::plugins.emplace_back(std::make_unique<Plugin>(file, type));
   auto & pluginEnd = ::plugins.back();
 
   // check plugin loaded
