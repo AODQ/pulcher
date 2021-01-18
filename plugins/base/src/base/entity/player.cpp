@@ -437,7 +437,7 @@ void UpdatePlayerPhysics(
       intersectionNormal = glm::normalize(intersectionNormal);
     }
 
-    spdlog::debug("normal: {}", intersectionNormal);
+    /* spdlog::debug("normal: {}", intersectionNormal); */
 
     glm::vec2 const targetDirection = 
       glm::reflect(glm::normalize(player.velocity), -intersectionNormal);

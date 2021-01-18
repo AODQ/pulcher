@@ -727,8 +727,6 @@ PUL_PLUGIN_DECL void Map_Render(
 ) {
   sg_apply_pipeline(pipeline);
 
-  spdlog::debug("ms delta interp {}", renderBundle.msDeltaInterp);
-
   glm::vec2 cameraOrigin = renderBundle.cameraOrigin;
 
   sg_apply_uniforms(

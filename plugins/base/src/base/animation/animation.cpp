@@ -26,6 +26,10 @@
 
 namespace {
 
+static size_t animationBufferMaxSize = 4096*4096*5; // ~50MB
+
+static std::vector<pul::animation::Instance const *> debugRenderingInstances;
+
 static size_t animMsTimer = 0ul;
 static bool animLoop = true;
 static float animShowPreviousSprite = 0.0f;
@@ -1199,9 +1203,9 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
 
   auto & animationSystem = scene.AnimationSystem();
 
-  { // -- create 50MB buffer
+  { // -- create buffer
     sg_buffer_desc desc = {};
-    desc.size = 4096 * 4096 * 4;
+    desc.size = ::animationBufferMaxSize;
     desc.usage = SG_USAGE_STREAM;
     desc.content = nullptr;
     desc.label = "animation buffer";
@@ -1417,7 +1421,23 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
   , sizeof(float) * 2ul
   );
 
-  std::vector<glm::vec4> bufferData;
+  static std::vector<glm::vec4> bufferData;
+  static std::vector<size_t> imageData;
+
+  // set capacity and set size to 0
+  if (bufferData.capacity() == 0ul)
+    { bufferData.reserve(animationBufferMaxSize / sizeof(glm::vec4)); }
+  bufferData.resize(0); // doesn't affect capacity
+
+  // DEBUG
+  debugRenderingInstances.resize(0);
+
+  auto const
+    cullBoundLeft  = cameraOrigin.x - scene.config.framebufferDimFloat.x/2.0f
+  , cullBoundRight = cameraOrigin.x + scene.config.framebufferDimFloat.x/2.0f
+  , cullBoundUp    = cameraOrigin.y - scene.config.framebufferDimFloat.y/2.0f
+  , cullBoundDown  = cameraOrigin.y + scene.config.framebufferDimFloat.y/2.0f
+  ;
 
   // record each component to a buffer
   auto view = registry.view<pul::animation::ComponentInstance>();
@@ -1427,10 +1447,18 @@ PUL_PLUGIN_DECL void Animation_RenderAnimations(
     if (self.instance.automaticCachedMatrixCalculation)
       { self.instance.hasCalculatedCachedInfo = false; }
 
+    // check if visible / cull / ready to render
     if (
         !self.instance.visible
      || self.instance.drawCallCount == 0ul
+     || cullBoundLeft > self.instance.origin.x
+     || cullBoundRight < self.instance.origin.x
+     || cullBoundUp > self.instance.origin.y
+     || cullBoundDown < self.instance.origin.y
     ) { continue; }
+
+    // DEBUG
+    debugRenderingInstances.emplace_back(&self.instance);
 
     for (size_t it = 0; it < self.instance.originBufferData.size(); ++ it) {
       auto const origin =
@@ -2051,6 +2079,13 @@ PUL_PLUGIN_DECL void Animation_UiRender(
 
     ImGui::End();
   }
+
+  ImGui::Begin("animation debug");
+  ImGui::Text("total rendering %lu", debugRenderingInstances.size());
+  for (auto & render : debugRenderingInstances) {
+    ImGui::Text("'%s'", render->animator->label.c_str());
+  }
+  ImGui::End();
 }
 
 } // -- extern C

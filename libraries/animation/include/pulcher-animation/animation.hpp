@@ -148,7 +148,6 @@ namespace pul::animation {
   };
 
   struct Instance {
-    std::string animatorLabel = {};
     std::shared_ptr<Animator> animator = {};
 
     struct StateInfo {

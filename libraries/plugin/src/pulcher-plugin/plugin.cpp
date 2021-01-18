@@ -78,16 +78,26 @@ void Plugin::Reload() {
 void Plugin::Close() {
   if (!this->data) { return; }
   #if defined(__unix__) || defined(__APPLE__)
-    ::dlclose(this->data);
+    spdlog::info("closing plugin {} {}", this->data, this->filename);
+    if (::dlclose(this->data)) {
+      spdlog::critical(
+        "Failed to close plugin '{}': {}", this->filename, ::dlerror()
+      );
+    }
   #elif defined(_WIN32) || defined(_WIN64)
-    ::FreeLibrary(this->data);
+    if (::FreeLibrary(this->data)) {
+      spdlog::critical(
+        "Failed to load plugin '{}'; {}", this->filename, ::GetLastError()
+      );
+    }
   #endif
   this->data = nullptr;
 }
 
 void Plugin::Open() {
   #if defined(__unix__) || defined(__APPLE__)
-    this->data = ::dlopen(this->filename.c_str(), RTLD_LAZY | RTLD_LOCAL);
+    this->data = ::dlopen(this->filename.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    spdlog::info("opening {} : {}", this->data, this->filename);
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}", this->filename, ::dlerror()
@@ -108,8 +118,10 @@ void Plugin::Open() {
 std::vector<std::unique_ptr<Plugin>> plugins;
 
 void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
+  spdlog::info("reloading plugins..");
   {
     auto & unit = plugin.animation;
+    unit.RenderAnimations = nullptr;
     ctx.LoadFunction(unit.ConstructInstance, "Animation_ConstructInstance");
     ctx.LoadFunction(unit.LoadAnimations,    "Animation_LoadAnimations");
     ctx.LoadFunction(unit.Shutdown,          "Animation_Shutdown");
