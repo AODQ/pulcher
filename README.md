@@ -8,6 +8,8 @@ The game is processed at a logical 90 frames per second, with 1 frame of latency
 
 Sokol is used to render OpenGL3.2 & EnTT is used for the entity-component system. These both drive the majority of Pulcher functionality. ImGui is used for development to allow prototyping of functionality to be very fast, which combined with hot-reloadable plugins make developing Pulcher very painless & easy.
 
+Rendering in Pulcher sits on top of Sokol, which is a very nice rendering abstraction on top of several APIs. It's an API I enjoy using, & though I'm a graphics engineer, I chose to use Sokol instead of rolling my own library because it's basically an equivalent to what I would have written anyways, besides OpenGL uniform buffer support.
+
 [![physx](https://img.youtube.com/vi/M27mRWE0eLg/0.jpg)](https://www.youtube.com/watch?v=M27mRWE0eLg&feature=youtu.be)
 
 # Code Philosphy
