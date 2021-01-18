@@ -7,6 +7,7 @@
 #include <span>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 namespace pul::animation { struct Instance; }
 namespace pul::animation { struct System; }
@@ -167,7 +168,7 @@ namespace pul::plugin {
   bool LoadPlugin(
     pul::plugin::Info & plugin
   , pul::plugin::Type type
-  , std::string const & filename
+  , std::filesystem::path const & filename
   );
 
   // TODO load mod plugins

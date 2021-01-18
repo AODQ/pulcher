@@ -29,7 +29,7 @@ struct Plugin {
   Plugin(char const * filename, pul::plugin::Type type);
   ~Plugin();
 
-  std::string filename;
+  std::filesystem::path filename;
   PluginHandle data = nullptr;
   pul::plugin::Type type;
 
@@ -78,16 +78,17 @@ void Plugin::Reload() {
 void Plugin::Close() {
   if (!this->data) { return; }
   #if defined(__unix__) || defined(__APPLE__)
-    spdlog::info("closing plugin {} {}", this->data, this->filename);
+    spdlog::info("closing plugin {} {}", this->data, this->filename.c_str());
     if (::dlclose(this->data)) {
       spdlog::critical(
-        "Failed to close plugin '{}': {}", this->filename, ::dlerror()
+        "Failed to close plugin '{}': {}", this->filename.c_str(), ::dlerror()
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
     if (::FreeLibrary(this->data)) {
       spdlog::critical(
-        "Failed to load plugin '{}'; {}", this->filename, ::GetLastError()
+        "Failed to load plugin '{}'; {}"
+      , this->filename.c_str(), ::GetLastError()
       );
     }
   #endif
@@ -97,17 +98,18 @@ void Plugin::Close() {
 void Plugin::Open() {
   #if defined(__unix__) || defined(__APPLE__)
     this->data = ::dlopen(this->filename.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-    spdlog::info("opening {} : {}", this->data, this->filename);
+    spdlog::info("opening {} : {}", this->data, this->filename.c_str());
     if (!this->data) {
       spdlog::critical(
-        "Failed to load plugin '{}'; {}", this->filename, ::dlerror()
+        "Failed to load plugin '{}'; {}", this->filename.c_str(), ::dlerror()
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
     this->data = ::LoadLibraryA(this->filename.c_str());
     if (!this->data) {
       spdlog::critical(
-        "Failed to load plugin '{}'; {}", this->filename, ::GetLastError()
+        "Failed to load plugin '{}'; {}"
+      , this->filename.c_str(), ::GetLastError()
       );
     }
   #endif
@@ -190,13 +192,13 @@ void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
 bool pul::plugin::LoadPlugin(
   pul::plugin::Info & plugin
 , pul::plugin::Type type
-, std::string const & file
+, std::filesystem::path const & file
 ) {
   // first find if the plugin has already been loaded, if that's the case then
   // error
   for (auto & pluginIt : plugins) {
     if (pluginIt->filename == file) {
-      spdlog::error("Plugin '{}' already loaded", pluginIt->filename);
+      spdlog::error("Plugin '{}' already loaded", pluginIt->filename.c_str());
       return false;
     }
   }
@@ -208,7 +210,10 @@ bool pul::plugin::LoadPlugin(
   // check plugin loaded
   if (!pluginEnd->data) {
     ::plugins.pop_back();
-    spdlog::error("shared object file {} could not load correctly", file);
+    spdlog::error(
+      "shared object file {} could not load correctly"
+    , file.c_str()
+    );
     return false;
   }
 
