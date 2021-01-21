@@ -1,10 +1,13 @@
 #pragma once
 
 #include <pulcher-core/config.hpp>
+#include <pulcher-util/any.hpp>
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/pimpl.hpp>
 
 #include <glm/glm.hpp>
+
+#include <string>
 
 namespace entt { enum class entity : std::uint32_t; }
 namespace entt { template <typename> class basic_registry; }
@@ -14,9 +17,10 @@ namespace pul::audio { struct System; }
 namespace pul::controls { struct Controller; }
 namespace pul::core { struct ComponentOrigin; }
 namespace pul::core { struct ComponentPlayer; }
-namespace pul::core { struct PlayerMetaInfo; }
 namespace pul::core { struct HudInfo; }
+namespace pul::core { struct PlayerMetaInfo; }
 namespace pul::physics { struct DebugQueries; }
+namespace pul::plugin { struct Info; }
 
 namespace pul::core {
   struct SceneBundle {
@@ -39,11 +43,15 @@ namespace pul::core {
     pul::audio::System & AudioSystem();
     pul::core::HudInfo & Hud();
 
+
     // store player between reloads
     pul::core::ComponentPlayer & StoredDebugPlayerComponent();
     pul::core::ComponentOrigin & StoredDebugPlayerOriginComponent();
 
     entt::registry & EnttRegistry();
+
+    pul::animation::System const & AnimationSystem() const;
+    entt::registry const & EnttRegistry() const;
 
     struct Impl;
     pul::util::pimpl<Impl> impl;
@@ -57,6 +65,9 @@ namespace pul::core {
 
     glm::vec2 playerCenter;
 
+    // allows plugins to query plugin data
+    std::map<std::string, std::shared_ptr<pul::util::Any>> pluginBundleData;
+
     // 0 .. 1, ms delta interpolation. only used from instances created by
     //   RenderBundle::Interpolate
     float msDeltaInterp;
@@ -67,8 +78,21 @@ namespace pul::core {
 
     bool debugUseInterpolation = true;
 
-    static RenderBundle Construct(SceneBundle const &);
-    void Update(SceneBundle const &);
-    RenderBundleInstance Interpolate(float const msDeltaInterp);
+    // constructs dummy render bundle (previous = current = scene), this is so
+    // that the first couple of frames of rendering are valid & do not have
+    // garbage memory
+    static RenderBundle Construct(
+      pul::plugin::Info const & plugin, SceneBundle &
+    );
+
+    // stores current into previous, and then updates current with scene
+    void Update(pul::plugin::Info const & plugin, SceneBundle &);
+
+    // constructs a render bundle instance from the ms-delta interpolation
+    // value, from 0 to 1. Most likely `accumulatedMs / totalMsPerFrame`.
+    // equivalent of pseudo-code `mix(previous, current, msDeltaInterp)`
+    RenderBundleInstance Interpolate(
+      pul::plugin::Info const & plugin, float const msDeltaInterp
+    );
   };
 }

@@ -268,6 +268,8 @@ void ProcessRendering(
     plugin.animation.RenderAnimations(plugin, scene);
     plugin.physics.RenderDebug(scene);
 
+    plugin.RenderInterpolated(scene, renderInterp);
+
     sg_end_pass();
   }
 
@@ -321,9 +323,13 @@ void ProcessRendering(
       // reload configs
       scene.PlayerMetaInfo() = {};
 
+      renderBundle = {};
+
       // continue loading plugins
       pul::plugin::UpdatePlugins(plugin);
       ::LoadPluginInfo(plugin, scene);
+
+      renderBundle = pul::core::RenderBundle::Construct(plugin, scene);
 
       pul::controls::LoadControllerConfig(
         pul::gfx::DisplayWindow()
@@ -614,7 +620,7 @@ int main(int argc, char const ** argv) {
   , sceneBundle.PlayerController()
   );
 
-  auto renderBundle = pul::core::RenderBundle::Construct(sceneBundle);
+  auto renderBundle = pul::core::RenderBundle::Construct(plugin, sceneBundle);
 
   ImGuiApplyStyling();
 
@@ -645,15 +651,16 @@ int main(int argc, char const ** argv) {
         ::ProcessLogic(plugin, sceneBundle);
 
         // -- update render bundle
-        renderBundle.Update(sceneBundle);
+        renderBundle.Update(plugin, sceneBundle);
       }
 
       sceneBundle.numCpuFrames = calculatedFrames;
 
-      auto renderBundleInterp =
-        renderBundle.Interpolate(
-          msToCalculate / sceneBundle.calculatedMsPerFrame
-        );
+      // -- rendering interpolation
+      auto const msDeltaInterp =
+        msToCalculate / sceneBundle.calculatedMsPerFrame
+      ;
+      auto renderBundleInterp = renderBundle.Interpolate(plugin, msDeltaInterp);
 
       // -- rendering, unlimited Hz
       ::ProcessRendering(

@@ -30,4 +30,5 @@ target_link_libraries(
     pulcher-audio
     pulcher-controls
     pulcher-physics
+    pulcher-plugin
 )

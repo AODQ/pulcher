@@ -5,7 +5,9 @@ target_sources(
   plugin-base
   PRIVATE
     src/base/animation/animation.cpp
+    src/base/animation/render.cpp
     src/base/audio/audio.cpp
+    src/base/interpolation.cpp
     src/base/entity/config.cpp
     src/base/entity/cursor.cpp
     src/base/entity/entity.cpp

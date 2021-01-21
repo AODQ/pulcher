@@ -1,3 +1,4 @@
+#include <plugin-base/animation/animation.hpp>
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
@@ -28,7 +29,7 @@ namespace {
 
 static size_t animationBufferMaxSize = 4096*4096*5; // ~50MB
 
-static std::vector<pul::animation::Instance const *> debugRenderingInstances;
+/* static std::vector<pul::animation::Instance const *> debugRenderingInstances; */
 
 static size_t animMsTimer = 0ul;
 static bool animLoop = true;
@@ -182,8 +183,7 @@ std::tuple<
 }
 
 void ComputeVertices(
-  pul::core::SceneBundle &
-, pul::animation::Instance & instance
+  pul::animation::Instance & instance
 , pul::animation::Animator::SkeletalPiece const & skeletal
 , size_t & indexOffset
 , bool & skeletalFlip
@@ -290,8 +290,7 @@ void ComputeVertices(
 }
 
 void ComputeVertices(
-  pul::core::SceneBundle & scene
-, pul::animation::Instance & instance
+  pul::animation::Instance & instance
 , std::vector<pul::animation::Animator::SkeletalPiece> const & skeletals
 , size_t & indexOffset
 , bool const skeletalFlip
@@ -304,28 +303,16 @@ void ComputeVertices(
     float newSkeletalRotation = skeletalRotation;
     bool newForceUpdate = forceUpdate;
     ComputeVertices(
-      scene, instance, skeletal, indexOffset
+      instance, skeletal, indexOffset
     , newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
 
     // continue to children
     ComputeVertices(
-      scene, instance, skeletal.children, indexOffset
+      instance, skeletal.children, indexOffset
     , newSkeletalFlip, newSkeletalRotation, newForceUpdate
     );
   }
-}
-
-void ComputeVertices(
-  pul::core::SceneBundle & scene
-, pul::animation::Instance & instance
-, bool forceUpdate = false
-) {
-  size_t indexOffset = 0ul;
-  ComputeVertices(
-    scene, instance, instance.animator->skeleton
-  , indexOffset, false, 0.0f, forceUpdate
-  );
 }
 
 void ComputeCache(
@@ -425,8 +412,9 @@ void ComputeCache(
       glm::translate(skeletalMatrix, glm::vec2(localOrigin));
    }
 }
+} // -- namespace
 
-void ComputeCache(
+void plugin::animation::ComputeCache(
   pul::animation::Instance & instance
 , std::vector<pul::animation::Animator::SkeletalPiece> const & skeletals
 , glm::mat3 const skeletalMatrix
@@ -437,23 +425,32 @@ void ComputeCache(
     auto newSkeletalMatrix = skeletalMatrix;
     auto newSkeletalFlip = skeletalFlip;
     auto newSkeletalRotation = skeletalRotation;
-    ComputeCache(
+    ::ComputeCache(
       instance, skeletal
     , newSkeletalMatrix, newSkeletalFlip, newSkeletalRotation
     );
 
-    ComputeCache(
+    plugin::animation::ComputeCache(
       instance, skeletal.children
     , newSkeletalMatrix, newSkeletalFlip, newSkeletalRotation
     );
   }
 }
 
-} // -- namespace
+void plugin::animation::ComputeVertices(
+  pul::animation::Instance & instance
+, bool forceUpdate
+) {
+  size_t indexOffset = 0ul;
+  ::ComputeVertices(
+    instance, instance.animator->skeleton
+  , indexOffset, false, 0.0f, forceUpdate
+  );
+}
 
 extern "C" {
 PUL_PLUGIN_DECL void Animation_ConstructInstance(
-  pul::core::SceneBundle & scene
+  pul::core::SceneBundle &
 , pul::animation::Instance & animationInstance
 , pul::animation::System & animationSystem
 , char const * label
@@ -492,7 +489,7 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
     animationInstance.uvCoordBufferData.resize(vertexBufferSize);
     animationInstance.originBufferData.resize(vertexBufferSize);
 
-    ::ComputeVertices(scene, animationInstance, true);
+    plugin::animation::ComputeVertices(animationInstance, true);
 
     /* { // -- origin */
     /*   sg_buffer_desc desc = {}; */
@@ -1385,124 +1382,24 @@ PUL_PLUGIN_DECL void Animation_UpdateFrame(
   for (auto entity : view) {
     auto & self = view.get<pul::animation::ComponentInstance>(entity);
 
-    ::ComputeCache(
+    plugin::animation::ComputeCache(
       self.instance, self.instance.animator->skeleton
     , glm::mat3(1.0f), false, 0.0f
     );
 
-    ::ComputeVertices(scene, self.instance, true);
+    plugin::animation::ComputeVertices(self.instance, true);
   }
 }
 
 PUL_PLUGIN_DECL void Animation_RenderAnimations(
-  pul::plugin::Info const &, pul::core::SceneBundle & scene
+  pul::plugin::Info const &, pul::core::SceneBundle &
 ) {
-  auto & registry = scene.EnttRegistry();
-  // -- render sokol animations
-
-  auto & animationSystem = scene.AnimationSystem();
-
-  // bind pipeline & global uniforms
-  sg_apply_pipeline(animationSystem.sgPipeline);
-
-  sg_apply_uniforms(
-    SG_SHADERSTAGE_VS
-  , 1
-  , &scene.config.framebufferDimFloat.x
-  , sizeof(float) * 2ul
-  );
-
-  auto cameraOrigin = glm::vec2(scene.cameraOrigin);
-
-  sg_apply_uniforms(
-    SG_SHADERSTAGE_VS
-  , 2
-  , &cameraOrigin.x
-  , sizeof(float) * 2ul
-  );
-
-  static std::vector<glm::vec4> bufferData;
-  static std::vector<size_t> imageData;
-
-  // set capacity and set size to 0
-  if (bufferData.capacity() == 0ul)
-    { bufferData.reserve(animationBufferMaxSize / sizeof(glm::vec4)); }
-  bufferData.resize(0); // doesn't affect capacity
-
-  // DEBUG
-  debugRenderingInstances.resize(0);
-
-  auto const
-    cullBoundLeft  = cameraOrigin.x - scene.config.framebufferDimFloat.x/2.0f
-  , cullBoundRight = cameraOrigin.x + scene.config.framebufferDimFloat.x/2.0f
-  , cullBoundUp    = cameraOrigin.y - scene.config.framebufferDimFloat.y/2.0f
-  , cullBoundDown  = cameraOrigin.y + scene.config.framebufferDimFloat.y/2.0f
-  ;
-
-  // record each component to a buffer
-  auto view = registry.view<pul::animation::ComponentInstance>();
-  for (auto entity : view) {
-    auto & self = view.get<pul::animation::ComponentInstance>(entity);
-
-    if (self.instance.automaticCachedMatrixCalculation)
-      { self.instance.hasCalculatedCachedInfo = false; }
-
-    // check if visible / cull / ready to render
-    if (
-        !self.instance.visible
-     || self.instance.drawCallCount == 0ul
-     || cullBoundLeft > self.instance.origin.x
-     || cullBoundRight < self.instance.origin.x
-     || cullBoundUp > self.instance.origin.y
-     || cullBoundDown < self.instance.origin.y
-    ) { continue; }
-
-    // DEBUG
-    debugRenderingInstances.emplace_back(&self.instance);
-
-    for (size_t it = 0; it < self.instance.originBufferData.size(); ++ it) {
-      auto const origin =
-        self.instance.originBufferData[it]
-      + glm::vec3(self.instance.origin, 0.0f)
-      ;
-
-      bufferData.emplace_back(glm::vec4(origin, 0.0f));
-      bufferData.emplace_back(
-        glm::vec4(self.instance.uvCoordBufferData[it], 0.0f, 0.0f)
-      );
-    }
-  }
-
-  sg_update_buffer(
-    *animationSystem.sgBuffer
-  , bufferData.data(), bufferData.size() * sizeof(glm::vec4)
-  );
-
-  sg_apply_bindings(animationSystem.sgBindings);
-
-  /* glm::vec2 const resolution = */
-  /*   glm::vec2( */
-  /*     self.instance.animator->spritesheet.width */
-  /*   , self.instance.animator->spritesheet.height */
-  /*   ); */
-
-  /* sg_apply_uniforms( */
-  /*   SG_SHADERSTAGE_VS */
-  /* , 3 */
-  /* , &resolution.x */
-  /* , sizeof(float) * 2ul */
-  /* ); */
-
-  sg_draw(0, bufferData.size() / 2, 1);
-
-    /* sg_draw(0, self.instance.drawCallCount, 1); */
-  /* } */
 }
 
 PUL_PLUGIN_DECL void Animation_UpdateCache(
   pul::animation::Instance & instance
 ) {
-  ::ComputeCache(
+  plugin::animation::ComputeCache(
     instance, instance.animator->skeleton, glm::mat3(1.0f), false, 0.0f
   );
   instance.hasCalculatedCachedInfo = true;
@@ -1512,7 +1409,7 @@ PUL_PLUGIN_DECL void Animation_UpdateCacheWithPrecalculatedMatrix(
   pul::animation::Instance & instance
 , glm::mat3 const & skeletalMatrix
 ) {
-  ::ComputeCache(
+  plugin::animation::ComputeCache(
     instance, instance.animator->skeleton, skeletalMatrix, false, 0.0f
   );
   instance.hasCalculatedCachedInfo = true;
@@ -2080,12 +1977,12 @@ PUL_PLUGIN_DECL void Animation_UiRender(
     ImGui::End();
   }
 
-  ImGui::Begin("animation debug");
-  ImGui::Text("total rendering %lu", debugRenderingInstances.size());
-  for (auto & render : debugRenderingInstances) {
-    ImGui::Text("'%s'", render->animator->label.c_str());
-  }
-  ImGui::End();
+  /* ImGui::Begin("animation debug"); */
+  /* ImGui::Text("total rendering %lu", debugRenderingInstances.size()); */
+  /* for (auto & render : debugRenderingInstances) { */
+    /* ImGui::Text("'%s'", render->animator->label.c_str()); */
+  /* } */
+  /* ImGui::End(); */
 }
 
 } // -- extern C

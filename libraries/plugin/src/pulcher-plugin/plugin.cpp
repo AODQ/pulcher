@@ -131,6 +131,21 @@ void Plugin::Open() {
 
 void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
   spdlog::info("reloading plugins..");
+
+  {
+    ctx.LoadFunction(
+      plugin.UpdateRenderBundleInstance, "Plugin_UpdateRenderBundleInstance"
+    );
+
+    ctx.LoadFunction(
+      plugin.Interpolate, "Plugin_Interpolate"
+    );
+
+    ctx.LoadFunction(
+      plugin.RenderInterpolated, "Plugin_RenderInterpolated"
+    );
+  }
+
   {
     auto & unit = plugin.animation;
     unit.RenderAnimations = nullptr;

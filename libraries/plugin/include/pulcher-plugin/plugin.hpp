@@ -163,6 +163,23 @@ namespace pul::plugin {
     pul::plugin::Map map;
     pul::plugin::Physics physics;
     pul::plugin::UserInterfaceInfo userInterface;
+
+    void (*UpdateRenderBundleInstance)(
+      pul::core::SceneBundle & scene
+    , pul::core::RenderBundleInstance & instance
+    );
+
+    void (*Interpolate)(
+      float const msDeltaInterp
+    , pul::core::RenderBundleInstance const & previousBundle
+    , pul::core::RenderBundleInstance const & currentBundle
+    , pul::core::RenderBundleInstance & outputBundle
+    );
+
+    void (*RenderInterpolated)(
+      pul::core::SceneBundle const & scene
+    , pul::core::RenderBundleInstance const & interpolatedBundle
+    );
   };
 
   bool LoadPlugin(

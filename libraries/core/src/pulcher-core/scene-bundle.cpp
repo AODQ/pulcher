@@ -3,9 +3,10 @@
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
-#include <pulcher-core/player.hpp>
 #include <pulcher-core/hud.hpp>
+#include <pulcher-core/player.hpp>
 #include <pulcher-physics/intersections.hpp>
+#include <pulcher-plugin/plugin.hpp>
 
 #include <entt/entt.hpp>
 
@@ -26,6 +27,10 @@ struct pul::core::SceneBundle::Impl {
 #include <pulcher-util/pimpl.inl>
 
 pul::animation::System & pul::core::SceneBundle::AnimationSystem() {
+  return impl->animationSystem;
+}
+
+pul::animation::System const & pul::core::SceneBundle::AnimationSystem() const {
   return impl->animationSystem;
 }
 
@@ -64,32 +69,41 @@ entt::registry & pul::core::SceneBundle::EnttRegistry() {
   return impl->enttRegistry;
 }
 
+entt::registry const & pul::core::SceneBundle::EnttRegistry() const {
+  return impl->enttRegistry;
+}
+
 //------------------------------------------------------------------------------
 
 pul::core::RenderBundle pul::core::RenderBundle::Construct(
-  SceneBundle const & scene
+  pul::plugin::Info const & plugin
+, SceneBundle & scene
 ) {
   pul::core::RenderBundle self;
 
   // update current & copy to previous to make both instances valid
-  self.Update(scene);
+  self.Update(plugin, scene);
   self.previous = self.current;
 
   return self;
 }
 
-void pul::core::RenderBundle::Update(pul::core::SceneBundle const & scene) {
-
+void pul::core::RenderBundle::Update(
+  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+) {
   previous = std::move(current);
 
   current.playerOrigin = scene.playerOrigin;
   current.cameraOrigin = scene.cameraOrigin;
   current.playerCenter = scene.playerCenter;
+
+  plugin.UpdateRenderBundleInstance(scene, current);
 }
 
 pul::core::RenderBundleInstance
 pul::core::RenderBundle::Interpolate(
-  float const msDeltaInterp
+  pul::plugin::Info const & plugin
+, float const msDeltaInterp
 ) {
   pul::core::RenderBundleInstance instance;
 
@@ -117,6 +131,8 @@ pul::core::RenderBundle::Interpolate(
     );
 
   instance.msDeltaInterp = interp;
+
+  plugin.Interpolate(msDeltaInterp, previous, current, instance);
 
   return instance;
 }
