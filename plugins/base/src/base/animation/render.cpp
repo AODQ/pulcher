@@ -109,19 +109,23 @@ void plugin::animation::RenderInterpolated(
 
 void plugin::animation::Interpolate(
   const float msDeltaInterp
-, std::vector<plugin::animation::Interpolant> const & interpolantsPrev
-, std::vector<plugin::animation::Interpolant> const & interpolantsCurr
+, InterpolantMap<plugin::animation::Interpolant> const & interpolantsPrev
+, InterpolantMap<plugin::animation::Interpolant> const & interpolantsCurr
 , std::vector<plugin::animation::Interpolant> & interpolantsOut
 ) {
-  if (interpolantsPrev.size() != interpolantsCurr.size())
-    return;
-
   interpolantsOut.reserve(interpolantsPrev.size());
 
-  for (size_t it = 0ul; it < interpolantsPrev.size(); ++ it) {
+  for (auto & interpolantPair : interpolantsPrev) {
 
-    auto & previous = interpolantsPrev[it].instance;
-    auto & current  = interpolantsCurr[it].instance;
+    auto const interpolantId = std::get<0>(interpolantPair);
+
+    auto const & previous = std::get<1>(interpolantPair).instance;
+
+    // locate current, if it doesn't exist then this object has been destroyed
+    auto currentPtr = interpolantsCurr.find(interpolantId);
+    if (currentPtr == interpolantsCurr.end()) { continue; }
+
+    auto & current  = std::get<1>(*currentPtr).instance;
 
     // TODO
     /* if (instance.automaticCachedMatrixCalculation) */
@@ -129,9 +133,6 @@ void plugin::animation::Interpolate(
 
     // copy instance
     auto instance = previous;
-
-    if (previous.originBufferData.size() != current.originBufferData.size())
-      continue;
 
     // create an interpolated instance to compute vertices from
     instance.origin = glm::mix(previous.origin, current.origin, msDeltaInterp);

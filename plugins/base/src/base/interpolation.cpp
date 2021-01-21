@@ -11,7 +11,10 @@
 namespace {
 
 struct BaseRenderBundle {
-  std::vector<plugin::animation::Interpolant> animationInterpolants;
+  InterpolantMap<plugin::animation::Interpolant> animationInterpolants;
+
+  // only used as output TODO maybe make a different struct for outputs?
+  std::vector<plugin::animation::Interpolant> animationInterpolantOutputs;
 
   static void Deallocate(void * data) {
     delete reinterpret_cast<BaseRenderBundle *>(data);
@@ -28,7 +31,7 @@ PUL_PLUGIN_DECL void Plugin_UpdateRenderBundleInstance(
 ) {
   auto & registry = scene.EnttRegistry();
 
-  std::vector<plugin::animation::Interpolant> animationInterpolants;
+  InterpolantMap<plugin::animation::Interpolant> animationInterpolants;
 
   { // -- store animation information
 
@@ -67,7 +70,9 @@ PUL_PLUGIN_DECL void Plugin_UpdateRenderBundleInstance(
       plugin::animation::ComputeCache(
         instance, instance.animator->skeleton, glm::mat3(1.0f), false, 0.0f
       );
-      animationInterpolants.emplace_back(std::move(instance));
+      animationInterpolants.emplace(
+        static_cast<size_t>(entity), std::move(instance)
+      );
     }
   }
 
@@ -117,7 +122,7 @@ PUL_PLUGIN_DECL void Plugin_Interpolate(
   plugin::animation::Interpolate(
     msDeltaInterp
   , previous.animationInterpolants, current.animationInterpolants
-  , output.animationInterpolants
+  , output.animationInterpolantOutputs
   );
 }
 
@@ -139,7 +144,7 @@ PUL_PLUGIN_DECL void Plugin_RenderInterpolated(
   plugin::animation::RenderInterpolated(
     scene
   , interpolatedBundle
-  , current.animationInterpolants
+  , current.animationInterpolantOutputs
   );
 }
 
