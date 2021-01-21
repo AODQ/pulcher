@@ -70,6 +70,8 @@ PUL_PLUGIN_DECL void Plugin_UpdateRenderBundleInstance(
       plugin::animation::ComputeCache(
         instance, instance.animator->skeleton, glm::mat3(1.0f), false, 0.0f
       );
+
+      // move instance w/ the entity ID
       animationInterpolants.emplace(
         static_cast<size_t>(entity), std::move(instance)
       );
@@ -140,7 +142,6 @@ PUL_PLUGIN_DECL void Plugin_RenderInterpolated(
   ;
 
   // -- forward rendering information
-
   plugin::animation::RenderInterpolated(
     scene
   , interpolatedBundle

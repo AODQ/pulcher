@@ -491,34 +491,6 @@ PUL_PLUGIN_DECL void Animation_ConstructInstance(
 
     plugin::animation::ComputeVertices(animationInstance, true);
 
-    /* { // -- origin */
-    /*   sg_buffer_desc desc = {}; */
-    /*   desc.size = vertexBufferSize * sizeof(glm::vec3); */
-    /*   desc.usage = SG_USAGE_STREAM; */
-    /*   desc.content = nullptr; */
-    /*   desc.label = "origin buffer"; */
-    /*   animationInstance.sgBufferOrigin = std::make_unique<pul::gfx::SgBuffer>(); */
-    /*   animationInstance.sgBufferOrigin->buffer = sg_make_buffer(&desc); */
-    /* } */
-
-    /* { // -- uv coord */
-    /*   sg_buffer_desc desc = {}; */
-    /*   desc.size = vertexBufferSize * sizeof(glm::vec2); */
-    /*   desc.usage = SG_USAGE_STREAM; */
-    /*   desc.content = nullptr; */
-    /*   desc.label = "uv coord buffer"; */
-    /*   animationInstance.sgBufferUvCoord = std::make_unique<pul::gfx::SgBuffer>(); */
-    /*   animationInstance.sgBufferUvCoord->buffer = sg_make_buffer(&desc); */
-    /* } */
-
-    // bindings
-    /* animationInstance.sgBindings.vertex_buffers[0] = */
-    /*   *animationSystem.sgBuffer; */
-    /* animationInstance.sgBindings.vertex_buffers[1] = */
-    /*   *animationInstance.sgBufferUvCoord; */
-    /* animationInstance.sgBindings.fs_images[0] = */
-    /*   animationInstance.animator->spritesheet.Image(); */
-
     // get draw call count
     animationInstance.drawCallCount = vertexBufferSize;
   }
@@ -1254,8 +1226,8 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
     desc.vs.uniform_blocks[3].uniforms[0].name = "textureResolution";
     desc.vs.uniform_blocks[3].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
-    /* desc.fs.images[0].name = "baseSampler"; */
-    /* desc.fs.images[0].type = SG_IMAGETYPE_2D; */
+    desc.fs.images[0].name = "baseSampler";
+    desc.fs.images[0].type = SG_IMAGETYPE_2D;
 
     desc.vs.source = PUL_SHADER(
       layout(location = 0) in vec3 inOrigin;
@@ -1291,7 +1263,7 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
     );
 
     desc.fs.source = PUL_SHADER(
-      //uniform sampler2D baseSampler;
+      uniform sampler2D baseSampler;
 
       in vec2 uvCoord;
       in vec2 vertexCoord;
@@ -1299,8 +1271,7 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
       out vec4 outColor;
 
       void main() {
-        /* outColor = texture(baseSampler, uvCoord); */
-        outColor = vec4(uvCoord, 0.5f, 1.0f);
+        outColor = texture(baseSampler, uvCoord);
         if (outColor.a < 0.1f)
           { discard; }
         if (

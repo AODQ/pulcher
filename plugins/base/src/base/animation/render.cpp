@@ -79,32 +79,23 @@ void plugin::animation::RenderInterpolated(
         glm::vec4(instance.uvCoordBufferData[it], 0.0f, 0.0f)
       );
     }
+
+    auto const offset =
+      sg_append_buffer(
+        *animationSystem.sgBuffer
+      , bufferData.data(), bufferData.size() * sizeof(glm::vec4)
+      );
+
+    auto bindings = animationSystem.sgBindings;
+    bindings.vertex_buffer_offsets[0] = offset;
+    bindings.vertex_buffer_offsets[1] = offset;
+    bindings.fs_images[0] = instance.animator->spritesheet.Image();
+    sg_apply_bindings(bindings);
+
+    sg_draw(0, bufferData.size() / 2, 1);
+
+    bufferData.resize(0);
   }
-
-  sg_update_buffer(
-    *animationSystem.sgBuffer
-  , bufferData.data(), bufferData.size() * sizeof(glm::vec4)
-  );
-
-  sg_apply_bindings(animationSystem.sgBindings);
-
-  /* glm::vec2 const resolution = */
-  /*   glm::vec2( */
-  /*     self.instance.animator->spritesheet.width */
-  /*   , self.instance.animator->spritesheet.height */
-  /*   ); */
-
-  /* sg_apply_uniforms( */
-  /*   SG_SHADERSTAGE_VS */
-  /* , 3 */
-  /* , &resolution.x */
-  /* , sizeof(float) * 2ul */
-  /* ); */
-
-  sg_draw(0, bufferData.size() / 2, 1);
-
-    /* sg_draw(0, self.instance.drawCallCount, 1); */
-  /* } */
 }
 
 void plugin::animation::Interpolate(
