@@ -34,39 +34,16 @@ void plugin::animation::RenderInterpolated(
   );
 
   static std::vector<glm::vec4> bufferData;
-  /* static std::vector<size_t> imageData; */
 
   // set capacity and set size to 0
   if (bufferData.capacity() == 0ul)
     { bufferData.reserve(animationBufferMaxSize / sizeof(glm::vec4)); }
   bufferData.resize(0); // doesn't affect capacity
 
-  // DEBUG
-  /* debugRenderingInstances.resize(0); */
-
-  auto const
-    cullBoundLeft  = cameraOrigin.x - scene.config.framebufferDimFloat.x/2.0f
-  , cullBoundRight = cameraOrigin.x + scene.config.framebufferDimFloat.x/2.0f
-  , cullBoundUp    = cameraOrigin.y - scene.config.framebufferDimFloat.y/2.0f
-  , cullBoundDown  = cameraOrigin.y + scene.config.framebufferDimFloat.y/2.0f
-  ;
-
   // record each component to a buffer
   for (auto & interpolant : interpolants) {
 
     auto & instance = interpolant.instance;
-    // check if visible / cull / ready to render
-    if (
-        !instance.visible
-     || instance.drawCallCount == 0ul
-     || cullBoundLeft > instance.origin.x
-     || cullBoundRight < instance.origin.x
-     || cullBoundUp > instance.origin.y
-     || cullBoundDown < instance.origin.y
-    ) { continue; }
-
-    // DEBUG
-    /* debugRenderingInstances.emplace_back(&instance); */
 
     for (size_t it = 0; it < instance.originBufferData.size(); ++ it) {
       auto const origin =
@@ -123,7 +100,8 @@ void plugin::animation::Interpolate(
     /*   { instance.hasCalculatedCachedInfo = false; } */
 
     // copy instance
-    auto instance = previous;
+    auto interpolant = plugin::animation::Interpolant { previous };
+    auto & instance = interpolant.instance;
 
     // create an interpolated instance to compute vertices from
     instance.origin = glm::mix(previous.origin, current.origin, msDeltaInterp);
@@ -134,11 +112,7 @@ void plugin::animation::Interpolate(
       auto const & statePrev = previous.pieceToState.at(label);
       auto const & stateCurr = current.pieceToState.at(label);
 
-      state.deltaTime =
-        glm::mix(statePrev.deltaTime, stateCurr.deltaTime, msDeltaInterp);
       state.angle = glm::mix(statePrev.angle, stateCurr.angle, msDeltaInterp);
-      state.flip = stateCurr.flip;
-      state.visible = stateCurr.visible;
     }
 
     // compute vertices
@@ -148,6 +122,6 @@ void plugin::animation::Interpolate(
 
     plugin::animation::ComputeVertices(instance, true);
 
-    interpolantsOut.emplace_back(std::move(instance));
+    interpolantsOut.emplace_back(std::move(interpolant));
   }
 }

@@ -6,7 +6,7 @@
 #include <array>
 
 namespace pul::util {
-  float constexpr MsPerFrame = 11.0f;
+  float constexpr MsPerFrame = 16.0f;
 
   std::array<glm::vec2, 6> TriangleVertexArray();
 }

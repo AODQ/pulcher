@@ -215,7 +215,7 @@ void ShutdownPluginInfo(
   plugin.entity.Shutdown(scene);
 }
 
-// this gets capped at 90Hz
+// this gets capped at pul::util::MsPerFrame
 void ProcessLogic(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
 ) {
@@ -341,7 +341,7 @@ void ProcessRendering(
     );
     ImGui::SliderFloat(
       "ms / frame", &scene.calculatedMsPerFrame
-    , 1000.0f/90.0f, 1000.0f/0.9f
+    , 1.0f, 1000.0f/0.9f
     , "%.3f", 4.0f
     );
     ImGui::ColorEdit3("screen clear", &screenClearColor.x);
@@ -641,7 +641,7 @@ int main(int argc, char const ** argv) {
       // -- update windowing events
       glfwPollEvents();
 
-      // -- logic, 90 Hz
+      // -- logic, ~62 Hz
       msToCalculate += deltaMs;
       size_t calculatedFrames = 0ul;
       while (msToCalculate >= sceneBundle.calculatedMsPerFrame) {

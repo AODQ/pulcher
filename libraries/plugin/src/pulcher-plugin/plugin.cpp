@@ -81,17 +81,17 @@ void Plugin::Reload() {
 void Plugin::Close() {
   if (!this->data) { return; }
   #if defined(__unix__) || defined(__APPLE__)
-    spdlog::info("closing plugin {} {}", this->data, this->filepath.native());
+    spdlog::info("closing plugin {} {}", this->data, this->filepath.string());
     if (::dlclose(this->data)) {
       spdlog::critical(
-        "Failed to close plugin '{}': {}", this->filepath.native(), ::dlerror()
+        "Failed to close plugin '{}': {}", this->filepath.string(), ::dlerror()
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
     if (::FreeLibrary(this->data)) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}"
-      , this->filepath.native(), ::GetLastError()
+      , this->filepath.string().c_str(), ::GetLastError()
       );
     }
   #endif
@@ -101,18 +101,18 @@ void Plugin::Close() {
 void Plugin::Open() {
   #if defined(__unix__) || defined(__APPLE__)
     this->data = ::dlopen(this->filepath.c_str(), RTLD_LAZY | RTLD_LOCAL);
-    spdlog::info("opening {} : {}", this->data, this->filepath.native());
+    spdlog::info("opening {} : {}", this->data, this->filepath.string());
     if (!this->data) {
       spdlog::critical(
-        "Failed to load plugin '{}'; {}", this->filepath.native(), ::dlerror()
+        "Failed to load plugin '{}'; {}", this->filepath.string(), ::dlerror()
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
-    this->data = ::LoadLibraryA(this->filepath.c_str());
+    this->data = ::LoadLibraryA(this->filepath.string().c_str());
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}"
-      , this->filepath.native(), ::GetLastError()
+      , this->filepath.string().c_str(), ::GetLastError()
       );
     }
   #endif
@@ -121,7 +121,7 @@ void Plugin::Open() {
   for (auto & plugin : ::plugins) {
     if (&*plugin == this) { continue; }
     if (plugin->data == this->data) {
-      spdlog::critical("plugin {} already loaded", this->filepath.native());
+      spdlog::critical("plugin {} already loaded", this->filepath.string());
       break;
     }
   }
@@ -223,7 +223,7 @@ bool pul::plugin::LoadPlugin(
   // error
   for (auto & pluginIt : plugins) {
     if (pluginIt->filepath == file) {
-      spdlog::error("Plugin '{}' already loaded", pluginIt->filepath.native());
+      spdlog::error("Plugin '{}' already loaded", pluginIt->filepath.string());
       return false;
     }
   }
@@ -237,7 +237,7 @@ bool pul::plugin::LoadPlugin(
     ::plugins.pop_back();
     spdlog::error(
       "shared object file {} could not load correctly"
-    , file.c_str()
+    , file.string()
     );
     return false;
   }

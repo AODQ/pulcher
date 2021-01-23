@@ -89,7 +89,7 @@ The best way to mod Pulcher is to use plugins. This is still in the design phase
   - `void UiRender(pul::plugin::Info const *, pul::core::SceneBundle *);` - updates ImGui for developer purposes
   - `void Initialize(); - called when plugin is initialized
   - `void MapInitialize(pul::core::SceneBundle *); - called when map is initialized, will probably also contain map information to load custom entities
-  - `void Update(pul::plugin::Info const *, pul::core::SceneBundle *);` - updates the game @ 90Hz, used to update game-related logic
+  - `void Update(pul::plugin::Info const *, pul::core::SceneBundle *);` - updates the game @ pul::util::MsPerFrame (16 ms/frame), used to update game-related logic
   - `void Render(pul::core::SceneBundle *);` - used to provide custom rendering of the scene, can be called at any varying rate, thus the plugin
                                                  itself must handle its own interpolation, but items within SceneBundle will already be interpolated
 
