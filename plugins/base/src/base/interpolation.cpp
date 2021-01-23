@@ -64,16 +64,18 @@ PUL_PLUGIN_DECL void Plugin_UpdateRenderBundleInstance(
       /* debugRenderingInstances.emplace_back(&self.instance); */
 
       // copy the entire instance
-      auto instance = self.instance;
+      auto interpolantCopy = plugin::animation::Interpolant { self.instance };
+      auto & instanceCopy = interpolantCopy.instance;
 
       // compute cache
       plugin::animation::ComputeCache(
-        instance, instance.animator->skeleton, glm::mat3(1.0f), false, 0.0f
+        instanceCopy, instanceCopy.animator->skeleton
+      , glm::mat3(1.0f), false, 0.0f
       );
 
       // move instance w/ the entity ID
       animationInterpolants.emplace(
-        static_cast<size_t>(entity), std::move(instance)
+        static_cast<size_t>(entity), std::move(interpolantCopy)
       );
     }
   }
