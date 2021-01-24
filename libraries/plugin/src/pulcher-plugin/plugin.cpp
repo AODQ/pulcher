@@ -91,7 +91,7 @@ void Plugin::Close() {
     if (::FreeLibrary(this->data)) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}"
-      , this->filepath.string().c_str(), ::GetLastError()
+      , this->filepath.string(), ::GetLastError()
       );
     }
   #endif
@@ -108,11 +108,11 @@ void Plugin::Open() {
       );
     }
   #elif defined(_WIN32) || defined(_WIN64)
-    this->data = ::LoadLibraryA(this->filepath.string().c_str());
+    this->data = ::LoadLibraryW(this->filepath.c_str());
     if (!this->data) {
       spdlog::critical(
         "Failed to load plugin '{}'; {}"
-      , this->filepath.string().c_str(), ::GetLastError()
+      , this->filepath.string(), ::GetLastError()
       );
     }
   #endif

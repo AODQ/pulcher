@@ -1,12 +1,25 @@
 #pragma once
 
+#include <pulcher-audio/fmod-studio-guids.hpp>
+
 #include <pulcher-core/pickup.hpp>
 #include <pulcher-util/enum.hpp>
 
-#include <array>
+#include <vector>
 
 namespace pul::audio {
+
+  struct InstanceDispatch {
+    fmodGuid const * guid = nullptr;
+
+    struct Parameter { std::string key; float value; };
+    std::vector<Parameter> parameters;
+    glm::vec2 origin;
+  };
+
   struct System {
+    std::vector<InstanceDispatch> dispatches;
+
     bool playerJumped = false;
     bool playerDashed = false;
     bool playerSlided = false;

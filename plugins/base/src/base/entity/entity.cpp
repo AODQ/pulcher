@@ -6,6 +6,7 @@
 #include <plugin-base/entity/weapon.hpp>
 
 #include <pulcher-animation/animation.hpp>
+#include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/hud.hpp>
 #include <pulcher-core/particle.hpp>
@@ -414,6 +415,12 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         if (pickup.spawnTimer >= pickup.spawnTimerSet) {
           pickup.spawnTimer = 0ul;
           pickup.spawned = true;
+
+          pul::audio::InstanceDispatch dispatch;
+          dispatch.guid = &pul::audio::event::pickupSpawn;
+          dispatch.parameters = {{ "type", 3.0f }};
+          dispatch.origin = pickup.origin;
+          scene.AudioSystem().dispatches.emplace_back(dispatch);
         }
       }
 
