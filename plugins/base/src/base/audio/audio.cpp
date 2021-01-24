@@ -47,7 +47,9 @@ void InitializeSystem() {
     ), return;
   );
 
-  FMOD_Studio_Bank_LoadSampleData(fmodBank);
+  FMOD_ASSERT(FMOD_Studio_Bank_LoadSampleData(fmodBank), return;);
+
+  FMOD_ASSERT(FMOD_Studio_System_SetNumListeners(fmodSystem, 1), return;);
 }
 
 }
@@ -75,7 +77,21 @@ PUL_PLUGIN_DECL void Audio_Update(
 ) {
   auto & audioSystem = scene.AudioSystem();
 
-  auto const origin = scene.playerOrigin;
+  { // -- update listener
+    auto const origin = scene.playerOrigin;
+    FMOD_3D_ATTRIBUTES attributes3D;
+    attributes3D.position    = { origin.x/32.0f, origin.y/32.0f, 0.0f };
+    attributes3D.velocity    = { 0.0f, 0.0f, 0.0f };
+    attributes3D.forward     = { 1.0f, 0.0f, 0.0f };
+    attributes3D.up          = { 0.0f, 1.0f, 0.0f };
+    FMOD_ASSERT(
+      FMOD_Studio_System_SetListenerAttributes(
+        ::fmodSystem, 0
+      , &attributes3D, nullptr
+      )
+    , return;
+    );
+  }
 
   // -- dispatch
 
@@ -116,19 +132,14 @@ PUL_PLUGIN_DECL void Audio_Update(
     }
 
     FMOD_3D_ATTRIBUTES attributes3D;
-    attributes3D.position.x = (dispatch.origin.x - origin.x) / 32.0f;
-    attributes3D.position.y = (dispatch.origin.y - origin.y) / 32.0f;
-    attributes3D.position.z = 0.0f;
-    attributes3D.velocity.x = 0.0f;
-    attributes3D.velocity.y = 0.0f;
-    attributes3D.velocity.z = 0.0f;
-    attributes3D.forward.x  = 1.0f;
-    attributes3D.forward.y  = 0.0f;
-    attributes3D.forward.z  = 1.0f;
-    attributes3D.up.x       = 0.0f;
-    attributes3D.up.y       = 1.0f;
-    attributes3D.up.z       = 0.0f;
-    FMOD_Studio_EventInstance_Set3DAttributes(eventInstance, &attributes3D);
+    attributes3D.position = { dispatch.origin.x / 32.0f, dispatch.origin.y / 32.0f, 0.0f };
+    attributes3D.velocity = { 0.0f, 0.0f, 0.0f };
+    attributes3D.forward  = { 1.0f, 0.0f, 0.0f };
+    attributes3D.up       = { 0.0f, 1.0f, 0.0f };
+    FMOD_ASSERT(
+      FMOD_Studio_EventInstance_Set3DAttributes(eventInstance, &attributes3D)
+    , return;
+    );
   }
 
   audioSystem.dispatches.clear();
