@@ -2,8 +2,10 @@
 
 namespace pul::core {
   enum class PickupType {
-    HealthLarge, HealthMedium, HealthSmall
+    Ammo
   , ArmorLarge,  ArmorMedium,  ArmorSmall
+  , HealthLarge, HealthMedium, HealthSmall
+  , Powerup
   , Weapon, WeaponAll
   , Size
   };

@@ -57,9 +57,26 @@ void InitializeSystem() {
 extern "C" {
 
 PUL_PLUGIN_DECL void Audio_LoadAudio(
-  pul::plugin::Info const &, pul::core::SceneBundle &
+  pul::plugin::Info const &, pul::core::SceneBundle & scene
 ) {
   ::InitializeSystem();
+
+  auto & audioSystem = scene.AudioSystem();
+
+  // -- load event descriptions
+  for (size_t it = 0; it < Idx(pul::audio::event::Type::Size); ++ it) {
+    FMOD_STUDIO_EVENTDESCRIPTION * eventDescription;
+    FMOD_ASSERT(
+      FMOD_Studio_System_GetEventByID(
+        ::fmodSystem
+      , reinterpret_cast<FMOD_GUID const *>(&pul::audio::event::guids[it])
+      , &eventDescription
+      )
+    , spdlog::error("event: {}", it); continue;
+    );
+
+    audioSystem.eventDescriptions[it] = eventDescription;
+  }
 }
 
 PUL_PLUGIN_DECL void Audio_Shutdown(
@@ -75,8 +92,6 @@ PUL_PLUGIN_DECL void Audio_Shutdown(
 PUL_PLUGIN_DECL void Audio_Update(
   pul::plugin::Info const &, pul::core::SceneBundle & scene
 ) {
-  auto & audioSystem = scene.AudioSystem();
-
   { // -- update listener
     auto const origin = scene.playerOrigin;
     FMOD_3D_ATTRIBUTES attributes3D;
@@ -94,55 +109,6 @@ PUL_PLUGIN_DECL void Audio_Update(
   }
 
   // -- dispatch
-
-  for (auto & dispatch : audioSystem.dispatches) {
-
-    if (dispatch.guid == nullptr) { continue; }
-
-    FMOD_STUDIO_EVENTDESCRIPTION * eventDescription;
-    FMOD_ASSERT(
-      FMOD_Studio_System_GetEventByID(
-        ::fmodSystem
-      , reinterpret_cast<FMOD_GUID const *>(dispatch.guid)
-      , &eventDescription
-      )
-    , return;
-    );
-
-    FMOD_STUDIO_EVENTINSTANCE * eventInstance;
-
-    FMOD_ASSERT(
-      FMOD_Studio_EventDescription_CreateInstance(
-        eventDescription, &eventInstance
-      )
-    , return;
-    );
-
-    FMOD_ASSERT(FMOD_Studio_EventInstance_Start(eventInstance), return;);
-
-    for (auto & param : dispatch.parameters) {
-      FMOD_ASSERT(
-        FMOD_Studio_EventInstance_SetParameterByName(
-          eventInstance, param.key.c_str(), param.value, true
-        )
-      ,
-        spdlog::error("param: '{}'", param.key);
-        continue;
-      );
-    }
-
-    FMOD_3D_ATTRIBUTES attributes3D;
-    attributes3D.position = { dispatch.origin.x / 32.0f, dispatch.origin.y / 32.0f, 0.0f };
-    attributes3D.velocity = { 0.0f, 0.0f, 0.0f };
-    attributes3D.forward  = { 1.0f, 0.0f, 0.0f };
-    attributes3D.up       = { 0.0f, 1.0f, 0.0f };
-    FMOD_ASSERT(
-      FMOD_Studio_EventInstance_Set3DAttributes(eventInstance, &attributes3D)
-    , return;
-    );
-  }
-
-  audioSystem.dispatches.clear();
 
   // -- update fmod
   FMOD_Studio_System_Update(::fmodSystem);

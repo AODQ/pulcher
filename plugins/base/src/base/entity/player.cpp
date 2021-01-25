@@ -287,7 +287,13 @@ void PlayerCheckPickups(
       pickup.spawned = false;
       pickup.spawnTimer = 0ul;
 
-      scene.AudioSystem().pickup[Idx(pickup.type)] |= true;
+      { // audio pickup
+        pul::audio::EventInfo audioEvent;
+        audioEvent.event = pul::audio::event::Type::PickupActivate;
+        audioEvent.params = {{"type", Idx(pickup.type)}};
+        audioEvent.origin = pickup.origin;
+        scene.AudioSystem().DispatchEventOneOff(audioEvent);
+      }
 
       switch (pickup.type) {
         default: spdlog::error("unknown pickup type {}", pickup.type); break;
@@ -748,6 +754,8 @@ void plugin::entity::UpdatePlayer(
 
   auto const & controller = controls.current;
   auto const & controllerPrev = controls.previous;
+
+  player.prevAirVelocity = player.velocity.y;
 
   // error checking
   if (glm::abs(player.velocity.x) > 1000.0f) {
@@ -1352,18 +1360,45 @@ void plugin::entity::UpdatePlayer(
   );
   ::PlayerCheckPickups(scene, player, damageable, playerOrigin, hitbox);
 
+  // -- set audio
   auto & audioSystem = scene.AudioSystem();
-  audioSystem.playerJumped |=
-    frameVerticalJump || frameHorizontalJump || frameWalljump;
-  audioSystem.playerSlided |= player.crouchSliding && !prevCrouchSliding;
-  audioSystem.playerDashed |= frameHorizontalDash || frameVerticalDash;
-  audioSystem.playerTaunted |= controller.taunt && !controllerPrev.taunt;
+
+  if (frameVerticalJump || frameHorizontalJump || frameWalljump) {
+    pul::audio::EventInfo audioEvent;
+    audioEvent.event = pul::audio::event::Type::CharacterMovementJump;
+    audioEvent.origin = playerOrigin;
+    audioSystem.DispatchEventOneOff(audioEvent);
+  }
+
+  if (player.crouchSliding && !prevCrouchSliding) {
+    pul::audio::EventInfo audioEvent;
+    audioEvent.event = pul::audio::event::Type::CharacterMovementSlide;
+    audioEvent.params = { {"slide", glm::abs(player.velocity.x)} };
+    audioEvent.origin = playerOrigin;
+    audioSystem.DispatchEventOneOff(audioEvent);
+  }
+
+  if (frameHorizontalDash || frameVerticalDash) {
+    pul::audio::EventInfo audioEvent;
+    audioEvent.event = pul::audio::event::Type::CharacterMovementDash;
+    audioEvent.origin = playerOrigin;
+    audioSystem.DispatchEventOneOff(audioEvent);
+  }
+
+  if (controller.taunt && !controllerPrev.taunt) {
+    pul::audio::EventInfo audioEvent;
+    audioEvent.event = pul::audio::event::Type::CharacterDialogueTaunt;
+    audioEvent.origin = playerOrigin;
+    audioSystem.DispatchEventOneOff(audioEvent);
+  }
 
   auto & legInfo = playerAnim.instance.pieceToState["legs"];
 
+  bool playCrouchWalkAudio = false;
+
   if (player.grounded && legInfo.label == "crouch-walk") {
     static size_t prevComp = 0;
-    audioSystem.playerStepped |=
+    playCrouchWalkAudio |=
         (prevComp % 5 != 0) && legInfo.componentIt % 5 == 0
      && legInfo.componentIt != 0
     ;
@@ -1372,7 +1407,7 @@ void plugin::entity::UpdatePlayer(
 
   if (player.grounded && legInfo.label == "walk") {
     static size_t prevComp = 0;
-    audioSystem.playerStepped |=
+    playCrouchWalkAudio |=
         (prevComp % 3 != 0) && legInfo.componentIt % 3 == 0
      && legInfo.componentIt != 0
     ;
@@ -1381,17 +1416,30 @@ void plugin::entity::UpdatePlayer(
 
   if (player.grounded && legInfo.label == "run") {
     static size_t prevComp = 0;
-    audioSystem.playerStepped |=
+    playCrouchWalkAudio |=
         (prevComp % 3 != 0) && legInfo.componentIt % 3 == 0
      && legInfo.componentIt != 0
     ;
     prevComp = legInfo.componentIt;
   }
 
-  if (audioSystem.envLanded == -1ul && !prevGrounded && frameStartGrounded) {
-    audioSystem.envLanded =
-      static_cast<size_t>(glm::clamp(player.prevAirVelocity/5.0f, 0.0f, 2.0f));
-    audioSystem.playerLanded |= player.prevAirVelocity > 9.0f;
+  if (playCrouchWalkAudio) {
+    pul::audio::EventInfo audioEvent;
+    audioEvent.event = pul::audio::event::Type::CharacterMovementStep;
+    audioEvent.params = { {"type", 2.0f} }; // 'normal'
+    audioEvent.origin = playerOrigin;
+    audioSystem.DispatchEventOneOff(audioEvent);
+  }
+
+  if (!prevGrounded && frameStartGrounded && player.prevAirVelocity > 1.0f) {
+    pul::audio::EventInfo audioEvent;
+    audioEvent.event = pul::audio::event::Type::CharacterMovementLand;
+    audioEvent.origin = playerOrigin;
+    audioEvent.params = {
+      {"type", 2.0f} // 'normal'
+    , {"force", glm::abs(player.prevAirVelocity/8.0f)}
+    };
+    audioSystem.DispatchEventOneOff(audioEvent);
   }
 
   playerOrigin -= glm::vec2(0.0f, 28.0f);

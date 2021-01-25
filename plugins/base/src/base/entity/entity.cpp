@@ -416,11 +416,11 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           pickup.spawnTimer = 0ul;
           pickup.spawned = true;
 
-          pul::audio::InstanceDispatch dispatch;
-          dispatch.guid = &pul::audio::event::pickupSpawn;
-          dispatch.parameters = {{ "type", 3.0f }};
-          dispatch.origin = pickup.origin;
-          scene.AudioSystem().dispatches.emplace_back(dispatch);
+          pul::audio::EventInfo audioEvent;
+          audioEvent.event = pul::audio::event::Type::PickupSpawn;
+          audioEvent.params = {{ "type", Idx(pickup.type) }};
+          audioEvent.origin = pickup.origin;
+          scene.AudioSystem().DispatchEventOneOff(audioEvent);
         }
       }
 

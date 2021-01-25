@@ -21,4 +21,6 @@ target_link_libraries(
   PUBLIC
     pulcher-util
     pulcher-core
+  PRIVATE
+    fmod
 )
