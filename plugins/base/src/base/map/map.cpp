@@ -563,7 +563,7 @@ PUL_PLUGIN_DECL void Map_LoadMap(
 , pul::core::SceneBundle & scene
 , char const * filename
 ) {
-  spdlog::info("Loading '{}'", filename);
+  spdlog::info("Loading map '{}'", filename);
 
   cJSON * map;
   {

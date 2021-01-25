@@ -48,6 +48,12 @@ auto StartupOptions() -> argparse::ArgumentParser {
   ;
 
   options
+    .add_argument("-m")
+    .help(("map path"))
+    .default_value(std::string{"assets/base/map/Calamity-test.json"})
+  ;
+
+  options
     .add_argument("-d")
     .help("debug mode (console printing)")
     .default_value(false)
@@ -75,6 +81,7 @@ auto CreateUserConfig(argparse::ArgumentParser const & userResults)
   try {
     windowResolution = userResults.get<std::string>("-w");
     framebufferResolution = userResults.get<std::string>("-r");
+    config.mapPath = std::filesystem::path{userResults.get<std::string>("-m")};
     if (userResults.get<bool>("-d")) {
       spdlog::set_level(spdlog::level::debug);
     }
@@ -195,7 +202,7 @@ void LoadPluginInfo(
   plugin.animation.LoadAnimations(plugin, scene);
   plugin.audio.LoadAudio(plugin, scene);
 
-  plugin.map.LoadMap(plugin, scene, "assets/base/map/test.json");
+  plugin.map.LoadMap(plugin, scene, scene.config.mapPath.c_str());
 
   // last thing so that all the previous information (maps, animation, etc)
   // can be loaded up. They can still modify the registry if they need tho.
