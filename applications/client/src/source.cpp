@@ -202,7 +202,7 @@ void LoadPluginInfo(
   plugin.animation.LoadAnimations(plugin, scene);
   plugin.audio.LoadAudio(plugin, scene);
 
-  plugin.map.LoadMap(plugin, scene, scene.config.mapPath.c_str());
+  plugin.map.LoadMap(plugin, scene, scene.config.mapPath.string().c_str());
 
   // last thing so that all the previous information (maps, animation, etc)
   // can be loaded up. They can still modify the registry if they need tho.
