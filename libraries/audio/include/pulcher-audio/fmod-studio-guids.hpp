@@ -12,12 +12,11 @@ struct fmodGuid {
   uint32_t data0;
   uint16_t data1;
   uint16_t data2;
-  uint8_t data4[8];
-  /* std::array<uint8_t, 8> data4; */
+  std::array<uint8_t, 8> data4;
 };
 
 namespace pul::audio::event {
-  enum class Type : uint32_t {
+  enum class Type {
     AnnouncerCount,
     CharacterDamageDeath,
     CharacterDamageDrown,
@@ -58,7 +57,7 @@ namespace pul::audio::event {
     Size,
   };
 
-  constexpr std::array<fmodGuid, 52> guids = {{
+  constexpr std::array<fmodGuid, 53> guids = {{
     {0x32addf1b, 0x5593, 0x447e, {0xa0, 0xf3, 0x43, 0xad, 0x55, 0x01, 0x07, 0xe9}},
     {0x5472a84a, 0x0fcc, 0x40a9, {0xa4, 0x73, 0xd7, 0xf4, 0xd9, 0xd4, 0xab, 0x10}},
     {0x34bc7f73, 0x6b74, 0x4c83, {0xa5, 0x21, 0x6c, 0x24, 0xd8, 0x17, 0xd8, 0xf0}},
@@ -100,7 +99,7 @@ namespace pul::audio::event {
 }
 
 namespace pul::audio::bus {
-  enum class Type : uint32_t {
+  enum class Type {
     MasterBus,
   };
 
@@ -110,7 +109,7 @@ namespace pul::audio::bus {
 }
 
 namespace pul::audio::bank {
-  enum class Type : uint32_t {
+  enum class Type {
     Announcer,
     Hud,
     Master,
@@ -126,7 +125,7 @@ namespace pul::audio::bank {
 }
 
 namespace pul::audio::param {
-  enum class Type : uint32_t {
+  enum class Type {
     AnnouncerCountdown,
     CharacterCharacterType,
     CharacterDamage,
@@ -158,3 +157,4 @@ namespace pul::audio::param {
     {0x6da638d5, 0x1559, 0x4e84, {0xb8, 0x5d, 0x19, 0xbf, 0x59, 0xc4, 0xa7, 0x94}},
   }};
 }
+
