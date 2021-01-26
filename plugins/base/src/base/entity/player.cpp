@@ -1373,7 +1373,7 @@ void plugin::entity::UpdatePlayer(
   if (player.crouchSliding && !prevCrouchSliding) {
     pul::audio::EventInfo audioEvent;
     audioEvent.event = pul::audio::event::Type::CharacterMovementSlide;
-    audioEvent.params = { {"slide", glm::abs(player.velocity.x)} };
+    audioEvent.params = { {"velocity.x", glm::abs(player.velocity.x)} };
     audioEvent.origin = playerOrigin;
     audioSystem.DispatchEventOneOff(audioEvent);
   }

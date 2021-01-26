@@ -50,7 +50,7 @@ auto StartupOptions() -> argparse::ArgumentParser {
   options
     .add_argument("-m")
     .help(("map path"))
-    .default_value(std::string{"assets/base/map/Calamity-test.json"})
+    .default_value(std::string{"assets/base/map/calamity/map-calamity.json"})
   ;
 
   options

@@ -618,7 +618,7 @@ PUL_PLUGIN_DECL void Map_LoadMap(
 
       auto file = std::ifstream{tilesetJsonPath.string()};
       if (file.eof() || !file.good()) {
-        spdlog::error("could not load tilest '{}'", tilesetJsonPath.string());
+        spdlog::error("could not load tileset '{}'", tilesetJsonPath.string());
         return;
       }
 
