@@ -52,6 +52,7 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   entt::entity playerEntity;
   plugin::entity::ConstructPlayer(playerEntity, plugin, scene, true);
 
+
   // bot/AI
   /* for (size_t i = 0; i < 0; ++ i) { */
   /*   entt::entity botEntity; */

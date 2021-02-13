@@ -33,6 +33,7 @@ git add *.dll
 
 # check for assets update
 cd assets
+git stash
 git pull
 cd ..
 git status

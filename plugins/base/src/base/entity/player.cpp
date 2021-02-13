@@ -67,6 +67,25 @@ namespace {
 
   std::string debugTransferDetails = {};
 
+  // have a "diamond" around player to validate its position;
+  // first forward pick points, clamping player origin based off
+  // the closest intersection
+
+  // then apply connect points to clamp the player off from the environment
+  // order:
+  //      0--1
+  //      |  |
+  //      |  |
+  //      |  |
+  //      2--3
+
+  // TODO IMGUI DEBUG constexpr
+  std::array<glm::vec2, 4> pickPoints = {
+    glm::vec2(-5.0f, -48.0f)
+  , glm::vec2(+5.0f, -48.0f)
+  , glm::vec2(+5.0f, -4.0f)
+  , glm::vec2(-5.0f, -4.0f)
+  };
 
 /*
   calculate requested dash transfer velocity given a direction and a velocity.
@@ -340,59 +359,40 @@ void UpdatePlayerPhysics(
   // if no velocity do nothing
   if (player.velocity == glm::vec2(0.0f)) { return; }
 
-  // have a "diamond" around player to validate its position;
-  // first forward pick points, clamping player origin based off
-  // the closest intersection
+  /* { // -- wall intersection left */
+  /*   auto wallPoint = */
+  /*     pul::physics::IntersectorPoint{ */
+  /*       glm::round(pickPoints[2] + playerOrigin - glm::vec2(3.0f, 0.0f)) */
+  /*     } */
+  /*   ; */
 
-  // then apply connect points to clamp the player off from the environment
-  // order:
-  //      0      *
-  //     / \    1  4
-  //    1   3  *    *
-  //     \ /    2  3
-  //      2      *
+  /*   pul::physics::IntersectionResults results; */
+  /*   player.wallClingLeft = */
+  /*     plugin.physics.IntersectionPoint(scene, wallPoint, results); */
 
-  std::array<glm::vec2, 4> constexpr pickPoints = {
-    glm::vec2(0.0f, -48.0f)
-  , glm::vec2(-10.0f, -22.0f)
-  , glm::vec2(0.0f, -4.0f)
-  , glm::vec2(+10.0f, -22.0f)
-  };
+  /*   if (player.wallClingLeft) */
+  /*     { player.velocity.x = glm::max(player.velocity.x, 0.0f); } */
 
-  {
-    auto wallPoint =
-      pul::physics::IntersectorPoint{
-        glm::round(pickPoints[1] + playerOrigin - glm::vec2(3.0f, 0.0f))
-      }
-    ;
+  /*   if (player.grounded) */
+  /*     { player.wallClingLeft = false; } */
+  /* } */
 
-    pul::physics::IntersectionResults results;
-    player.wallClingLeft =
-      plugin.physics.IntersectionPoint(scene, wallPoint, results);
+  /* { // -- wall intersection right */
+  /*   auto wallPoint = */
+  /*     pul::physics::IntersectorPoint{ */
+  /*       glm::round(pickPoints[3] + playerOrigin + glm::vec2(3.0f, 0.0f)) */
+  /*     } */
+  /*   ; */
 
-    if (player.wallClingLeft)
-      { player.velocity.x = glm::max(player.velocity.x, 0.0f); }
+  /*   pul::physics::IntersectionResults results; */
+  /*   player.wallClingRight = */
+  /*     plugin.physics.IntersectionPoint(scene, wallPoint, results); */
+  /*   if (player.wallClingRight) */
+  /*     { player.velocity.x = glm::min(player.velocity.x, 0.0f); } */
 
-    if (player.grounded)
-      { player.wallClingLeft = false; }
-  }
-
-  {
-    auto wallPoint =
-      pul::physics::IntersectorPoint{
-        glm::round(pickPoints[3] + playerOrigin + glm::vec2(3.0f, 0.0f))
-      }
-    ;
-
-    pul::physics::IntersectionResults results;
-    player.wallClingRight =
-      plugin.physics.IntersectionPoint(scene, wallPoint, results);
-    if (player.wallClingRight)
-      { player.velocity.x = glm::min(player.velocity.x, 0.0f); }
-
-    if (player.grounded)
-      { player.wallClingRight = false; }
-  }
+  /*   if (player.grounded) */
+  /*     { player.wallClingRight = false; } */
+  /* } */
 
   pul::physics::IntersectionResults static pointResults;
   size_t closestIntersection = -1ul;
@@ -435,17 +435,16 @@ void UpdatePlayerPhysics(
           intersectionNormal += point;
         }
       }
+
+      // if there's no normal this is not a valid collision
       if (intersectionNormal  == glm::vec2(0.0)) {
-        player.velocity = glm::vec2(0.01f);
-        intersectionNormal = glm::vec2(1.0f);
+        goto SKIP_INTERSECTION_EDGE_TEST;
       }
 
       intersectionNormal = glm::normalize(intersectionNormal);
     }
 
-    /* spdlog::debug("normal: {}", intersectionNormal); */
-
-    glm::vec2 const targetDirection = 
+    glm::vec2 const targetDirection =
       glm::reflect(glm::normalize(player.velocity), -intersectionNormal);
 
     if (player.jumping && player.hasReleasedJump) {
@@ -482,6 +481,8 @@ void UpdatePlayerPhysics(
     ;
   }
 
+  SKIP_INTERSECTION_EDGE_TEST:
+
   // now apply the border
   //      0      *
   //     / \    1  4
@@ -489,24 +490,27 @@ void UpdatePlayerPhysics(
   //     \ /    2  3
   //      2      *
 
-  /* for (int i = 0; i < 4; ++ i) { */
-  /*   glm::vec2 const point0 = pickPoints[i], point1 = pickPoints[(i+1)%4]; */
-  /*   auto borderRay = */
-  /*     pul::physics::IntersectorRay::Construct( */
-  /*       glm::round(point0 + playerOrigin) */
-  /*     , glm::round(point1 + playerOrigin) */
-  /*     ); */
-  /*   pul::physics::IntersectionResults borderResults; */
-  /*   plugin.physics.IntersectionRaycast(scene, borderRay, borderResults); */
+  for (size_t i = 0; i < ::pickPoints.size(); ++ i) {
+    glm::vec2 const
+      point0 = pickPoints[i]
+    , point1 = pickPoints[(i+1)%pickPoints.size()]
+    ;
+    auto borderRay =
+      pul::physics::IntersectorRay::Construct(
+        glm::round(point0 + playerOrigin)
+      , glm::round(point1 + playerOrigin)
+      );
+    pul::physics::IntersectionResults borderResults;
+    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
 
-  /*   if (borderResults.collision) { */
-  /*     // get the origin of the intersection in releation to center of player */
-  /*     glm::vec2 origin = */
-  /*       glm::vec2(borderResults.origin) - playerOrigin - glm::vec2(0.0f, 32.0f); */
+    if (borderResults.collision) {
+      // get the origin of the intersection in releation to center of player
+      glm::vec2 origin =
+        glm::vec2(borderResults.origin) - playerOrigin - glm::vec2(0.0f, 32.0f);
 
-  /*     playerOrigin -= origin; */
-  /*   } */
-  /* } */
+      playerOrigin -= origin;
+    }
+  }
 }
 
 void UpdatePlayerWeapon(
@@ -791,10 +795,11 @@ void plugin::entity::UpdatePlayer(
 
   // gravity/ground check
   if (player.affectedByGravity) {
-    pul::physics::IntersectorPoint point;
-    point.origin = playerOrigin + glm::vec2(0.0f, -3.0f);
+    pul::physics::IntersectorRay ray;
+    ray.beginOrigin = playerOrigin + glm::vec2(+5.0f, -3.0f);
+    ray.endOrigin   = playerOrigin + glm::vec2(-5.0f, -3.0f);
     pul::physics::IntersectionResults results;
-    player.grounded = plugin.physics.IntersectionPoint(scene, point, results);
+    player.grounded = plugin.physics.IntersectionRaycast(scene, ray, results);
   }
 
   bool const frameStartGrounded = player.grounded;
@@ -1453,6 +1458,14 @@ void plugin::entity::UiRenderPlayer(
   ImGui::Begin("Physics");
 
   ImGui::Separator();
+  ImGui::Separator();
+
+  ImGui::Text("player physx points");
+  for (size_t it = 0; it < ::pickPoints.size(); ++ it) {
+    auto & pick = ::pickPoints[it];
+    ImGui::DragFloat2(fmt::format("pt {}", it).c_str(), &pick.x, 0.25f);
+  }
+
   ImGui::Separator();
 
   ImGui::PushItemWidth(74.0f);

@@ -346,6 +346,10 @@ void ProcessRendering(
     pul::imgui::ItemTooltip(
       "NOTE: RELOADING plugins will save animations, configs, etc"
     );
+    ImGui::SameLine();
+    if (ImGui::Button("reset ms/frame")) {
+      scene.calculatedMsPerFrame = pul::util::MsPerFrame;
+    }
     ImGui::SliderFloat(
       "ms / frame", &scene.calculatedMsPerFrame
     , 1.0f, 1000.0f/0.9f

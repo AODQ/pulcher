@@ -20,7 +20,7 @@
 
 namespace {
 
-bool showPhysicsQueries = false;
+bool showPhysicsQueries = true;
 bool showHitboxes = false;
 
 struct DebugRenderInfo {
