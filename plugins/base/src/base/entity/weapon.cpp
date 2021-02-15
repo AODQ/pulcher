@@ -2922,8 +2922,11 @@ bool plugin::entity::WeaponDamageCircle(
 
     pul::core::DamageInfo damageInfo;
     { // calculate damage info
-      glm::vec2 const dir =
+      glm::vec2 dir =
         glm::vec2(std::get<0>(entityIntersection)) - origin;
+      if (dir == glm::vec2(0.0f)) {
+        dir = glm::vec2(0, -radius);
+      }
 
       float const forceRatio = 1.0f - glm::length(dir) / radius;
 

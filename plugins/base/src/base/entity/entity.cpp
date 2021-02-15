@@ -808,6 +808,7 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
       ImGui::SameLine();
       ImGui::Checkbox("hasReleasedJump", &self.hasReleasedJump);
       ImGui::Checkbox("grounded", &self.grounded);
+      ImGui::Checkbox("prev ground", &self.prevGrounded);
       ImGui::SameLine();
       ImGui::Checkbox("use gravity", &self.affectedByGravity);
       ImGui::Checkbox("wall cling left", &self.wallClingLeft);

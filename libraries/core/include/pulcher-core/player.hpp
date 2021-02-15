@@ -28,11 +28,13 @@ namespace pul::core {
 
   struct ComponentHitboxAABB {
     glm::i32vec2 dimensions;
+    glm::i32vec2 offset = glm::vec2(0);
   };
 
   struct ComponentPlayer {
     glm::vec2 velocity = {};
     glm::vec2 storedVelocity = {};
+    glm::vec2 prevOrigin = {};
     float lookAtAngle = 0.0f;
     bool flip = false;
 
@@ -55,8 +57,9 @@ namespace pul::core {
     bool crouchSliding = false;
     bool crouching = false;
     bool hasReleasedJump = false;
-    bool grounded = false;
+    bool grounded = false, prevGrounded = false;
     bool wallClingLeft = false, wallClingRight = false;
+    bool prevWallClingLeft = false, prevWallClingRight = false;
     bool landing = false; // landing until animation timer ends
 
     std::array<float, Idx(pul::Direction::Size)> dashCooldown { 0.0f };
