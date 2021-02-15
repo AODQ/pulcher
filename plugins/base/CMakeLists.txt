@@ -7,12 +7,13 @@ target_sources(
     src/base/animation/animation.cpp
     src/base/animation/render.cpp
     src/base/audio/audio.cpp
-    src/base/interpolation.cpp
+    src/base/debug/renderer.cpp
     src/base/entity/config.cpp
     src/base/entity/cursor.cpp
     src/base/entity/entity.cpp
     src/base/entity/player.cpp
     src/base/entity/weapon.cpp
+    src/base/interpolation.cpp
     src/base/map/map.cpp
     src/base/physics/physics.cpp
     src/base/ui/ui.cpp

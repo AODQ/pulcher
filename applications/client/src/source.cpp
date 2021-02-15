@@ -287,7 +287,7 @@ void ProcessRendering(
 
     sg_begin_pass(pul::gfx::ScenePass(), &passAction);
 
-    plugin.entity.EntityRender(plugin, scene);
+    plugin.entity.EntityRender(plugin, scene, renderInterp);
 
     sg_end_pass();
   }

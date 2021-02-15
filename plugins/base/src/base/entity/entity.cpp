@@ -4,6 +4,7 @@
 #include <plugin-base/entity/cursor.hpp>
 #include <plugin-base/entity/player.hpp>
 #include <plugin-base/entity/weapon.hpp>
+#include <plugin-base/debug/renderer.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
@@ -34,6 +35,7 @@
 namespace {
 
 bool botPlays = false;
+bool showHitboxRendering = false;
 
 } // -- namespace
 
@@ -51,6 +53,9 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   // player
   entt::entity playerEntity;
   plugin::entity::ConstructPlayer(playerEntity, plugin, scene, true);
+
+  // initialize debug
+  plugin::debug::ShapesRenderInitialize();
 
 
   // bot/AI
@@ -87,9 +92,12 @@ PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
 }
 
 PUL_PLUGIN_DECL void Entity_EntityRender(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::plugin::Info const & plugin
+, pul::core::SceneBundle & scene
+, pul::core::RenderBundleInstance const & renderBundle
 ) {
-  plugin::entity::RenderCursor(plugin, scene);
+  plugin::entity::RenderCursor(plugin, scene, renderBundle);
+  plugin::debug::ShapesRender(scene, renderBundle);
 }
 
 PUL_PLUGIN_DECL void Entity_EntityUpdate(
@@ -517,6 +525,30 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
     }
   }
 
+  if (showHitboxRendering)
+  { // -- debug hitbox lines
+    auto view =
+      registry.view<
+        pul::core::ComponentHitboxAABB, pul::core::ComponentOrigin
+      >();
+
+    for (auto & entity : view) {
+      // get origin/dimensions, for dimensions multiply by half in order to
+      // get its "radius" or whatever
+      auto const & dim =
+        glm::vec2(
+          view.get<pul::core::ComponentHitboxAABB>(entity).dimensions
+        ) * 0.5f
+      ;
+      auto const & origin =
+        view.get<pul::core::ComponentOrigin>(entity).origin;
+
+      plugin::debug::RenderAabbByCenter(
+        origin, dim, glm::vec3(0.7f, 0.8f, 1.0f)
+      );
+    }
+  }
+
   { // -- player
     auto view =
       registry.view<
@@ -869,6 +901,10 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
 
     ImGui::PopID();
   });
+  ImGui::End();
+
+  ImGui::Begin("Diagnostics");
+    ImGui::Checkbox("show hitbox rendering", &::showHitboxRendering);
   ImGui::End();
 
   auto view =

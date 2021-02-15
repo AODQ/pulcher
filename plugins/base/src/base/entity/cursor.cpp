@@ -220,7 +220,9 @@ void plugin::entity::ConstructCursor(
 }
 
 void plugin::entity::RenderCursor(
-  pul::plugin::Info const &, pul::core::SceneBundle & scene
+  pul::plugin::Info const &
+, pul::core::SceneBundle & scene
+, pul::core::RenderBundleInstance const & renderBundle
 ) {
   auto & registry = scene.EnttRegistry();
   auto view = registry.view<::ComponentCursor>();
