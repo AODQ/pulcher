@@ -14,7 +14,13 @@ Rendering in Pulcher sits on top of Sokol, which is a very nice rendering abstra
 
 # Code Philosphy
 
-Code should be simple and data-oriented. There should be minimal implicit behavior, including hidden heap allocations. OO patterns like polymorphism & inheritance are also discouraged. It should be fast to compile code, so headers should generally avoid including other headers, favoring forward-declarations. Also dependencies should be minimal & carefully chosen, and built along-side the project. All code, with an exception to files that exist to hold data, should be 80-column width.
+Code should be simple and data-oriented. There should be minimal implicit behavior, including hidden heap allocations. OO patterns like polymorphism & inheritance are also discouraged. It should be fast to compile code, so headers should generally avoid including other headers, favoring forward-declarations. Also dependencies should be minimal & carefully chosen, and built along-side the project. All code, with an exception to files that exist to hold data, should be 80-character width.
+
+Some definitions of ambigous terminology;
+
+  - 'size' in consts will usually refer to the number of bytes, whereas 'length'
+    will refer to the number of elements. Though I have recently decided to
+    stick with 'byteSize' to avoid confusion with std::vector::size.
 
 # Layout
 
@@ -76,7 +82,7 @@ Pulcher is officially built against Clang, but should also build against GCC wit
 To build on Mac, use clang and CMake, similar to the above example for building on Linux, except specify the `PULCHER_PLATFORM` as macOS
 ```
 cmake -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release -DPULCHER_PLATFORM=macOS ../repo
-``` 
+```
 
 MacOS support is limited, and there maybe be dependency issues, in particular be sure to install/update GLFW on your system with homebrew.
 
