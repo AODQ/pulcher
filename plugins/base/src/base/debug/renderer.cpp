@@ -33,7 +33,7 @@ namespace {
     + ::maxPrimitives * sizeof(float) * 8 * 4 // circle
   ;
 
-  size_t debugRenderLineLength = 0;
+  size_t debugRenderLineLength = -1ul;
 
   // this specifies the number of draw-calls, it's different from the length
   // as that length will be cleared out after a swap, however we will still be
@@ -192,7 +192,7 @@ void plugin::debug::ShapesRender(
 ) {
 
   // check if buffer needs to be updated
-  if (::debugRenderLineLength != 0) {
+  if (::debugRenderLineLength != -1ul) {
     plugin::debug::ShapesRenderSwap();
   }
 
@@ -223,7 +223,7 @@ void plugin::debug::ShapesRenderSwap() {
   ::debugRenderLineDrawCalls = ::debugRenderLineLength * 2;
 
   // reset buffers
-  ::debugRenderLineLength = 0;
+  ::debugRenderLineLength = -1ul;
 }
 
 /* void RenderPoint(glm::vec2 origin, glm::vec3 color); */
