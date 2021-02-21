@@ -21,12 +21,12 @@
 
 namespace {
   int32_t maxAirDashes = 3u;
-  float inputRunAccelTarget = 5.0f;
-  float inputRunAccelTime = 1.5f;
+  float inputRunAccelTarget = 6.5f;
+  float inputRunAccelTime = 1.0f;
   float slideAccel = 1.0f;
   float slideMinVelocity = 6.0f;
-  float slideCooldown   = 300.0f;
-  float slideFriction = 0.95f;
+  float slideCooldown   = 1500.0f;
+  float slideFriction = 0.97f;
   float slideFrictionTransitionTime = 500.0f;
   float slideFrictionTransitionPow = 1.0f;
   float slopeStepUpHeight   = 12.0f;
@@ -34,21 +34,21 @@ namespace {
 
   float inputAirAccelPreThresholdTime = 0.8f;
   float inputAirAccelPostThreshold = 0.02f;
-  float inputAirAccelThreshold = 6.0f;
+  float inputAirAccelThreshold = 8.0f;
 
   float inputGravityAccelPreThresholdTime = 1.0f;
-  float inputGravityAccelPostThreshold = 0.04f;
-  float inputGravityAccelThreshold = 8.0f;
+  float inputGravityAccelPostThreshold = 0.84f;
+  float inputGravityAccelThreshold = 12.0f;
 
-  float inputWalkAccelTarget = 1.0f;
+  float inputWalkAccelTarget = 2.0f;
   float inputWalkAccelTime = 0.5f;
-  float inputCrouchAccelTarget = 2.0f;
+  float inputCrouchAccelTarget = 3.0f;
   float inputCrouchAccelTime = 1.0f;
   float jumpAfterFallTime = 200.0f;
-  float jumpingHorizontalAccel = 4.0f;
+  float jumpingHorizontalAccel = 5.0f;
   float jumpingHorizontalAccelMax = 6.0f;
-  float jumpingVerticalAccel = 7.0f;
-  float jumpingHorizontalTheta = 90.0f;
+  float jumpingVerticalAccel = 8.0f;
+  float jumpingHorizontalTheta = 60.0f;
   float frictionGrounded = 0.8f;
   float dashAccel = 1.0f;
   float dashGravityTime = 200.0f;
@@ -60,7 +60,7 @@ namespace {
   };
   TransferPercent dashVerticalTransfer;
   TransferPercent dashHorizontalTransfer;
-  float dashMinVelocity = 6.0f;
+  float dashMinVelocity = 7.0f;
   float dashMinVelocityMultiplier = 2.0f;
   float dashCooldown = 1500.0f;
   float horizontalGroundedVelocityStop = 0.5f;
