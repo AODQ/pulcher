@@ -880,6 +880,7 @@ void plugin::entity::UpdatePlayer(
     playerAnim.instance.pieceToState["body"].angle = 0.0f;
 
     // -- process crouching
+    player.prevCrouching = player.crouching;
     player.crouching = controller.crouch;
 
     // check if player can uncrouch from geometry
@@ -914,9 +915,6 @@ void plugin::entity::UpdatePlayer(
         player.crouchSliding = false; // force sliding off
       }
     }
-
-    // at this point prev crouching is no longer used
-    player.prevCrouching = player.crouching;
 
     // if the player is crouch sliding, player remains crouched until the
     // animation is finished, the velocity is below crouch target, or the
@@ -1035,9 +1033,9 @@ void plugin::entity::UpdatePlayer(
           , ::inputWalkAccelTime, ::inputWalkAccelTarget
           , frictionApplies, inputAccel
           );
-        } else if (controller.crouch) {
+        } else if (player.crouching) {
           if (
-              (player.prevGrounded ? !controllerPrev.crouch: !prevCrouchSliding)
+              (player.prevGrounded ? !player.prevCrouching : !prevCrouchSliding)
             && player.crouchSlideCooldown <= 0.0f
           ) {
             player.crouchSliding = true;
@@ -1356,7 +1354,7 @@ void plugin::entity::UpdatePlayer(
     switch (currentWeaponInfo.requiredHands) {
       case 0:
         if (player.grounded) {
-          if (controller.crouch) {
+          if (player.crouching) {
             playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
             playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
           }
