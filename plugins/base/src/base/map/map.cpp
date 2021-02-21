@@ -1,3 +1,5 @@
+#include <plugin-base/bot/bot.hpp>
+
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-core/enum.hpp>
 #include <pulcher-core/map.hpp>
@@ -716,6 +718,11 @@ PUL_PLUGIN_DECL void Map_LoadMap(
       .LoadMapGeometry(
         tilesets, mapTileIndices, mapTileOrigins, mapTileOrientations
       );
+
+    // create navigation map
+    plugin::bot::BuildNavigationMap(
+      tilesets, mapTileIndices, mapTileOrigins, mapTileOrientations
+    );
   }
 
   cJSON_Delete(map);
