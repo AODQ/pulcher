@@ -2,12 +2,10 @@
 
 namespace entt { enum class entity : uint32_t; }
 namespace pul::core { struct SceneBundle; }
-namespace pul::plugin { struct Info; }
 
 namespace plugin::entity {
   void ConstructDebugBox(
     entt::entity & entityOut
-  , pul::plugin::Info const & plugin
   , pul::core::SceneBundle & scene
   );
 
@@ -19,8 +17,5 @@ namespace plugin::entity {
     float angle = 1.5f/2.0f;
   };
 
-  void BoxUpdate(
-    pul::plugin::Info const & plugin,
-    pul::core::SceneBundle & scene
-  );
+  void BoxUpdate(pul::core::SceneBundle & scene);
 }

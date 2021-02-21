@@ -53,7 +53,7 @@ Plugins directory contains dynamic libraries that provide known C-ABI functions 
  - `plugins/base/audio` contains implementation of audio
  - `plugins/base/entity` contains implementation of Pulcher entities (weapons, players, etc)
  - `plugins/base/map` contains implementation of the Pulcher map, including loading & rendering.
- - `plugins/base/ui` contains `UiDispatch` function, that along with containing some ImGui behavior (diagnostics, controls, etc) will dispatch every plugins `UiRender`
+ - `plugins/base/ui` contains `DebugUiDispatch` function, that along with containing some ImGui behavior (diagnostics, controls, etc) will dispatch every plugins `DebugUiDispatch`
 
 The scripts directory contains generic scripts, mostly to quickly set up a development environment, updating the binaries repository, & testing that each binary launches.
 
@@ -92,11 +92,63 @@ I haven't tried building Pulcher on Windows, though besides possible MSVC errors
 
 The best way to mod Pulcher is to use plugins. This is still in the design phase. Most likely how this will work is that for a plugin `PluginTest`, it must provide a C-ABI compatible functions;
 
-  - `void UiRender(pul::plugin::Info const *, pul::core::SceneBundle *);` - updates ImGui for developer purposes
-  - `void Initialize(); - called when plugin is initialized
-  - `void MapInitialize(pul::core::SceneBundle *); - called when map is initialized, will probably also contain map information to load custom entities
-  - `void Update(pul::plugin::Info const *, pul::core::SceneBundle *);` - updates the game @ pul::util::MsPerFrame (16 ms/frame), used to update game-related logic
-  - `void Render(pul::core::SceneBundle *);` - used to provide custom rendering of the scene, can be called at any varying rate, thus the plugin
+  - `void DebugUiDispatch(pul::core::SceneBundle &);` - updates ImGui for developer purposes
+  - `void Initialize(pul::core::SceneBundle &); - called when plugin is initialized
+  - `void Shutdown(pul::core::SceneBundle &); - unloads the plugin
+  - `void LoadMap(pul::core::SceneBundle &); - called when map is initialized, will probably also contain map information to load custom entities
+  - `void LogicUpdate(pul::core::SceneBundle &);` - updates the game @ pul::util::MsPerFrame (16 ms/frame), used to update game-related logic
+  - UpdateRenderBundleInstance(pul::core::SceneBundle &, pul::core::RenderBundleInstance &);
+      puts logical information into a render bundle for rendering purposes
+  - `void Interpolate(float const msDeltaInterp, pul::core::RenderBundleInstance const & previousBundle, pul::core::RenderBundleInstance const & currentBundle, pul::core::RenderBundleInstance::outputBundle);`
+     outputs an interpolated bundle based on current/previous bundle and current msDeltaInterp; ei; mix(previous.playerPosition, current.playerPosition, msDeltaInterp);
+  - `void RenderInterpolated(pul::core::SceneBundle &);` - used to provide custom rendering of the scene, can be called at any varying rate, thus the plugin
                                                  itself must handle its own interpolation, but items within SceneBundle will already be interpolated
 
-Plugins should generally communicate to Pulcher by creating entities.
+
+thus a plugin writer should generally expect this behavior;
+```
+
+void main() {
+  // create scene
+  ...
+
+  plugin_Initialize(scene);
+
+  // setup and create map
+  ...
+
+  plugin_LoadMap(scene);
+
+  while ( ... ) {
+    // update timing ...
+
+    if (readyToComputeLogicalFrame) {
+      plugin_Update(scene);
+
+      plugin_UpdateRenderBundleInstance(scene, current);
+    }
+
+    // prepare interpolated bundle & rendering
+    ...
+
+    plugin_Interpolate(msDeltaInterpolate, previous, current, output);
+
+    // setup rendering
+    ...
+
+    plugin_RenderInterpolated(scene, output);
+
+    ...
+
+    plugin_DebugUiDispatch(scene);
+  }
+
+  plugin_Shutdown(scene);
+
+  // destroy scene
+  ...
+}
+
+```
+
+Plugins should generally otherwise communicate to Pulcher by using entt

@@ -1,4 +1,8 @@
+#include <plugin-base/map/map.hpp>
+
+#include <plugin-base/animation/animation.hpp>
 #include <plugin-base/bot/bot.hpp>
+#include <plugin-base/physics/physics.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-core/enum.hpp>
@@ -11,7 +15,6 @@
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
 #include <pulcher-physics/tileset.hpp>
-#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
@@ -330,8 +333,7 @@ void MapSokolEnd() {
 }
 
 void ParseLayerTile(
-  pul::plugin::Info const &
-, pul::core::SceneBundle &
+  pul::core::SceneBundle &
 , cJSON * layer
 , char const * layerLabel
 ) {
@@ -387,11 +389,7 @@ void ParseLayerTile(
   }
 }
 
-void ParseLayerObject(
-  pul::plugin::Info const & plugins
-, pul::core::SceneBundle & scene
-, cJSON * layer
-) {
+void ParseLayerObject(pul::core::SceneBundle & scene , cJSON * layer) {
   cJSON * object;
 
   cJSON_ArrayForEach(
@@ -536,7 +534,7 @@ void ParseLayerObject(
       );
 
       pul::animation::Instance pickupAnimationInstance;
-      plugins.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, pickupAnimationInstance, scene.AnimationSystem()
       , animationPickupStr.c_str()
       );
@@ -558,11 +556,8 @@ void ParseLayerObject(
 
 } // -- namespace
 
-extern "C" {
-
-PUL_PLUGIN_DECL void Map_LoadMap(
-  pul::plugin::Info const & plugins
-, pul::core::SceneBundle & scene
+void plugin::map::LoadMap(
+  pul::core::SceneBundle & scene
 , char const * filename
 ) {
   spdlog::info("Loading map '{}'", filename);
@@ -652,7 +647,7 @@ PUL_PLUGIN_DECL void Map_LoadMap(
 
       // get plugin to load tileset
       pul::physics::Tileset physxTileset;
-      plugins.physics.ProcessTileset(physxTileset, image);
+      plugin::physics::ProcessTileset(physxTileset, image);
 
       auto tilesJson = cJSON_GetObjectItemCaseSensitive(tilesetJson, "tiles");
       // copy tilesJson if not null
@@ -681,9 +676,9 @@ PUL_PLUGIN_DECL void Map_LoadMap(
       std::string{cJSON_GetObjectItemCaseSensitive(layer, "type")->valuestring};
 
     if (layerType == "tilelayer") {
-      ParseLayerTile(plugins, scene, layer, layerLabel);
+      ParseLayerTile(scene, layer, layerLabel);
     } else if (layerType == "objectgroup") {
-      ParseLayerObject(plugins, scene, layer);
+      ParseLayerObject(scene, layer);
     } else {
       spdlog::error("unable to parse layer of type '{}'", layerType);
     }
@@ -713,11 +708,9 @@ PUL_PLUGIN_DECL void Map_LoadMap(
       mapTileOrientations.emplace_back(std::span(renderable.tileOrientations));
     }
 
-    plugins
-      .physics
-      .LoadMapGeometry(
-        tilesets, mapTileIndices, mapTileOrigins, mapTileOrientations
-      );
+    plugin::physics::LoadMapGeometry(
+      tilesets, mapTileIndices, mapTileOrigins, mapTileOrientations
+    );
 
     // create navigation map
     plugin::bot::BuildNavigationMap(
@@ -728,7 +721,7 @@ PUL_PLUGIN_DECL void Map_LoadMap(
   cJSON_Delete(map);
 }
 
-PUL_PLUGIN_DECL void Map_Render(
+void plugin::map::Render(
   pul::core::SceneBundle const & scene
 , pul::core::RenderBundleInstance const & renderBundle
 ) {
@@ -769,7 +762,7 @@ PUL_PLUGIN_DECL void Map_Render(
   }
 }
 
-PUL_PLUGIN_DECL void Map_UiRender(pul::core::SceneBundle & scene) {
+void plugin::map::DebugUiDispatch(pul::core::SceneBundle & scene) {
   ImGui::Begin("Map Info");
 
   ImGui::DragInt2("map origin", &scene.cameraOrigin.x);
@@ -868,7 +861,7 @@ PUL_PLUGIN_DECL void Map_UiRender(pul::core::SceneBundle & scene) {
   ImGui::End();
 }
 
-PUL_PLUGIN_DECL void Map_Shutdown() {
+void plugin::map::Shutdown() {
   spdlog::info("destroying map");
 
   for (auto & renderable : ::renderables) {
@@ -890,5 +883,3 @@ PUL_PLUGIN_DECL void Map_Shutdown() {
   }
   ::mapTilesets.clear();
 }
-
-} // extern C

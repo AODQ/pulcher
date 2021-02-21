@@ -1,3 +1,5 @@
+#include <plugin-base/physics/physics.hpp>
+
 #include <plugin-base/debug/renderer.hpp>
 
 #include <pulcher-core/map.hpp>
@@ -7,7 +9,6 @@
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-physics/tileset.hpp>
-#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
@@ -113,9 +114,7 @@ bool IntersectionCircleAabb(
 } // -- namespace
 
 // -- plugin functions
-extern "C" {
-
-PUL_PLUGIN_DECL void Physics_EntityIntersectionRaycast(
+void plugin::physics::EntityIntersectionRaycast(
   pul::core::SceneBundle & scene
 , pul::physics::IntersectorRay const & ray
 , pul::physics::EntityIntersectionResults & intersectionResults
@@ -162,7 +161,7 @@ PUL_PLUGIN_DECL void Physics_EntityIntersectionRaycast(
   }
 }
 
-PUL_PLUGIN_DECL void Physics_EntityIntersectionCircle(
+void plugin::physics::EntityIntersectionCircle(
   pul::core::SceneBundle & scene
 , pul::physics::IntersectorCircle const & circle
 , pul::physics::EntityIntersectionResults & intersectionResults
@@ -199,7 +198,7 @@ PUL_PLUGIN_DECL void Physics_EntityIntersectionCircle(
   }
 }
 
-PUL_PLUGIN_DECL void Physics_ProcessTileset(
+void plugin::physics::ProcessTileset(
   pul::physics::Tileset & tileset
 , pul::gfx::Image const & image
 ) {
@@ -234,17 +233,17 @@ PUL_PLUGIN_DECL void Physics_ProcessTileset(
   }
 }
 
-PUL_PLUGIN_DECL void Physics_ClearMapGeometry() {
+void plugin::physics::ClearMapGeometry() {
   tilemapLayer = {};
 }
 
-PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
+void plugin::physics::LoadMapGeometry(
   std::vector<pul::physics::Tileset const *> const & tilesets
 , std::vector<std::span<size_t>>             const & mapTileIndices
 , std::vector<std::span<glm::u32vec2>>       const & mapTileOrigins
 , std::vector<std::span<pul::core::TileOrientation>> const & mapTileOrientations
 ) {
-  Physics_ClearMapGeometry();
+  plugin::physics::ClearMapGeometry();
 
   // -- assert tilesets.size == mapTileIndices.size == mapTileOrigins.size
   if (tilesets.size() != mapTileOrigins.size()) {
@@ -308,7 +307,7 @@ PUL_PLUGIN_DECL void Physics_LoadMapGeometry(
   }
 }
 
-PUL_PLUGIN_DECL bool Physics_InverseSceneIntersectionRaycast(
+bool plugin::physics::InverseSceneIntersectionRaycast(
   pul::core::SceneBundle &
 , pul::physics::IntersectorRay const & ray
 , pul::physics::IntersectionResults & intersectionResults
@@ -358,7 +357,7 @@ PUL_PLUGIN_DECL bool Physics_InverseSceneIntersectionRaycast(
   return intersectionResults.collision;
 }
 
-PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
+bool plugin::physics::IntersectionRaycast(
   pul::core::SceneBundle &
 , pul::physics::IntersectorRay const & ray
 , pul::physics::IntersectionResults & intersectionResults
@@ -408,11 +407,11 @@ PUL_PLUGIN_DECL bool Physics_IntersectionRaycast(
   return intersectionResults.collision;
 }
 
-PUL_PLUGIN_DECL pul::physics::TilemapLayer * Physics_TilemapLayer() {
+pul::physics::TilemapLayer * plugin::physics::TilemapLayer() {
   return &tilemapLayer;
 }
 
-PUL_PLUGIN_DECL bool Physics_IntersectionAabb(
+bool plugin::physics::IntersectionAabb(
   pul::core::SceneBundle &
 , pul::physics::IntersectorAabb const &
 , pul::physics::IntersectionResults &
@@ -420,7 +419,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionAabb(
   return false;
 }
 
-PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
+bool plugin::physics::IntersectionPoint(
   pul::core::SceneBundle &
 , pul::physics::IntersectorPoint const & point
 , pul::physics::IntersectionResults & intersectionResults
@@ -458,10 +457,7 @@ PUL_PLUGIN_DECL bool Physics_IntersectionPoint(
   return false;
 }
 
-PUL_PLUGIN_DECL void Physics_RenderDebug(pul::core::SceneBundle &) {
-}
-
-PUL_PLUGIN_DECL void Physics_UiRender(pul::core::SceneBundle &) {
+void plugin::physics::DebugUiDispatch(pul::core::SceneBundle &) {
   ImGui::Begin("Physics");
 
   pul::imgui::Text("tilemap width {}", ::tilemapLayer.width);
@@ -470,6 +466,4 @@ PUL_PLUGIN_DECL void Physics_UiRender(pul::core::SceneBundle &) {
   ImGui::Checkbox("show physics queries", &::showPhysicsQueries);
 
   ImGui::End();
-}
-
 }

@@ -26,12 +26,11 @@ namespace {
 #endif
 
 struct Plugin {
-  Plugin(std::filesystem::path filepath, pul::plugin::Type type);
+  Plugin(std::filesystem::path filepath);
   ~Plugin();
 
   std::filesystem::path filepath;
   PluginHandle data = nullptr;
-  pul::plugin::Type type;
 
   template <typename T> void LoadFunction(T & fn, char const * label);
   void Reload();
@@ -42,8 +41,8 @@ struct Plugin {
 // list of unique plugins currently loaded by process
 std::vector<std::unique_ptr<Plugin>> plugins;
 
-Plugin::Plugin(std::filesystem::path filepath_, pul::plugin::Type type_)
-  : filepath(filepath_), type(type_)
+Plugin::Plugin(std::filesystem::path filepath_)
+  : filepath(filepath_)
 {
   this->Open();
 }
@@ -130,93 +129,24 @@ void Plugin::Open() {
 // --
 
 void LoadPluginFunctions(pul::plugin::Info & plugin, Plugin & ctx) {
-  spdlog::info("reloading plugins..");
+  spdlog::info("reloading plugins");
 
-  {
-    ctx.LoadFunction(
-      plugin.UpdateRenderBundleInstance, "Plugin_UpdateRenderBundleInstance"
-    );
-
-    ctx.LoadFunction(
-      plugin.Interpolate, "Plugin_Interpolate"
-    );
-
-    ctx.LoadFunction(
-      plugin.RenderInterpolated, "Plugin_RenderInterpolated"
-    );
-  }
-
-  {
-    auto & unit = plugin.animation;
-    unit.RenderAnimations = nullptr;
-    ctx.LoadFunction(unit.ConstructInstance, "Animation_ConstructInstance");
-    ctx.LoadFunction(unit.LoadAnimations,    "Animation_LoadAnimations");
-    ctx.LoadFunction(unit.Shutdown,          "Animation_Shutdown");
-    ctx.LoadFunction(unit.UpdateFrame,       "Animation_UpdateFrame");
-    ctx.LoadFunction(unit.RenderAnimations,  "Animation_RenderAnimations");
-    ctx.LoadFunction(unit.UpdateCache,       "Animation_UpdateCache");
-    ctx.LoadFunction(
-      unit.UpdateCacheWithPrecalculatedMatrix
-    , "Animation_UpdateCacheWithPrecalculatedMatrix"
-    );
-    ctx.LoadFunction(unit.UiRender,          "Animation_UiRender");
-  }
-  {
-    auto & unit = plugin.audio;
-    ctx.LoadFunction(unit.LoadAudio, "Audio_LoadAudio");
-    ctx.LoadFunction(unit.Update,    "Audio_Update");
-    ctx.LoadFunction(unit.Shutdown,  "Audio_Shutdown");
-    ctx.LoadFunction(unit.UiRender,  "Audio_UiRender");
-  }
-  {
-    auto & unit = plugin.entity;
-    ctx.LoadFunction(unit.EntityRender, "Entity_EntityRender");
-    ctx.LoadFunction(unit.EntityUpdate, "Entity_EntityUpdate");
-    ctx.LoadFunction(unit.Shutdown,     "Entity_Shutdown");
-    ctx.LoadFunction(unit.StartScene,   "Entity_StartScene");
-    ctx.LoadFunction(unit.UiRender,     "Entity_UiRender");
-  }
-  {
-    auto & unit = plugin.userInterface;
-    ctx.LoadFunction(unit.UiDispatch, "Ui_UiDispatch");
-  }
-  {
-    auto & unit = plugin.map;
-    ctx.LoadFunction(unit.LoadMap,     "Map_LoadMap");
-    ctx.LoadFunction(unit.Render,   "Map_Render");
-    ctx.LoadFunction(unit.UiRender, "Map_UiRender");
-    ctx.LoadFunction(unit.Shutdown, "Map_Shutdown");
-  }
-  {
-    auto & unit = plugin.physics;
-    ctx.LoadFunction(
-      unit.EntityIntersectionRaycast,
-      "Physics_EntityIntersectionRaycast"
-    );
-    ctx.LoadFunction(
-      unit.EntityIntersectionCircle,
-      "Physics_EntityIntersectionCircle"
-    );
-    ctx.LoadFunction(unit.ProcessTileset,      "Physics_ProcessTileset");
-    ctx.LoadFunction(unit.ClearMapGeometry,    "Physics_ClearMapGeometry");
-    ctx.LoadFunction(unit.LoadMapGeometry,     "Physics_LoadMapGeometry");
-    ctx.LoadFunction(unit.IntersectionRaycast, "Physics_IntersectionRaycast");
-    ctx.LoadFunction(
-      unit.InverseSceneIntersectionRaycast
-    , "Physics_InverseSceneIntersectionRaycast"
-    );
-    ctx.LoadFunction(unit.TilemapLayer,        "Physics_TilemapLayer");
-    ctx.LoadFunction(unit.IntersectionPoint,   "Physics_IntersectionPoint");
-    ctx.LoadFunction(unit.RenderDebug,         "Physics_RenderDebug");
-    ctx.LoadFunction(unit.UiRender,            "Physics_UiRender");
-  }
+  ctx.LoadFunction(
+    plugin.UpdateRenderBundleInstance, "Plugin_UpdateRenderBundleInstance"
+  );
+  ctx.LoadFunction(plugin.DebugUiDispatch, "Plugin_DebugUiDispatch");
+  ctx.LoadFunction(plugin.Initialize, "Plugin_Initialize");
+  ctx.LoadFunction(plugin.Interpolate, "Plugin_Interpolate");
+  ctx.LoadFunction(plugin.LoadMap, "Plugin_LoadMap");
+  ctx.LoadFunction(plugin.LogicUpdate, "Plugin_LogicUpdate");
+  ctx.LoadFunction(plugin.RenderInterpolated, "Plugin_RenderInterpolated");
+  ctx.LoadFunction(plugin.Shutdown, "Plugin_Shutdown");
 }
 
 } // -- anon namespace
 
 bool pul::plugin::LoadPlugin(
   pul::plugin::Info & plugin
-, pul::plugin::Type type
 , std::filesystem::path const & file
 ) {
   // first find if the plugin has already been loaded, if that's the case then
@@ -229,7 +159,7 @@ bool pul::plugin::LoadPlugin(
   }
 
   // -- load plugin
-  ::plugins.emplace_back(std::make_unique<Plugin>(file, type));
+  ::plugins.emplace_back(std::make_unique<Plugin>(file));
   auto & pluginEnd = ::plugins.back();
 
   // check plugin loaded

@@ -8,7 +8,6 @@ namespace pul::core { enum class TileOrientation : size_t; }
 namespace pul::core { struct ComponentPlayer; }
 namespace pul::core { struct SceneBundle; }
 namespace pul::physics { struct Tileset; }
-namespace pul::plugin { struct Info; }
 
 namespace plugin::bot {
 
@@ -22,7 +21,7 @@ namespace plugin::bot {
   );
 
   void ApplyInput(
-    pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+    pul::core::SceneBundle & scene
   , pul::controls::Controller & controls
   , pul::core::ComponentPlayer const & bot
   , glm::vec2 const & botOrigin

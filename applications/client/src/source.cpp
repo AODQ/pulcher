@@ -1,5 +1,6 @@
 /* pulcher | aodq.net */
 
+#include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/player.hpp>
@@ -196,32 +197,6 @@ static void ImGuiApplyStyling()
     colors[ImGuiCol_ModalWindowDimBg]      = ImVec4(0.80f, 0.81f, 0.81f, 0.35f);
 }
 
-void LoadPluginInfo(
-  pul::plugin::Info & plugin, pul::core::SceneBundle & scene
-) {
-  plugin.animation.LoadAnimations(plugin, scene);
-  plugin.audio.LoadAudio(plugin, scene);
-
-  plugin.map.LoadMap(plugin, scene, scene.config.mapPath.string().c_str());
-
-  // last thing so that all the previous information (maps, animation, etc)
-  // can be loaded up. They can still modify the registry if they need tho.
-  plugin.entity.StartScene(plugin, scene);
-}
-
-void ShutdownPluginInfo(
-  pul::plugin::Info & plugin, pul::core::SceneBundle & scene
-) {
-  plugin.animation.Shutdown(scene);
-  plugin.audio.Shutdown(scene);
-  plugin.map.Shutdown();
-  plugin.physics.ClearMapGeometry();
-
-  // entity has to shut down last from plugins to allow entities in the
-  // registry to be deallocated
-  plugin.entity.Shutdown(scene);
-}
-
 // this gets capped at pul::util::MsPerFrame
 void ProcessLogic(
   pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
@@ -242,8 +217,8 @@ void ProcessLogic(
   , false
   , scene.debugFrameBufferHovered ? false : imguiIo.WantCaptureMouse
   );
-  plugin.entity.EntityUpdate(plugin, scene);
-  plugin.animation.UpdateFrame(plugin, scene);
+
+  plugin.LogicUpdate(scene);
 }
 
 // this has no framerate cap, but it most provide a minimal of 90 framerate
@@ -271,23 +246,7 @@ void ProcessRendering(
 
     sg_begin_pass(pul::gfx::ScenePass(), &passAction);
 
-    plugin.map.Render(scene, renderInterp);
-    plugin.animation.RenderAnimations(plugin, scene);
-    plugin.physics.RenderDebug(scene);
-
     plugin.RenderInterpolated(scene, renderInterp);
-
-    sg_end_pass();
-  }
-
-  { // -- postproc
-    sg_pass_action passAction = {};
-    passAction.colors[0].action = SG_ACTION_LOAD;
-    passAction.depth.action = SG_ACTION_LOAD;
-
-    sg_begin_pass(pul::gfx::ScenePass(), &passAction);
-
-    plugin.entity.EntityRender(plugin, scene, renderInterp);
 
     sg_end_pass();
   }
@@ -325,7 +284,7 @@ void ProcessRendering(
 
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
-      ::ShutdownPluginInfo(plugin, scene);
+      plugin.Shutdown(scene);
 
       // reload configs
       scene.PlayerMetaInfo() = {};
@@ -334,7 +293,7 @@ void ProcessRendering(
 
       // continue loading plugins
       pul::plugin::UpdatePlugins(plugin);
-      ::LoadPluginInfo(plugin, scene);
+      plugin.Initialize(scene);
 
       renderBundle = pul::core::RenderBundle::Construct(plugin, scene);
 
@@ -568,7 +527,9 @@ void ProcessRendering(
 
     ImGui::End();
 
-    plugin.userInterface.UiDispatch(plugin, scene);
+    // -- debug ui
+    plugin.DebugUiDispatch(scene);
+
     simgui_render();
 
     sg_end_pass();
@@ -582,10 +543,7 @@ void ProcessRendering(
 pul::plugin::Info InitializePlugins() {
   pul::plugin::Info plugins;
 
-  pul::plugin::LoadPlugin(
-    plugins, pul::plugin::Type::Base
-  , "plugins/plugin-base.pulcher-plugin"
-  );
+  pul::plugin::LoadPlugin(plugins , "plugins/plugin-base.pulcher-plugin");
 
   return plugins;
 }
@@ -625,11 +583,12 @@ int main(int argc, char const ** argv) {
 
   pul::core::SceneBundle sceneBundle;
   sceneBundle.config = userConfig;
-  ::LoadPluginInfo(plugin, sceneBundle);
   pul::controls::LoadControllerConfig(
     pul::gfx::DisplayWindow()
   , sceneBundle.PlayerController()
   );
+
+  plugin.Initialize(sceneBundle);
 
   auto renderBundle = pul::core::RenderBundle::Construct(plugin, sceneBundle);
 
@@ -682,7 +641,7 @@ int main(int argc, char const ** argv) {
       );
 
       // -- audio, unlimited Hz
-      plugin.audio.Update(plugin, sceneBundle);
+      sceneBundle.AudioSystem().Update(sceneBundle);
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(0));
@@ -690,7 +649,7 @@ int main(int argc, char const ** argv) {
     timePreviousFrameBegin = timeFrameBegin;
   }
 
-  ::ShutdownPluginInfo(plugin, sceneBundle);
+  plugin.Shutdown(sceneBundle);
 
   // has to be last thing to shut down to allow gl deallocation calls
   pul::gfx::Shutdown();

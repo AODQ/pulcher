@@ -42,6 +42,11 @@ pul::controls::Controller & pul::core::SceneBundle::PlayerController() {
   return impl->playerController;
 }
 
+pul::controls::Controller const & pul::core::SceneBundle::PlayerController(
+) const {
+  return impl->playerController;
+}
+
 pul::core::PlayerMetaInfo & pul::core::SceneBundle::PlayerMetaInfo() {
   return impl->playerMetaInfo;
 }
@@ -62,6 +67,10 @@ pul::core::SceneBundle::StoredDebugPlayerOriginComponent() {
 }
 
 pul::core::HudInfo & pul::core::SceneBundle::Hud() {
+  return impl->hudInfo;
+}
+
+pul::core::HudInfo const & pul::core::SceneBundle::Hud() const {
   return impl->hudInfo;
 }
 

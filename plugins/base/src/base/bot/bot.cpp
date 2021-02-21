@@ -6,7 +6,6 @@
 #include <pulcher-core/map.hpp>
 #include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
-#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/log.hpp>
 
 namespace {
@@ -80,7 +79,7 @@ void plugin::bot::BuildNavigationMap(
 }
 
 void plugin::bot::ApplyInput(
-  pul::plugin::Info const &, pul::core::SceneBundle &
+  pul::core::SceneBundle &
 , pul::controls::Controller & controls
 , pul::core::ComponentPlayer const &
 , glm::vec2 const &

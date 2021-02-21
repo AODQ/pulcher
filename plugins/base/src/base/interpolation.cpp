@@ -2,9 +2,14 @@
 
 #include <plugin-base/animation/animation.hpp>
 #include <plugin-base/animation/render.hpp>
+#include <plugin-base/debug/renderer.hpp>
+#include <plugin-base/entity/cursor.hpp>
+#include <plugin-base/entity/entity.hpp>
+#include <plugin-base/map/map.hpp>
+
 #include <pulcher-animation/animation.hpp>
+#include <pulcher-core/plugin-macro.hpp>
 #include <pulcher-core/scene-bundle.hpp>
-#include <pulcher-plugin/plugin.hpp>
 
 #include <glm/glm.hpp>
 
@@ -137,6 +142,8 @@ PUL_PLUGIN_DECL void Plugin_RenderInterpolated(
   // -- get current bundle
   auto & bundleDataCurrentAny = interpolatedBundle.pluginBundleData.at("base");
 
+  plugin::map::Render(scene, interpolatedBundle);
+
   // -- retrieve baserenderbundle for each
   auto
     & current =
@@ -149,6 +156,9 @@ PUL_PLUGIN_DECL void Plugin_RenderInterpolated(
   , interpolatedBundle
   , current.animationInterpolantOutputs
   );
+
+  plugin::entity::RenderCursor(scene, interpolatedBundle);
+  plugin::debug::ShapesRender(scene, interpolatedBundle);
 }
 
 } // -- extern C

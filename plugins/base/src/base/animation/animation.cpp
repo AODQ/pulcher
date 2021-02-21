@@ -1,11 +1,11 @@
 #include <plugin-base/animation/animation.hpp>
+
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
-#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
@@ -448,56 +448,6 @@ void plugin::animation::ComputeVertices(
   );
 }
 
-extern "C" {
-PUL_PLUGIN_DECL void Animation_ConstructInstance(
-  pul::core::SceneBundle &
-, pul::animation::Instance & animationInstance
-, pul::animation::System & animationSystem
-, char const * label
-) {
-  if (
-    auto instance = animationSystem.animators.find(label);
-    instance != animationSystem.animators.end()
-  ) {
-    animationInstance.animator = instance->second;
-  } else {
-    spdlog::error("Could not find animation of type '{}'", label);
-    return;
-  }
-
-  // set default values for pieces
-  for (auto & piecePair : animationInstance.animator->pieces) {
-    if (piecePair.second.states.begin() == piecePair.second.states.end()) {
-      spdlog::error(
-        "need at least one state for piece '{}' of '{}'"
-      , piecePair.first, animationInstance.animator->label
-      );
-      continue;
-    }
-    auto & pieceToState = animationInstance.pieceToState[piecePair.first];
-    pieceToState.label = piecePair.second.states.begin()->first;
-    pieceToState.animator = animationInstance.animator;
-    pieceToState.pieceLabel = piecePair.first;
-  }
-
-  { // -- compute initial sokol buffers
-
-    // precompute size
-    size_t const vertexBufferSize =
-      ::ComputeVertexBufferSize(animationInstance.animator->skeleton);
-
-    animationInstance.uvCoordBufferData.resize(vertexBufferSize);
-    animationInstance.originBufferData.resize(vertexBufferSize);
-
-    plugin::animation::ComputeVertices(animationInstance, true);
-
-    // get draw call count
-    animationInstance.drawCallCount = vertexBufferSize;
-  }
-}
-
-} // -- extern C
-
 namespace {
 
 void ReconstructInstances(pul::core::SceneBundle & scene) {
@@ -508,7 +458,9 @@ void ReconstructInstances(pul::core::SceneBundle & scene) {
     auto & self = view.get<pul::animation::ComponentInstance>(entity);
     auto label = self.instance.animator->label;
     self.instance = {};
-    Animation_ConstructInstance(scene, self.instance, system, label.c_str());
+    plugin::animation::ConstructInstance(
+      scene, self.instance, system, label.c_str()
+    );
   }
 }
 
@@ -1165,11 +1117,9 @@ void LoadAnimation(
 
 } // -- namespace
 
-extern "C" {
-PUL_PLUGIN_DECL void Animation_LoadAnimations(
-  pul::plugin::Info const &, pul::core::SceneBundle & scene
+void plugin::animation::LoadAnimations(
+  pul::core::SceneBundle & scene
 ) {
-
   auto & animationSystem = scene.AnimationSystem();
 
   { // -- create buffer
@@ -1323,7 +1273,7 @@ PUL_PLUGIN_DECL void Animation_LoadAnimations(
   }
 }
 
-PUL_PLUGIN_DECL void Animation_Shutdown(pul::core::SceneBundle & scene) {
+void plugin::animation::Shutdown(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   ::SaveAnimations(scene.AnimationSystem());
@@ -1344,9 +1294,7 @@ PUL_PLUGIN_DECL void Animation_Shutdown(pul::core::SceneBundle & scene) {
   scene.AnimationSystem() = {};
 }
 
-PUL_PLUGIN_DECL void Animation_UpdateFrame(
-  pul::plugin::Info const &, pul::core::SceneBundle & scene
-) {
+void plugin::animation::UpdateFrame(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
   // update each component
   auto view = registry.view<pul::animation::ComponentInstance>();
@@ -1362,12 +1310,7 @@ PUL_PLUGIN_DECL void Animation_UpdateFrame(
   }
 }
 
-PUL_PLUGIN_DECL void Animation_RenderAnimations(
-  pul::plugin::Info const &, pul::core::SceneBundle &
-) {
-}
-
-PUL_PLUGIN_DECL void Animation_UpdateCache(
+void plugin::animation::UpdateCache(
   pul::animation::Instance & instance
 ) {
   plugin::animation::ComputeCache(
@@ -1376,7 +1319,7 @@ PUL_PLUGIN_DECL void Animation_UpdateCache(
   instance.hasCalculatedCachedInfo = true;
 }
 
-PUL_PLUGIN_DECL void Animation_UpdateCacheWithPrecalculatedMatrix(
+void plugin::animation::UpdateCacheWithPrecalculatedMatrix(
   pul::animation::Instance & instance
 , glm::mat3 const & skeletalMatrix
 ) {
@@ -1386,8 +1329,56 @@ PUL_PLUGIN_DECL void Animation_UpdateCacheWithPrecalculatedMatrix(
   instance.hasCalculatedCachedInfo = true;
 }
 
-PUL_PLUGIN_DECL void Animation_UiRender(
-  pul::plugin::Info const &, pul::core::SceneBundle & scene
+
+void plugin::animation::ConstructInstance(
+  pul::core::SceneBundle &
+, pul::animation::Instance & animationInstance
+, pul::animation::System & animationSystem
+, char const * label
+) {
+  if (
+    auto instance = animationSystem.animators.find(label);
+    instance != animationSystem.animators.end()
+  ) {
+    animationInstance.animator = instance->second;
+  } else {
+    spdlog::error("Could not find animation of type '{}'", label);
+    return;
+  }
+
+  // set default values for pieces
+  for (auto & piecePair : animationInstance.animator->pieces) {
+    if (piecePair.second.states.begin() == piecePair.second.states.end()) {
+      spdlog::error(
+        "need at least one state for piece '{}' of '{}'"
+      , piecePair.first, animationInstance.animator->label
+      );
+      continue;
+    }
+    auto & pieceToState = animationInstance.pieceToState[piecePair.first];
+    pieceToState.label = piecePair.second.states.begin()->first;
+    pieceToState.animator = animationInstance.animator;
+    pieceToState.pieceLabel = piecePair.first;
+  }
+
+  { // -- compute initial sokol buffers
+
+    // precompute size
+    size_t const vertexBufferSize =
+      ::ComputeVertexBufferSize(animationInstance.animator->skeleton);
+
+    animationInstance.uvCoordBufferData.resize(vertexBufferSize);
+    animationInstance.originBufferData.resize(vertexBufferSize);
+
+    plugin::animation::ComputeVertices(animationInstance, true);
+
+    // get draw call count
+    animationInstance.drawCallCount = vertexBufferSize;
+  }
+}
+
+void plugin::animation::DebugUiDispatch(
+  pul::core::SceneBundle & scene
 ) {
   ImGui::Begin("Animation");
 
@@ -1955,5 +1946,3 @@ PUL_PLUGIN_DECL void Animation_UiRender(
   /* } */
   /* ImGui::End(); */
 }
-
-} // -- extern C

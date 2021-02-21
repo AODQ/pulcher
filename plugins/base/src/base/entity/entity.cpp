@@ -1,11 +1,13 @@
-//  entity plugin
+#include <plugin-base/entity/entity.hpp>
 
+#include <plugin-base/animation/animation.hpp>
 #include <plugin-base/bot/bot.hpp>
 #include <plugin-base/debug/renderer.hpp>
 #include <plugin-base/entity/config.hpp>
 #include <plugin-base/entity/cursor.hpp>
 #include <plugin-base/entity/player.hpp>
 #include <plugin-base/entity/weapon.hpp>
+#include <plugin-base/physics/physics.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
@@ -20,7 +22,6 @@
 #include <pulcher-gfx/image.hpp>
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-physics/intersections.hpp>
-#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
@@ -40,20 +41,16 @@ bool showHitboxRendering = true;
 
 } // -- namespace
 
-extern "C" {
-
-PUL_PLUGIN_DECL void Entity_StartScene(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
-) {
+void plugin::entity::StartScene(pul::core::SceneBundle & scene) {
 
   // load config
   plugin::config::LoadConfig();
 
-  plugin::entity::ConstructCursor(plugin, scene);
+  plugin::entity::ConstructCursor(scene);
 
   // player
   entt::entity playerEntity;
-  plugin::entity::ConstructPlayer(playerEntity, plugin, scene, true);
+  plugin::entity::ConstructPlayer(playerEntity, scene, true);
 
   // initialize debug
   plugin::debug::ShapesRenderInitialize();
@@ -61,11 +58,11 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   // bot/AI
   for (size_t i = 0; i < 1; ++ i) {
     entt::entity botEntity;
-    plugin::entity::ConstructPlayer(botEntity, plugin, scene, false);
+    plugin::entity::ConstructPlayer(botEntity, scene, false);
   }
 }
 
-PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
+void plugin::entity::Shutdown(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   // save config
@@ -91,18 +88,7 @@ PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
   registry = {};
 }
 
-PUL_PLUGIN_DECL void Entity_EntityRender(
-  pul::plugin::Info const & plugin
-, pul::core::SceneBundle & scene
-, pul::core::RenderBundleInstance const & renderBundle
-) {
-  plugin::entity::RenderCursor(plugin, scene, renderBundle);
-  plugin::debug::ShapesRender(scene, renderBundle);
-}
-
-PUL_PLUGIN_DECL void Entity_EntityUpdate(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
-) {
+void plugin::entity::Update(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   { // -- projectile exploder
@@ -137,7 +123,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
         if (
           pul::physics::IntersectionResults results;
-          plugin.physics.IntersectionRaycast(scene, ray, results)
+          plugin::physics::IntersectionRaycast(scene, ray, results)
         ) {
           explodeOrigin = results.origin;
           explode |= exploder.explodeOnCollide;
@@ -148,7 +134,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       if (!explode && exploder.damage.damagePlayer) {
         playerDirectHit =
           plugin::entity::WeaponDamageRaycast(
-            plugin, scene
+            scene
           , animation.instance.origin
           , animation.instance.origin + particle.velocity
           , exploder.damage.playerDirectDamage
@@ -182,7 +168,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           pul::physics::EntityIntersectionResults results;
 
           plugin::entity::WeaponDamageCircle(
-            plugin, scene
+            scene
           , explodeOrigin
           , exploder.damage.explosionRadius
           , exploder.damage.playerSplashDamage
@@ -234,7 +220,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
         if (
           pul::physics::IntersectionResults results;
-          plugin.physics.IntersectionRaycast(scene, ray, results)
+          plugin::physics::IntersectionRaycast(scene, ray, results)
         ) {
           // calculate normal (TODO this should be precomputed)
           glm::vec2 normal = glm::vec2(0.0f);
@@ -250,7 +236,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
               };
             if (
               pul::physics::IntersectionResults pointResult;
-              plugin.physics.IntersectionPoint(scene, pointInt, pointResult)
+              plugin::physics::IntersectionPoint(scene, pointInt, pointResult)
             ) {
               normal += point;
             }
@@ -280,7 +266,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           ) {
 
             pul::animation::Instance bounceAnimation;
-            plugin.animation.ConstructInstance(
+            plugin::animation::ConstructInstance(
               scene, bounceAnimation, scene.AnimationSystem()
             , particle.bounceAnimation.c_str()
             );
@@ -314,7 +300,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       if (!destroyInstance && particle.damage.damagePlayer) {
         playerDirectHit =
           plugin::entity::WeaponDamageRaycast(
-            plugin, scene
+            scene
           , animation.instance.origin
           , animation.instance.origin + particle.velocity
           , particle.damage.playerDirectDamage
@@ -357,7 +343,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
           pul::physics::EntityIntersectionResults results;
 
           plugin::entity::WeaponDamageCircle(
-            plugin, scene
+            scene
           , animation.instance.origin
           , particle.damage.explosionRadius
           , particle.damage.playerSplashDamage
@@ -466,12 +452,11 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
 
       // update bot control input
       if (::botPlays) {
-        plugin::bot::ApplyInput(plugin, scene, controller, bot, origin.origin);
+        plugin::bot::ApplyInput(scene, controller, bot, origin.origin);
       }
 
       plugin::entity::UpdatePlayer(
-        plugin, scene
-      , controller, bot, origin.origin, hitbox
+        scene, controller, bot, origin.origin, hitbox
       , view.get<pul::animation::ComponentInstance>(entity)
       , damageable
       );
@@ -521,7 +506,8 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       auto & damageable = view.get<pul::core::ComponentDamageable>(entity);
 
       plugin::entity::UpdatePlayer(
-        plugin, scene, scene.PlayerController()
+        scene
+      , scene.PlayerController()
       , player
       , origin.origin
       , hitbox
@@ -574,9 +560,9 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
         playerAnim.pieceToState.at("weapon-placeholder");
       auto const & weaponMatrix = weaponState.cachedLocalSkeletalMatrix;
 
-      plugin
-        .animation
-        .UpdateCacheWithPrecalculatedMatrix(animation.instance, weaponMatrix);
+      plugin::animation::UpdateCacheWithPrecalculatedMatrix(
+        animation.instance, weaponMatrix
+      );
     }
   }
 
@@ -628,7 +614,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       if (emitter.distanceTravelled >= emitter.originDist) {
         emitter.distanceTravelled -= emitter.originDist;
         pul::animation::Instance animationInstance;
-        plugin.animation.ConstructInstance(
+        plugin::animation::ConstructInstance(
           scene, animationInstance, scene.AnimationSystem()
         , emitter.animationInstance.animator->label.c_str()
         );
@@ -657,7 +643,7 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
   }
 }
 
-PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
+void plugin::entity::DebugUiDispatch(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   plugin::config::RenderImGui();
@@ -869,12 +855,10 @@ PUL_PLUGIN_DECL void Entity_UiRender(pul::core::SceneBundle & scene) {
     >();
 
   for (auto entity : view) {
-    plugin::entity::UiRenderPlayer(
+    plugin::entity::DebugUiDispatchPlayer(
       scene
     , view.get<pul::core::ComponentPlayer>(entity)
     , view.get<pul::animation::ComponentInstance>(entity)
     );
   }
 }
-
-} // -- extern C

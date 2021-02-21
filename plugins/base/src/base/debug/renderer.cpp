@@ -187,7 +187,7 @@ void plugin::debug::RenderAabbByCenter(
 }
 
 void plugin::debug::ShapesRender(
-  pul::core::SceneBundle & scene
+  pul::core::SceneBundle const & scene
 , pul::core::RenderBundleInstance const &
 ) {
 

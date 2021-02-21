@@ -6,7 +6,7 @@ target_sources(
   PRIVATE
     src/base/animation/animation.cpp
     src/base/animation/render.cpp
-    src/base/audio/audio.cpp
+    src/base/base.cpp
     src/base/bot/bot.cpp
     src/base/debug/renderer.cpp
     src/base/entity/config.cpp
@@ -23,7 +23,7 @@ target_sources(
 target_link_libraries(
   plugin-base
   PRIVATE
-    EnTT cjson pulcher-core pulcher-gfx pulcher-physics pulcher-plugin
+    EnTT cjson pulcher-core pulcher-gfx pulcher-physics
     pulcher-controls pulcher-animation pulcher-audio
     fmod
     micropather

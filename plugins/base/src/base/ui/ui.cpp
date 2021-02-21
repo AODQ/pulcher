@@ -1,10 +1,14 @@
-/* pulcher | aodq.net */
+#include <plugin-base/ui/ui.hpp>
+
+#include <plugin-base/animation/animation.hpp>
+#include <plugin-base/entity/entity.hpp>
+#include <plugin-base/map/map.hpp>
+#include <plugin-base/physics/physics.hpp>
 
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/imgui.hpp>
-#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <GLFW/glfw3.h>
@@ -30,12 +34,7 @@ void RenderKey(
 
 } // -- namespace
 
-extern "C" {
-
-PUL_PLUGIN_DECL void Ui_UiDispatch(
-  pul::plugin::Info const & plugin
-, pul::core::SceneBundle & sceneBundle
-) {
+void plugin::ui::DebugUiDispatch(pul::core::SceneBundle & sceneBundle) {
   ImGui::Begin("Diagnostics");
 
   ImGuiIO & io = ImGui::GetIO();
@@ -107,12 +106,8 @@ PUL_PLUGIN_DECL void Ui_UiDispatch(
 
   ImGui::End();
 
-  plugin.animation.UiRender(plugin, sceneBundle);
-  plugin.audio.UiRender(plugin, sceneBundle);
-  plugin.entity.UiRender(sceneBundle);
-  plugin.map.UiRender(sceneBundle);
-  plugin.physics.UiRender(sceneBundle);
-  simgui_render();
-}
-
+  plugin::animation::DebugUiDispatch(sceneBundle);
+  plugin::entity::DebugUiDispatch(sceneBundle);
+  plugin::map::DebugUiDispatch(sceneBundle);
+  plugin::physics::DebugUiDispatch(sceneBundle);
 }

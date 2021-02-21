@@ -15,7 +15,7 @@ namespace plugin::debug {
   void ShapesRenderInitialize();
 
   void ShapesRender(
-    pul::core::SceneBundle & scene
+    pul::core::SceneBundle const & scene
   , pul::core::RenderBundleInstance const & renderBundle
   );
   void ShapesRenderSwap();

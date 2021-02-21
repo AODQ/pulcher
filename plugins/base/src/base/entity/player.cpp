@@ -1,6 +1,8 @@
 #include <plugin-base/entity/player.hpp>
 
+#include <plugin-base/animation/animation.hpp>
 #include <plugin-base/entity/weapon.hpp>
+#include <plugin-base/physics/physics.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
@@ -11,7 +13,6 @@
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/imgui.hpp>
 #include <pulcher-physics/intersections.hpp>
-#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
@@ -362,7 +363,7 @@ void PlayerCheckPickups(
 }
 
 void UpdatePlayerPhysics(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
 , pul::core::ComponentHitboxAABB & hitbox
@@ -454,7 +455,7 @@ void UpdatePlayerPhysics(
         , glm::round(origin + glm::vec2(player.velocity))
         );
       pul::physics::IntersectionResults pointResults;
-      plugin.physics.IntersectionRaycast(scene, pointRay, pointResults);
+      plugin::physics::IntersectionRaycast(scene, pointRay, pointResults);
 
       // update closest info
       auto distToPlayer = glm::length(origin - glm::vec2(pointResults.origin));
@@ -506,7 +507,7 @@ void UpdatePlayerPhysics(
       );
 
     pul::physics::IntersectionResults borderResults;
-    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
+    plugin::physics::IntersectionRaycast(scene, borderRay, borderResults);
 
     if (borderResults.collision) {
       player.grounded = true;
@@ -531,7 +532,7 @@ void UpdatePlayerPhysics(
       );
 
     pul::physics::IntersectionResults borderResults;
-    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
+    plugin::physics::IntersectionRaycast(scene, borderRay, borderResults);
 
     if (borderResults.collision) {
       player.wallClingRight = true;
@@ -550,7 +551,7 @@ void UpdatePlayerPhysics(
       );
 
     pul::physics::IntersectionResults borderResults;
-    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
+    plugin::physics::IntersectionRaycast(scene, borderRay, borderResults);
 
     if (borderResults.collision) {
       player.wallClingLeft = true;
@@ -561,7 +562,7 @@ void UpdatePlayerPhysics(
 }
 
 void UpdatePlayerWeapon(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::controls::Controller const & controls
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
@@ -611,7 +612,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix, playerEntity
       );
@@ -622,7 +623,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       , player, playerOrigin, playerAnim.instance, playerEntity
@@ -634,7 +635,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix, playerEntity
       );
@@ -645,7 +646,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix, playerEntity
       );
@@ -656,7 +657,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix, playerEntity
       );
@@ -667,7 +668,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       , player, playerOrigin, playerAnim.instance, playerEntity
@@ -679,7 +680,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix
       , player, playerAnim.instance, playerEntity
@@ -691,7 +692,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix, playerEntity
       );
@@ -702,7 +703,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix, playerEntity
       );
@@ -713,7 +714,7 @@ void UpdatePlayerWeapon(
         controller.shootPrimary, controller.shootSecondary
       , player.velocity
       , weapon
-      , plugin, scene, playerOriginCenter
+      , scene, playerOriginCenter
       , controller.lookDirection, controller.lookAngle
       , weaponFlip, weaponMatrix, playerEntity
       );
@@ -725,7 +726,7 @@ void UpdatePlayerWeapon(
 
 void plugin::entity::ConstructPlayer(
   entt::entity & entity
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , bool mainPlayer
 ) {
   auto & registry = scene.EnttRegistry();
@@ -739,7 +740,7 @@ void plugin::entity::ConstructPlayer(
   registry.emplace<pul::core::ComponentLabel>(entity, "Player");
 
   pul::animation::Instance instance;
-  plugin.animation.ConstructInstance(
+  plugin::animation::ConstructInstance(
     scene, instance, scene.AnimationSystem(), "nygelstromn"
   );
   registry.emplace<pul::animation::ComponentInstance>(
@@ -779,7 +780,7 @@ void plugin::entity::ConstructPlayer(
 
   // load weapon animation
   pul::animation::Instance weaponInstance;
-  plugin.animation.ConstructInstance(
+  plugin::animation::ConstructInstance(
     scene, weaponInstance, scene.AnimationSystem(), "weapons"
   );
   player.weaponAnimation = registry.create();
@@ -790,7 +791,7 @@ void plugin::entity::ConstructPlayer(
 }
 
 void plugin::entity::UpdatePlayer(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::controls::Controller const & controls
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
@@ -902,7 +903,7 @@ void plugin::entity::UpdatePlayer(
           );
 
         pul::physics::IntersectionResults pointResults;
-        plugin.physics.IntersectionRaycast(scene, pointRay, pointResults);
+        plugin::physics::IntersectionRaycast(scene, pointRay, pointResults);
 
         if (pointResults.collision) {
           canUncrouch = false;
@@ -1240,7 +1241,7 @@ void plugin::entity::UpdatePlayer(
     }
   }
 
-  ::UpdatePlayerPhysics(plugin, scene, player, playerOrigin, hitbox);
+  ::UpdatePlayerPhysics(scene, player, playerOrigin, hitbox);
 
   const float velocityXAbs = glm::abs(player.velocity.x);
 
@@ -1418,7 +1419,7 @@ void plugin::entity::UpdatePlayer(
     // center weapon origin, first have to update cache for this animation to
     // get the hand position
     {
-      plugin.animation.UpdateCache(playerAnim.instance);
+      plugin::animation::UpdateCache(playerAnim.instance);
       auto & handState = playerAnim.instance.pieceToState["weapon-placeholder"];
 
       char const * weaponStr = ToStr(player.inventory.currentWeapon);
@@ -1441,7 +1442,7 @@ void plugin::entity::UpdatePlayer(
       weaponState.angle = playerAnim.instance.pieceToState["arm-front"].angle;
       weaponState.flip = playerAnim.instance.pieceToState["legs"].flip;
 
-      plugin.animation.UpdateCacheWithPrecalculatedMatrix(
+      plugin::animation::UpdateCacheWithPrecalculatedMatrix(
         weaponAnimation, handState.cachedLocalSkeletalMatrix
       );
 
@@ -1449,7 +1450,7 @@ void plugin::entity::UpdatePlayer(
   }
 
   ::UpdatePlayerWeapon(
-    plugin, scene, controls, player, playerOrigin, hitbox, playerAnim
+    scene, controls, player, playerOrigin, hitbox, playerAnim
   );
   ::PlayerCheckPickups(scene, player, damageable, playerOrigin, hitbox);
 
@@ -1541,7 +1542,7 @@ void plugin::entity::UpdatePlayer(
   playerOrigin -= glm::vec2(0.0f, 28.0f);
 }
 
-void plugin::entity::UiRenderPlayer(
+void plugin::entity::DebugUiDispatchPlayer(
   pul::core::SceneBundle & scene
 , pul::core::ComponentPlayer & player
 , pul::animation::ComponentInstance &

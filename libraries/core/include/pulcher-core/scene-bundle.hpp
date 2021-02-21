@@ -51,7 +51,9 @@ namespace pul::core {
     entt::registry & EnttRegistry();
 
     pul::animation::System const & AnimationSystem() const;
+    pul::controls::Controller const & PlayerController() const;
     entt::registry const & EnttRegistry() const;
+    pul::core::HudInfo const & Hud() const;
 
     struct Impl;
     pul::util::pimpl<Impl> impl;

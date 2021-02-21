@@ -1,5 +1,8 @@
-#include <plugin-base/entity/config.hpp>
 #include <plugin-base/entity/weapon.hpp>
+
+#include <plugin-base/animation/animation.hpp>
+#include <plugin-base/entity/config.hpp>
+#include <plugin-base/physics/physics.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
@@ -9,7 +12,6 @@
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-core/weapon.hpp>
 #include <pulcher-physics/intersections.hpp>
-#include <pulcher-plugin/plugin.hpp>
 
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
@@ -29,7 +31,7 @@ struct ComponentZeusStingerSecondary {};
 struct ComponentBadFetusSecondary {};
 
 void CreateBadFetusLinkedBeam(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
 , pul::animation::Instance & playerAnim
@@ -42,8 +44,7 @@ void CreateBadFetusLinkedBeam(
   auto origin = playerOrigin + glm::vec2(0, 28.0f);
 
   auto const & weaponState =
-    playerAnim
-      .pieceToState["weapon-placeholder"];
+    playerAnim.pieceToState["weapon-placeholder"];
   auto const & weaponMatrix = weaponState.cachedLocalSkeletalMatrix;
 
   namespace config = plugin::config::badFetus::combo;
@@ -55,7 +56,7 @@ void CreateBadFetusLinkedBeam(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "bad-fetus-link-muzzle-flash"
     );
     auto & state = instance.pieceToState["particle"];
@@ -66,7 +67,7 @@ void CreateBadFetusLinkedBeam(
     instance.origin = origin + glm::vec2(0.0f, 28.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, weaponMatrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, weaponMatrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       badFetusMuzzleEntity, std::move(instance)
@@ -80,7 +81,7 @@ void CreateBadFetusLinkedBeam(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem()
     , "bad-fetus-linked-ball-projectile"
     );
@@ -101,7 +102,7 @@ void CreateBadFetusLinkedBeam(
 
   { // animation
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem()
     , "bad-fetus-link-beam"
     );
@@ -110,7 +111,7 @@ void CreateBadFetusLinkedBeam(
     instance.origin = playerOrigin + glm::vec2(0.0f, 28.0f);
     state.flip = weaponState.flip;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, weaponMatrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, weaponMatrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       badFetusBeamEntity, std::move(instance)
@@ -126,8 +127,8 @@ void CreateBadFetusLinkedBeam(
     pul::core::ComponentParticleBeam particle;
     particle.update =
       [
-        badFetusBallEntity, &registry, &scene, &plugin, &playerAnim
-      , &weaponInfo, &playerOrigin, playerEntity
+        badFetusBallEntity, &registry, &scene
+      , &playerAnim, &weaponInfo, &playerOrigin, playerEntity
       ](
         pul::animation::Instance & animInstance, float & /*cooldown*/
       ) -> bool {
@@ -150,7 +151,7 @@ void CreateBadFetusLinkedBeam(
               auto badFetusProjectileEntity = registry.create();
 
               pul::animation::Instance instance;
-              plugin.animation.ConstructInstance(
+              plugin::animation::ConstructInstance(
                 scene, instance, scene.AnimationSystem()
               , "bad-fetus-linked-ball-projectile"
               );
@@ -168,7 +169,7 @@ void CreateBadFetusLinkedBeam(
               {
                 pul::core::ComponentParticleGrenade particleGrenade;
 
-                plugin.animation.ConstructInstance(
+                plugin::animation::ConstructInstance(
                   scene, particleGrenade.animationInstance
                 , scene.AnimationSystem()
                 , "bad-fetus-explosion"
@@ -212,8 +213,7 @@ void CreateBadFetusLinkedBeam(
 
         // -- update animation origin/direction
         auto const & weaponStatePlaceholder =
-          playerAnim
-            .pieceToState["weapon-placeholder"];
+          playerAnim.pieceToState["weapon-placeholder"];
 
         bool const weaponFlip = playerAnim.pieceToState["legs"].flip;
 
@@ -225,11 +225,9 @@ void CreateBadFetusLinkedBeam(
         auto const & weaponMatrixPlaceholder =
           weaponStatePlaceholder.cachedLocalSkeletalMatrix;
 
-        plugin
-          .animation
-          .UpdateCacheWithPrecalculatedMatrix(
-            animInstance, weaponMatrixPlaceholder
-          );
+        plugin::animation::UpdateCacheWithPrecalculatedMatrix(
+          animInstance, weaponMatrixPlaceholder
+        );
 
         // -- update animation clipping
         animState.uvCoordWrap.x = 1.0f;
@@ -254,9 +252,10 @@ void CreateBadFetusLinkedBeam(
             beginOrigin
           , endOrigin
           );
+
         if (
           pul::physics::IntersectionResults resultsBeam;
-          plugin.physics.IntersectionRaycast(scene, beamRay, resultsBeam)
+          plugin::physics::IntersectionRaycast(scene, beamRay, resultsBeam)
         ) {
           intersection = true;
           endOrigin = resultsBeam.origin;
@@ -331,7 +330,7 @@ void CreateBadFetusLinkedBeam(
 }
 
 void GrannibalMuzzleTrail(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , glm::vec2 const & origin
 , bool const flip, glm::mat3 const & matrix
 ) {
@@ -343,7 +342,7 @@ void GrannibalMuzzleTrail(
   );
 
   pul::animation::Instance instance;
-  plugin.animation.ConstructInstance(
+  plugin::animation::ConstructInstance(
     scene, instance, scene.AnimationSystem(), "grannibal-fire"
   );
   auto & state = instance.pieceToState["particle"];
@@ -354,7 +353,7 @@ void GrannibalMuzzleTrail(
   instance.origin = origin + glm::vec2(0.0f, 32.0f);
   instance.automaticCachedMatrixCalculation = false;
 
-  plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+  plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
   registry.emplace<pul::animation::ComponentInstance>(
     grannibalFireEntity, std::move(instance)
@@ -367,7 +366,7 @@ void plugin::entity::PlayerFireVolnias(
   bool const primary, bool const secondary
 , glm::vec2 & velocity // TODO remove this
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
@@ -415,7 +414,7 @@ void plugin::entity::PlayerFireVolnias(
       volInfo.primaryChargeupTimer -= config::ChargeupDelta();
 
       plugin::entity::FireVolniasPrimary(
-        plugin, scene, origin, direction, angle, flip, matrix, playerEntity
+        scene, origin, direction, angle, flip, matrix, playerEntity
       );
     }
   }
@@ -466,7 +465,7 @@ void plugin::entity::PlayerFireVolnias(
       if (volInfo.dischargingTimer > configSec::DischargeDelta()) {
         volInfo.dischargingTimer -= configSec::DischargeDelta();
         plugin::entity::FireVolniasSecondary(
-          3, volInfo.secondaryChargedShots-1, plugin
+          3, volInfo.secondaryChargedShots-1
         , scene, origin, angle, flip, matrix
         , playerEntity
         );
@@ -481,7 +480,7 @@ void plugin::entity::PlayerFireVolnias(
 }
 
 void plugin::entity::FireVolniasPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
@@ -501,7 +500,7 @@ void plugin::entity::FireVolniasPrimary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "volnias-fire"
     );
     auto & state = instance.pieceToState["particle"];
@@ -512,7 +511,7 @@ void plugin::entity::FireVolniasPrimary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       volniasFireEntity, std::move(instance)
@@ -522,7 +521,7 @@ void plugin::entity::FireVolniasPrimary(
   {
     auto volniasProjectileEntity = registry.create();
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "volnias-projectile"
     );
     auto & state = instance.pieceToState["particle"];
@@ -552,7 +551,7 @@ void plugin::entity::FireVolniasPrimary(
     exploder.damage.playerSplashDamage = 0.0f;
     exploder.damage.playerDirectDamage = config::ProjectileDamage();
 
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
     , "volnias-hit"
     );
@@ -576,7 +575,7 @@ void plugin::entity::FireVolniasPrimary(
 
 void plugin::entity::FireVolniasSecondary(
   uint8_t shots, uint8_t shotSet
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
@@ -593,7 +592,7 @@ void plugin::entity::FireVolniasSecondary(
     fireAngle += angle;
     auto dir = glm::vec2(glm::sin(fireAngle), glm::cos(fireAngle));
     plugin::entity::FireVolniasPrimary(
-      plugin, scene, origin, dir, fireAngle, flip, matrix, playerEntity
+      scene, origin, dir, fireAngle, flip, matrix, playerEntity
     );
   }
 }
@@ -604,7 +603,7 @@ void plugin::entity::PlayerFireGrannibal(
   bool const primary, [[maybe_unused]] bool const secondary
 , [[maybe_unused]] glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
@@ -617,7 +616,7 @@ void plugin::entity::PlayerFireGrannibal(
 
   if (grannibalInfo.primaryMuzzleTrailLeft > 0) {
     if (grannibalInfo.primaryMuzzleTrailTimer <= 0.0f) {
-      ::GrannibalMuzzleTrail(plugin, scene, origin, flip, matrix);
+      ::GrannibalMuzzleTrail(scene, origin, flip, matrix);
       -- grannibalInfo.primaryMuzzleTrailLeft;
       grannibalInfo.primaryMuzzleTrailTimer = config::MuzzleTrailTimer();
     }
@@ -632,7 +631,7 @@ void plugin::entity::PlayerFireGrannibal(
   if (primary) {
     grannibalInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireGrannibalPrimary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
@@ -640,14 +639,14 @@ void plugin::entity::PlayerFireGrannibal(
   if (secondary) {
     grannibalInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireGrannibalSecondary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
 }
 
 void plugin::entity::FireGrannibalPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -663,12 +662,12 @@ void plugin::entity::FireGrannibalPrimary(
   grannibalInfo.primaryMuzzleTrailLeft = config::MuzzleTrailParticles();
   grannibalInfo.primaryMuzzleTrailTimer = config::MuzzleTrailTimer();
 
-  ::GrannibalMuzzleTrail(plugin, scene, origin, flip, matrix);
+  ::GrannibalMuzzleTrail(scene, origin, flip, matrix);
 
   {
     auto grannibalProjectileEntity = registry.create();
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "grannibal-projectile"
     );
     auto & state = instance.pieceToState["particle"];
@@ -683,7 +682,7 @@ void plugin::entity::FireGrannibalPrimary(
       pul::core::ComponentDistanceParticleEmitter emitter;
 
       // -- animation
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, emitter.animationInstance, scene.AnimationSystem()
       , "grannibal-primary-projectile-trail"
       );
@@ -722,7 +721,7 @@ void plugin::entity::FireGrannibalPrimary(
     exploder.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
     exploder.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
     , "grannibal-hit"
     );
@@ -738,7 +737,7 @@ void plugin::entity::FireGrannibalPrimary(
 }
 
 void plugin::entity::FireGrannibalSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const &
@@ -755,7 +754,7 @@ void plugin::entity::FireGrannibalSecondary(
   {
     auto grannibalProjectileEntity = registry.create();
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "grannibal-secondary-projectile"
     );
     auto & state = instance.pieceToState["particle"];
@@ -769,7 +768,7 @@ void plugin::entity::FireGrannibalSecondary(
       pul::core::ComponentDistanceParticleEmitter emitter;
 
       // -- animation
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, emitter.animationInstance, scene.AnimationSystem()
       , "grannibal-secondary-projectile-trail"
       );
@@ -801,7 +800,7 @@ void plugin::entity::FireGrannibalSecondary(
     particle.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
     particle.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, particle.animationInstance, scene.AnimationSystem()
     , "grannibal-hit"
     );
@@ -829,7 +828,7 @@ void plugin::entity::PlayerFireDopplerBeam(
   bool const primary, bool const secondary
 , [[maybe_unused]] glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
@@ -848,7 +847,7 @@ void plugin::entity::PlayerFireDopplerBeam(
   if (primary) {
     dopplerBeamInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireDopplerBeamPrimary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
@@ -856,14 +855,14 @@ void plugin::entity::PlayerFireDopplerBeam(
   if (secondary) {
     dopplerBeamInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireDopplerBeamSecondary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
 }
 
 void plugin::entity::FireDopplerBeamPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , [[maybe_unused]] pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -880,7 +879,7 @@ void plugin::entity::FireDopplerBeamPrimary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "doppler-beam-fire"
     );
     auto & state = instance.pieceToState["particle"];
@@ -891,7 +890,7 @@ void plugin::entity::FireDopplerBeamPrimary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       dopplerBeamFireEntity, std::move(instance)
@@ -901,7 +900,7 @@ void plugin::entity::FireDopplerBeamPrimary(
   {
     auto dopplerBeamProjectileEntity = registry.create();
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "doppler-beam-projectile"
     );
     auto & state = instance.pieceToState["particle"];
@@ -924,7 +923,7 @@ void plugin::entity::FireDopplerBeamPrimary(
       pul::core::ComponentDistanceParticleEmitter emitter;
 
       // -- animation
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, emitter.animationInstance, scene.AnimationSystem()
       , "doppler-beam-projectile-trail"
       );
@@ -954,7 +953,7 @@ void plugin::entity::FireDopplerBeamPrimary(
     exploder.damage.playerSplashDamage = 0.0f;
     exploder.damage.playerDirectDamage = config::ProjectileDamage();
 
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
     , "doppler-beam-hit"
     );
@@ -970,7 +969,7 @@ void plugin::entity::FireDopplerBeamPrimary(
 }
 
 void plugin::entity::FireDopplerBeamSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin
 , [[maybe_unused]] glm::vec2 const & direction
@@ -985,7 +984,7 @@ void plugin::entity::FireDopplerBeamSecondary(
     fireAngle += angle;
     auto dir = glm::vec2(glm::sin(fireAngle), glm::cos(fireAngle));
     plugin::entity::FireDopplerBeamPrimary(
-      plugin, scene, weaponInfo, origin, dir, fireAngle, flip, matrix
+      scene, weaponInfo, origin, dir, fireAngle, flip, matrix
     , playerEntity
     );
   }
@@ -997,7 +996,7 @@ void plugin::entity::PlayerFirePericaliya(
   bool const primary, bool const secondary
 , glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
@@ -1032,7 +1031,7 @@ void plugin::entity::PlayerFirePericaliya(
   if (primary) {
     pericaliyaInfo.isPrimaryActive = true;
     plugin::entity::FirePericaliyaPrimary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
@@ -1040,14 +1039,14 @@ void plugin::entity::PlayerFirePericaliya(
   if (secondary) {
     pericaliyaInfo.isSecondaryActive = true;
     plugin::entity::FirePericaliyaSecondary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
 }
 
 void plugin::entity::FirePericaliyaPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -1067,7 +1066,7 @@ void plugin::entity::FirePericaliyaPrimary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "pericaliya-muzzle"
     );
     auto & state = instance.pieceToState["particle"];
@@ -1078,7 +1077,7 @@ void plugin::entity::FirePericaliyaPrimary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       pericaliyaMuzzleEntity, std::move(instance)
@@ -1088,7 +1087,7 @@ void plugin::entity::FirePericaliyaPrimary(
   {
     auto pericaliyaProjectileEntity = registry.create();
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "pericaliya-primary-projectile"
     );
     auto & state = instance.pieceToState["particle"];
@@ -1102,7 +1101,7 @@ void plugin::entity::FirePericaliyaPrimary(
       pul::core::ComponentDistanceParticleEmitter emitter;
 
       // -- animation
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, emitter.animationInstance, scene.AnimationSystem()
       , "pericaliya-primary-projectile-trail"
       );
@@ -1155,7 +1154,7 @@ void plugin::entity::FirePericaliyaPrimary(
     exploder.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
     exploder.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, exploder.animationInstance, scene.AnimationSystem()
     , "pericaliya-primary-explosion"
     );
@@ -1171,7 +1170,7 @@ void plugin::entity::FirePericaliyaPrimary(
 }
 
 void plugin::entity::FirePericaliyaSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -1196,7 +1195,7 @@ void plugin::entity::FirePericaliyaSecondary(
       );
 
       pul::animation::Instance instance;
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, instance, scene.AnimationSystem(), "pericaliya-muzzle"
       );
       auto & state = instance.pieceToState["particle"];
@@ -1207,7 +1206,7 @@ void plugin::entity::FirePericaliyaSecondary(
       instance.origin = origin + glm::vec2(0.0f, 32.0f);
       instance.automaticCachedMatrixCalculation = false;
 
-      plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+      plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
       registry.emplace<pul::animation::ComponentInstance>(
         pericaliyaMuzzleEntity, std::move(instance)
@@ -1217,7 +1216,7 @@ void plugin::entity::FirePericaliyaSecondary(
     {
       auto pericaliyaProjectileEntity = registry.create();
       pul::animation::Instance instance;
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, instance, scene.AnimationSystem()
       , "pericaliya-secondary-projectile"
       );
@@ -1232,7 +1231,7 @@ void plugin::entity::FirePericaliyaSecondary(
         pul::core::ComponentDistanceParticleEmitter emitter;
 
         // -- animation
-        plugin.animation.ConstructInstance(
+        plugin::animation::ConstructInstance(
           scene, emitter.animationInstance, scene.AnimationSystem()
         , "pericaliya-secondary-projectile-trail"
         );
@@ -1298,7 +1297,7 @@ void plugin::entity::FirePericaliyaSecondary(
       exploder.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
       exploder.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, exploder.animationInstance, scene.AnimationSystem()
       , "pericaliya-secondary-explosion"
       );
@@ -1320,7 +1319,7 @@ void plugin::entity::PlayerFireZeusStinger(
   bool const primary, bool const secondary
 , glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
@@ -1341,7 +1340,7 @@ void plugin::entity::PlayerFireZeusStinger(
   if (primary) {
     zeusStingerInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireZeusStingerPrimary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , player, playerAnim
     , playerEntity
     );
@@ -1350,14 +1349,14 @@ void plugin::entity::PlayerFireZeusStinger(
   if (secondary) {
     zeusStingerInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireZeusStingerSecondary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
 }
 
 void plugin::entity::FireZeusStingerPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -1372,7 +1371,7 @@ void plugin::entity::FireZeusStingerPrimary(
   auto zeusStingerMuzzleEntity = registry.create();
   { // muzzle
     pul::animation::Instance animInstance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, animInstance, scene.AnimationSystem()
     , "zeus-stinger-primary-beam-muzzle-flash"
     );
@@ -1382,7 +1381,7 @@ void plugin::entity::FireZeusStingerPrimary(
     animInstance.origin = origin + glm::vec2(0.0f, 32.0f);
     animInstance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(animInstance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(animInstance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       zeusStingerMuzzleEntity, std::move(animInstance)
@@ -1409,7 +1408,7 @@ void plugin::entity::FireZeusStingerPrimary(
   { // projectile
     { // animation
       pul::animation::Instance animInstance;
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, animInstance, scene.AnimationSystem()
       , "zeus-stinger-primary-beam"
       );
@@ -1421,7 +1420,7 @@ void plugin::entity::FireZeusStingerPrimary(
       animInstance.origin = origin + glm::vec2(0.0f, 32.0f);
       animInstance.automaticCachedMatrixCalculation = false;
 
-      plugin.animation.UpdateCacheWithPrecalculatedMatrix(animInstance, matrix);
+      plugin::animation::UpdateCacheWithPrecalculatedMatrix(animInstance, matrix);
 
       registry.emplace<pul::animation::ComponentInstance>(
         zeusStingerBeamEntity, std::move(animInstance)
@@ -1467,7 +1466,7 @@ void plugin::entity::FireZeusStingerPrimary(
         );
       if (
         pul::physics::IntersectionResults resultsBeam;
-        plugin.physics.IntersectionRaycast(scene, beamRay, resultsBeam)
+        plugin::physics::IntersectionRaycast(scene, beamRay, resultsBeam)
       ) {
         intersection = true;
         endOrigin = resultsBeam.origin;
@@ -1520,7 +1519,7 @@ void plugin::entity::FireZeusStingerPrimary(
     // apply weapon damage
     auto weaponDamageInfo =
       plugin::entity::WeaponDamageRaycast(
-        plugin, scene
+        scene
       , beginOrigin
       , endOrigin
       , config::ProjectileDamage()
@@ -1599,7 +1598,7 @@ void plugin::entity::FireZeusStingerPrimary(
       ;
 
       pul::animation::Instance instance;
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, instance, scene.AnimationSystem(), explosionStr
       );
       auto & state = instance.pieceToState["particle"];
@@ -1621,7 +1620,7 @@ void plugin::entity::FireZeusStingerPrimary(
     auto scatterBeamEntity = registry.create();
     { // animation
       pul::animation::Instance animInstance;
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, animInstance, scene.AnimationSystem()
       , "zeus-stinger-scatter-beam"
       );
@@ -1662,7 +1661,7 @@ void plugin::entity::FireZeusStingerPrimary(
       glm::rotate(glm::mat3(1.0f), scatterAngle);
 
     plugin::entity::FireZeusStingerPrimary(
-      plugin, scene, weaponInfo
+      scene, weaponInfo
     , endOrigin - glm::vec2(0.0f, 32.0f), dir, scatterAngle, false
     , scatterMatrix
     , player, playerAnim
@@ -1672,7 +1671,7 @@ void plugin::entity::FireZeusStingerPrimary(
 }
 
 void plugin::entity::FireZeusStingerSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -1693,7 +1692,7 @@ void plugin::entity::FireZeusStingerSecondary(
     pul::animation::Instance instance;
 
     { // create animation
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, instance, scene.AnimationSystem()
       , "zeus-stinger-secondary-projectile"
       );
@@ -1718,7 +1717,7 @@ void plugin::entity::FireZeusStingerSecondary(
       particle.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
       particle.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
       , "zeus-stinger-secondary-explosion"
       );
@@ -1749,7 +1748,7 @@ void plugin::entity::PlayerFireBadFetus(
   bool const primary, bool const secondary
 , glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
@@ -1778,7 +1777,7 @@ void plugin::entity::PlayerFireBadFetus(
   if (primary) {
     badFetusInfo.primaryActive = true;
     plugin::entity::FireBadFetusPrimary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix, player
+      scene, weaponInfo, origin, direction, angle, flip, matrix, player
     , playerOrigin, playerAnim
     , playerEntity
     );
@@ -1787,14 +1786,14 @@ void plugin::entity::PlayerFireBadFetus(
   if (secondary) {
     badFetusInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireBadFetusSecondary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
 }
 
 void plugin::entity::FireBadFetusPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -1814,7 +1813,7 @@ void plugin::entity::FireBadFetusPrimary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "bad-fetus-primary-muzzle-flash"
     );
     auto & state = instance.pieceToState["particle"];
@@ -1825,7 +1824,7 @@ void plugin::entity::FireBadFetusPrimary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       badFetusMuzzleEntity, std::move(instance)
@@ -1837,7 +1836,7 @@ void plugin::entity::FireBadFetusPrimary(
 
   { // animation
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem()
     , "bad-fetus-primary-beam"
     );
@@ -1846,7 +1845,7 @@ void plugin::entity::FireBadFetusPrimary(
     instance.origin = origin;
     state.flip = flip;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       badFetusBeamEntity, std::move(instance)
@@ -1861,7 +1860,7 @@ void plugin::entity::FireBadFetusPrimary(
   { // particle beam
     pul::core::ComponentParticleBeam particle;
     particle.update =
-      [&registry, &scene, &plugin, &player, &playerOrigin, &playerAnim
+      [&registry, &scene, &player, &playerOrigin, &playerAnim
       , &weaponInfo, playerEntity
       ](
         pul::animation::Instance & animInstance, float & weaponCooldown
@@ -1888,9 +1887,9 @@ void plugin::entity::FireBadFetusPrimary(
         animState.flip = weaponFlip;
 
         auto const & weaponMatrix = weaponState.cachedLocalSkeletalMatrix;
-        plugin
-          .animation
-          .UpdateCacheWithPrecalculatedMatrix(animInstance, weaponMatrix);
+        plugin::animation::UpdateCacheWithPrecalculatedMatrix(
+          animInstance, weaponMatrix
+        );
 
         // -- update animation clipping
         animState.uvCoordWrap.x = 1.0f;
@@ -1922,7 +1921,7 @@ void plugin::entity::FireBadFetusPrimary(
           );
         if (
           pul::physics::IntersectionResults resultsBeam;
-          plugin.physics.IntersectionRaycast(scene, beamRay, resultsBeam)
+          plugin::physics::IntersectionRaycast(scene, beamRay, resultsBeam)
         ) {
           endOrigin = resultsBeam.origin;
           hasHit = true;
@@ -1932,7 +1931,7 @@ void plugin::entity::FireBadFetusPrimary(
         // weaponCooldown is finished
         auto weaponDamageInfo =
           plugin::entity::WeaponDamageRaycast(
-            plugin, scene
+            scene
           , beginOrigin, endOrigin
           , weaponCooldown <= 0.0f ? config::ProjectileDamage() : 0.0f
           , config::ProjectileForce() // force
@@ -1972,7 +1971,7 @@ void plugin::entity::FireBadFetusPrimary(
             );
 
             pul::animation::Instance instance;
-            plugin.animation.ConstructInstance(
+            plugin::animation::ConstructInstance(
               scene, instance, scene.AnimationSystem()
             , "bad-fetus-primary-hit-trail"
             );
@@ -2032,7 +2031,7 @@ void plugin::entity::FireBadFetusPrimary(
           // if intersection, destroy both entities & create linkedball entity
           if (intersection) {
             CreateBadFetusLinkedBeam(
-              plugin, scene, player, playerOrigin, playerAnim, weaponInfo
+              scene, player, playerOrigin, playerAnim, weaponInfo
             , endOrigin, playerEntity
             );
 
@@ -2051,7 +2050,7 @@ void plugin::entity::FireBadFetusPrimary(
 }
 
 void plugin::entity::FireBadFetusSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -2068,7 +2067,7 @@ void plugin::entity::FireBadFetusSecondary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "bad-fetus-primary-muzzle-flash"
     );
     auto & state = instance.pieceToState["particle"];
@@ -2079,7 +2078,7 @@ void plugin::entity::FireBadFetusSecondary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       badFetusMuzzleEntity, std::move(instance)
@@ -2094,7 +2093,7 @@ void plugin::entity::FireBadFetusSecondary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem()
     , "bad-fetus-secondary-projectile"
     );
@@ -2118,7 +2117,7 @@ void plugin::entity::FireBadFetusSecondary(
       particle.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
       particle.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
       , "bad-fetus-explosion"
       );
@@ -2145,7 +2144,7 @@ void plugin::entity::FireBadFetusSecondary(
       pul::core::ComponentDistanceParticleEmitter emitter;
 
       // -- animation
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, emitter.animationInstance, scene.AnimationSystem()
       , "bad-fetus-secondary-projectile-trail"
       );
@@ -2173,14 +2172,14 @@ void plugin::entity::PlayerFirePMF(
   bool const primary, bool const secondary
 , glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
 ) {}
 
 void plugin::entity::FirePMFPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -2188,7 +2187,7 @@ void plugin::entity::FirePMFPrimary(
 ) {}
 
 void plugin::entity::FirePMFSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -2201,14 +2200,14 @@ void plugin::entity::PlayerFireUnarmed(
   bool const primary, bool const secondary
 , glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
 ) {}
 
 void plugin::entity::FireUnarmedPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -2216,7 +2215,7 @@ void plugin::entity::FireUnarmedPrimary(
 ) {}
 
 void plugin::entity::FireUnarmedSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -2229,7 +2228,7 @@ void plugin::entity::PlayerFireManshredder(
   bool const primary, bool const secondary
 , glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , pul::core::ComponentPlayer & player
@@ -2260,7 +2259,7 @@ void plugin::entity::PlayerFireManshredder(
     manshredderInfo.isPrimaryActive = true;
     manshredderInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireManshredderPrimary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , player, playerOrigin, playerAnim
     , playerEntity
     );
@@ -2269,14 +2268,14 @@ void plugin::entity::PlayerFireManshredder(
   if (secondary) {
     manshredderInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireManshredderSecondary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
 }
 
 void plugin::entity::FireManshredderPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & projOrigin, glm::vec2 const & projDirection
 , float const angle
@@ -2298,7 +2297,7 @@ void plugin::entity::FireManshredderPrimary(
 
     { // animation
       pul::animation::Instance instance;
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, instance, scene.AnimationSystem(), "manshredder-primary-fire"
       );
       auto & state = instance.pieceToState["particle"];
@@ -2318,7 +2317,7 @@ void plugin::entity::FireManshredderPrimary(
       manshredderProjectileEntity
     , &playerAnim
     , [
-        &plugin, &scene, manshredderProjectileEntity, &registry
+        &scene, manshredderProjectileEntity, &registry
       , &manshredderInfo, &player, &playerOrigin, playerEntity
       ]
         (pul::core::ComponentHitscanProjectile & projectile) -> bool
@@ -2356,7 +2355,7 @@ void plugin::entity::FireManshredderPrimary(
           bool hasHit = false;
           if (
             pul::physics::IntersectionResults results;
-            plugin.physics.IntersectionRaycast(scene, ray, results)
+            plugin::physics::IntersectionRaycast(scene, ray, results)
           ) {
             hasHit = true;
             dist = glm::length(glm::vec2(results.origin) - origin);
@@ -2365,7 +2364,7 @@ void plugin::entity::FireManshredderPrimary(
           // apply weapon damage, clamped by previous environment check
           hasHit |=
             plugin::entity::WeaponDamageRaycast(
-              plugin, scene
+              scene
             , origin
             , origin + direction*dist
             , config::ProjectileDamage()
@@ -2391,7 +2390,7 @@ void plugin::entity::FireManshredderPrimary(
 }
 
 void plugin::entity::FireManshredderSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -2408,7 +2407,7 @@ void plugin::entity::FireManshredderSecondary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "manshredder-secondary-fire"
     );
     auto & state = instance.pieceToState["particle"];
@@ -2419,7 +2418,7 @@ void plugin::entity::FireManshredderSecondary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       manshredderFireEntity, std::move(instance)
@@ -2429,7 +2428,7 @@ void plugin::entity::FireManshredderSecondary(
   { // projectile
     auto manshredderProjectileEntity = registry.create();
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem()
     , "manshredder-secondary-projectile"
     );
@@ -2444,7 +2443,7 @@ void plugin::entity::FireManshredderSecondary(
       pul::core::ComponentDistanceParticleEmitter emitter;
 
       // -- animation
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, emitter.animationInstance, scene.AnimationSystem()
       , "manshredder-secondary-projectile"
       );
@@ -2485,7 +2484,7 @@ void plugin::entity::FireManshredderSecondary(
     exploder.damage.playerSplashDamage = config::ProjectileSplashDamageMax();
     exploder.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
      scene, exploder.animationInstance, scene.AnimationSystem()
     , "manshredder-secondary-hit"
     );
@@ -2506,7 +2505,7 @@ void plugin::entity::PlayerFireWallbanger(
   bool const primary, bool const secondary
 , glm::vec2 & velocity
 , pul::core::WeaponInfo & weaponInfo
-, pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+, pul::core::SceneBundle & scene
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
 , entt::entity playerEntity
@@ -2525,7 +2524,7 @@ void plugin::entity::PlayerFireWallbanger(
   if (primary) {
     wallbangerInfo.dischargingTimer = config::DischargeCooldown();
     plugin::entity::FireWallbangerPrimary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
@@ -2533,14 +2532,14 @@ void plugin::entity::PlayerFireWallbanger(
   if (secondary) {
     wallbangerInfo.dischargingTimer = configSec::DischargeCooldown();
     plugin::entity::FireWallbangerSecondary(
-      plugin, scene, weaponInfo, origin, direction, angle, flip, matrix
+      scene, weaponInfo, origin, direction, angle, flip, matrix
     , playerEntity
     );
   }
 }
 
 void plugin::entity::FireWallbangerPrimary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -2557,7 +2556,7 @@ void plugin::entity::FireWallbangerPrimary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "wallbanger-primary-muzzle"
     );
     auto & state = instance.pieceToState["particle"];
@@ -2568,7 +2567,7 @@ void plugin::entity::FireWallbangerPrimary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       wallbangerMuzzleEntity, std::move(instance)
@@ -2578,7 +2577,7 @@ void plugin::entity::FireWallbangerPrimary(
   { // projectile
     auto wallbangerProjectileEntity = registry.create();
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem()
     , "wallbanger-primary-projectile"
     );
@@ -2602,7 +2601,7 @@ void plugin::entity::FireWallbangerPrimary(
       particle.damage.playerSplashDamage = 0.0f;
       particle.damage.playerDirectDamage = config::ProjectileDirectDamage();
 
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, particle.animationInstance, scene.AnimationSystem()
       , "wallbanger-primary-explosion"
       );
@@ -2628,7 +2627,7 @@ void plugin::entity::FireWallbangerPrimary(
 }
 
 void plugin::entity::FireWallbangerSecondary(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , pul::core::WeaponInfo & weaponInfo
 , glm::vec2 const & origin, glm::vec2 const & direction, float const angle
 , bool const flip, glm::mat3 const & matrix
@@ -2645,7 +2644,7 @@ void plugin::entity::FireWallbangerSecondary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem()
     , "wallbanger-secondary-muzzle-big"
     );
@@ -2657,7 +2656,7 @@ void plugin::entity::FireWallbangerSecondary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       wallbangerMuzzleEntity, std::move(instance)
@@ -2671,7 +2670,7 @@ void plugin::entity::FireWallbangerSecondary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem()
     , "wallbanger-secondary-muzzle-small"
     );
@@ -2683,7 +2682,7 @@ void plugin::entity::FireWallbangerSecondary(
     instance.origin = origin + glm::vec2(0.0f, 32.0f);
     instance.automaticCachedMatrixCalculation = false;
 
-    plugin.animation.UpdateCacheWithPrecalculatedMatrix(instance, matrix);
+    plugin::animation::UpdateCacheWithPrecalculatedMatrix(instance, matrix);
 
     registry.emplace<pul::animation::ComponentInstance>(
       wallbangerMuzzleEntity, std::move(instance)
@@ -2712,7 +2711,7 @@ void plugin::entity::FireWallbangerSecondary(
       pul::physics::IntersectorRay::Construct(beginOrigin, endOrigin);
     if (
       pul::physics::IntersectionResults resultsBeam;
-      !plugin.physics.IntersectionRaycast(scene, beamRay, resultsBeam)
+      !plugin::physics::IntersectionRaycast(scene, beamRay, resultsBeam)
     ) {
       return;
     } else {
@@ -2725,7 +2724,7 @@ void plugin::entity::FireWallbangerSecondary(
     beamRay = pul::physics::IntersectorRay::Construct(beginOrigin, endOrigin);
     if (
       pul::physics::IntersectionResults resultsBeam;
-      plugin.physics.InverseSceneIntersectionRaycast(scene, beamRay, resultsBeam)
+      plugin::physics::InverseSceneIntersectionRaycast(scene, beamRay, resultsBeam)
     ) {
       endOrigin = glm::vec2(resultsBeam.origin);
     }
@@ -2742,7 +2741,7 @@ void plugin::entity::FireWallbangerSecondary(
     );
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), "wallbanger-wall-muzzle"
     );
     auto & state = instance.pieceToState["particle"];
@@ -2760,7 +2759,7 @@ void plugin::entity::FireWallbangerSecondary(
   { // projectile
     { // animation
       pul::animation::Instance animInstance;
-      plugin.animation.ConstructInstance(
+      plugin::animation::ConstructInstance(
         scene, animInstance, scene.AnimationSystem()
       , "wallbanger-secondary-wall-beam"
       );
@@ -2814,7 +2813,7 @@ void plugin::entity::FireWallbangerSecondary(
 
   // damage player
   plugin::entity::WeaponDamageCircle(
-    plugin, scene
+    scene
   , endOrigin, 128.0f
   , config::ProjectileDamage(), config::ProjectileForce()
   , entt::null
@@ -2829,7 +2828,7 @@ void plugin::entity::FireWallbangerSecondary(
     auto const explosionStr = "wallbanger-secondary-explosion";
 
     pul::animation::Instance instance;
-    plugin.animation.ConstructInstance(
+    plugin::animation::ConstructInstance(
       scene, instance, scene.AnimationSystem(), explosionStr
     );
     auto & state = instance.pieceToState["particle"];
@@ -2847,7 +2846,7 @@ void plugin::entity::FireWallbangerSecondary(
 
 plugin::entity::WeaponDamageRaycastReturnInfo
 plugin::entity::WeaponDamageRaycast(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , glm::vec2 const & originBegin, glm::vec2 const & originEnd
 , float const damage, float const force
 , entt::entity ignoredEntity
@@ -2863,7 +2862,7 @@ plugin::entity::WeaponDamageRaycast(
 
   // iterate thru all entity intersections, and if damageable record
   // the damage
-  plugin.physics.EntityIntersectionRaycast(scene, ray, results);
+  plugin::physics::EntityIntersectionRaycast(scene, ray, results);
   for (auto & entityIntersection : results.entities) {
     auto * damageable =
       registry.try_get<pul::core::ComponentDamageable>(
@@ -2893,7 +2892,7 @@ plugin::entity::WeaponDamageRaycast(
 }
 
 bool plugin::entity::WeaponDamageCircle(
-  pul::plugin::Info const & plugin, pul::core::SceneBundle & scene
+  pul::core::SceneBundle & scene
 , glm::vec2 const & origin, float radius
 , float const damage, float const force
 , entt::entity ignoredEntity
@@ -2907,7 +2906,7 @@ bool plugin::entity::WeaponDamageCircle(
 
   // iterate thru all entity intersections, and if damageable record
   // the damage
-  plugin.physics.EntityIntersectionCircle(scene, circle, results);
+  plugin::physics::EntityIntersectionCircle(scene, circle, results);
   bool hasHit = false;
   for (auto & entityIntersection : results.entities) {
     auto * damageable =

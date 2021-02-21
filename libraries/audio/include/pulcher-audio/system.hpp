@@ -7,8 +7,11 @@
 
 #include <vector>
 
+namespace pul::core { struct SceneBundle; }
+struct FMOD_STUDIO_BANK;
 struct FMOD_STUDIO_EVENTDESCRIPTION;
 struct FMOD_STUDIO_EVENTINSTANCE;
+struct FMOD_STUDIO_SYSTEM;
 
 #define FMOD_ASSERT(X, ...) \
   if (auto result = X; result != FMOD_OK) { \
@@ -55,6 +58,13 @@ namespace pul::audio {
     // changes to the instance before it gets released (audio will still play)
     EventInstance DispatchEventOneOff(pul::audio::EventInfo const & event);
 
+    FMOD_STUDIO_SYSTEM * fmodSystem;
+    FMOD_STUDIO_BANK * fmodBank;
+
+    void Initialize();
+    void Shutdown();
+    void Update(pul::core::SceneBundle & scene);
+
     // -- deprecated --
     bool volniasHit = false;
     bool volniasChargePrimary = false;
@@ -64,4 +74,6 @@ namespace pul::audio {
     bool volniasPrefireSecondary = false;
     size_t volniasFire = -1ul;
   };
+
+  void InitializeSystem();
 }

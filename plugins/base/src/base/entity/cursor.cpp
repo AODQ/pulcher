@@ -5,7 +5,6 @@
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/sokol.hpp>
-#include <pulcher-plugin/plugin.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <entt/entt.hpp>
@@ -208,9 +207,7 @@ void ConstructComponentCursor(ComponentCursor & self) {
 
 }
 
-void plugin::entity::ConstructCursor(
-  pul::plugin::Info const &, pul::core::SceneBundle & scene
-) {
+void plugin::entity::ConstructCursor(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   auto cursorEntity = registry.create();
@@ -220,12 +217,11 @@ void plugin::entity::ConstructCursor(
 }
 
 void plugin::entity::RenderCursor(
-  pul::plugin::Info const &
-, pul::core::SceneBundle & scene
+  pul::core::SceneBundle const & scene
 , pul::core::RenderBundleInstance const &
 ) {
   auto & registry = scene.EnttRegistry();
-  auto view = registry.view<::ComponentCursor>();
+  auto const view = registry.view<const ::ComponentCursor>();
 
   for (auto entity : view) {
     auto & cursor = registry.get<::ComponentCursor>(entity);

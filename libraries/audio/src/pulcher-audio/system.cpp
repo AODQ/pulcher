@@ -1,5 +1,7 @@
 #include <pulcher-audio/system.hpp>
 
+#include <pulcher-core/scene-bundle.hpp>
+
 #include <pulcher-util/log.hpp>
 
 #include <fmod_errors.h>
@@ -78,4 +80,91 @@ pul::audio::EventInstance pul::audio::System::DispatchEventOneOff(
   );
 
   return { instance };
+}
+
+// -- fmod specific ------------------------------------------------------------
+
+#define FMOD_ASSERT(X, ...) \
+  if (auto result = X; result != FMOD_OK) { \
+    spdlog::critical( \
+      "FMOD error; {}@{}; '{}': {}" \
+    , __FILE__, __LINE__, #X , FMOD_ErrorString(result) \
+    ); \
+    __VA_ARGS__ \
+  }
+
+void pul::audio::System::Initialize() {
+  { // -- initialize system
+    FMOD_ASSERT(
+      FMOD_Studio_System_Create(&this->fmodSystem, FMOD_VERSION), return;
+    );
+    FMOD_ASSERT(
+      FMOD_Studio_System_Initialize(
+        this->fmodSystem,
+        512,
+        FMOD_STUDIO_INIT_LIVEUPDATE,
+        FMOD_INIT_NORMAL,
+        nullptr
+      ), return;);
+
+    FMOD_ASSERT(
+      FMOD_Studio_System_LoadBankFile(
+        this->fmodSystem
+      , "assets/base/audio/fmod/Build/Desktop/Master.bank"
+      , FMOD_STUDIO_LOAD_BANK_NORMAL
+      , &this->fmodBank
+      ), return;
+    );
+
+    FMOD_ASSERT(FMOD_Studio_Bank_LoadSampleData(this->fmodBank), return;);
+
+    FMOD_ASSERT(
+      FMOD_Studio_System_SetNumListeners(this->fmodSystem, 1), return;
+    );
+  }
+
+
+  // -- load event descriptions
+  for (size_t it = 0; it < Idx(pul::audio::event::Type::Size); ++ it) {
+    FMOD_STUDIO_EVENTDESCRIPTION * eventDescription;
+    FMOD_ASSERT(
+      FMOD_Studio_System_GetEventByID(
+        this->fmodSystem
+      , reinterpret_cast<FMOD_GUID const *>(&pul::audio::event::guids[it])
+      , &eventDescription
+      )
+    , spdlog::error("event: {}", it); continue;
+    );
+
+    this->eventDescriptions[it] = eventDescription;
+  }
+}
+
+void pul::audio::System::Shutdown() {
+  FMOD_Studio_Bank_Unload(this->fmodBank);
+  this->fmodBank = nullptr;
+
+  FMOD_Studio_System_Release(this->fmodSystem);
+  this->fmodSystem = nullptr;
+}
+
+void pul::audio::System::Update(pul::core::SceneBundle & scene) {
+  { // -- update listener
+    auto const origin = scene.playerOrigin;
+    FMOD_3D_ATTRIBUTES attributes3D;
+    attributes3D.position    = { origin.x/32.0f, origin.y/32.0f, 0.0f };
+    attributes3D.velocity    = { 0.0f, 0.0f, 0.0f };
+    attributes3D.forward     = { 1.0f, 0.0f, 0.0f };
+    attributes3D.up          = { 0.0f, 1.0f, 0.0f };
+    FMOD_ASSERT(
+      FMOD_Studio_System_SetListenerAttributes(
+        this->fmodSystem, 0
+      , &attributes3D, nullptr
+      )
+    , return;
+    );
+  }
+
+  // -- update fmod
+  FMOD_Studio_System_Update(this->fmodSystem);
 }
