@@ -7,6 +7,7 @@ target_sources(
     src/base/animation/animation.cpp
     src/base/animation/render.cpp
     src/base/audio/audio.cpp
+    src/base/bot/bot.cpp
     src/base/debug/renderer.cpp
     src/base/entity/config.cpp
     src/base/entity/cursor.cpp
@@ -25,6 +26,7 @@ target_link_libraries(
     EnTT cjson pulcher-core pulcher-gfx pulcher-physics pulcher-plugin
     pulcher-controls pulcher-animation pulcher-audio
     fmod
+    micropather
 )
 
 set_target_properties(
