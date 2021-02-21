@@ -80,14 +80,14 @@ namespace {
   //      |  |
   //      2--3
 
-  constexpr float pickPointUpStand = -48.0f, pickPointUpCrouch = -32.0f;
+  constexpr int32_t pickPointUpStand = -48, pickPointUpCrouch = -32;
 
   // TODO IMGUI DEBUG constexpr
-  std::array<glm::vec2, 4> pickPoints = {
-    glm::vec2(-5.0f, pickPointUpStand)
-  , glm::vec2(+5.0f, pickPointUpStand)
-  , glm::vec2(+5.0f, -4.0f)
-  , glm::vec2(-5.0f, -4.0f)
+  std::array<glm::i32vec2, 4> pickPoints = {
+    glm::vec2(-5, pickPointUpStand)
+  , glm::vec2(+5, pickPointUpStand)
+  , glm::vec2(+5, -4)
+  , glm::vec2(-5, -4)
   };
 
   enum class PickPointType {
@@ -388,203 +388,118 @@ void UpdatePlayerPhysics(
       0, -32
     );
 
-  // -- update grounded state
-  player.prevGrounded = player.grounded;
-  player.grounded = false;
+  auto const & pointUl = ::pickPoints[Idx(::PickPointType::Ul)];
+  auto const & pointLr = ::pickPoints[Idx(::PickPointType::Lr)];
 
-  pul::physics::IntersectionResults static pointResults;
-  size_t closestIntersection = -1ul;
+  // left/right/top/bottom layer
+  struct IterLayerInfo {
+    bool horizontal; // vertical or horizontal
+    bool alternative; // lines are alternative (ei top or bottom)
+  };
 
-  // -- move player to closest intersection of points
 
-  // -- check bounds of player for collision
-  for (size_t i = 0; i < pickPoints.size(); ++ i) {
-    auto pointRay =
-      pul::physics::IntersectorRay::Construct(
-        glm::round(pickPoints[i] + playerOrigin + glm::sign(player.velocity))
-      , glm::round(pickPoints[i] + playerOrigin + glm::vec2(player.velocity))
-      );
-    pul::physics::IntersectionResults static tempPointResults;
-    plugin.physics.IntersectionRaycast(scene, pointRay, tempPointResults);
+  glm::vec2 closestIntersectionPlayerOriginOffset;
+  float closestIntersectionDistance = 99999.0f;
+  glm::vec2 closestPushDirection = {};
+  pul::physics::IntersectionResults closestIntersectionPointResults;
 
-    // TODO pick shortest length
-    auto distToPlayer =
-      glm::length(pickPoints[i] + playerOrigin - glm::vec2(tempPointResults.origin));
-    if (distToPlayer > 1.0f && tempPointResults.collision) {
-      closestIntersection = i;
-      pointResults = std::move(tempPointResults);
+  closestIntersectionPointResults.collision = false;
+
+  // left, right, top, bottom
+  for (auto const layer :
+    {
+      IterLayerInfo { false, false }, IterLayerInfo { false, true }
+    , IterLayerInfo { true,  false }, IterLayerInfo { true,  true }
+    }
+  ) {
+
+    int32_t pixXStart = 0, pixXEnd = 0, pixYStart = 0, pixYEnd = 0;
+
+    glm::vec2 pushDirection = {};
+
+    // select start/end point
+    if (layer.horizontal && layer.alternative) { // bottom
+      pixXStart = pointUl.x; pixXEnd = pointLr.x;
+      pixYStart = pointLr.y; pixYEnd = pointLr.y;
+      pushDirection = glm::vec2(0.0f, -1.0f);
+    } else if (layer.horizontal && !layer.alternative) { // top
+      pixXStart = pointUl.x; pixXEnd = pointLr.x;
+      pixYStart = pointUl.y; pixYEnd = pointUl.y;
+      pushDirection = glm::vec2(0.0f, +1.0f);
+    } else if (!layer.horizontal && layer.alternative) { // right
+      pixXStart = pointLr.x; pixXEnd = pointLr.x;
+      pixYStart = pointUl.y; pixYEnd = pointLr.y;
+      pushDirection = glm::vec2(-1.0f, 0.0f);
+    } else if (!layer.horizontal && !layer.alternative) { // left
+      pixXStart = pointUl.x; pixXEnd = pointUl.x;
+      pixYStart = pointUl.y; pixYEnd = pointLr.y;
+      pushDirection = glm::vec2(+1.0f, 0.0f);
+    }
+
+    // iteratee linearly (only one axis would be iterated through)
+    glm::i32vec2 pixIt = glm::i32vec2(pixXStart, pixYStart);
+
+    // apply initial iteration
+    if (layer.horizontal) { ++ pixIt.x; }
+    else                  { ++ pixIt.y; }
+
+    while (layer.horizontal ? (pixIt.x < pixXEnd) : (pixIt.y < pixYEnd)) {
+
+      glm::vec2 const origin = glm::round(glm::vec2(pixIt) + playerOrigin);
+
+      // apply intersection
+      auto pointRay =
+        pul::physics::IntersectorRay::Construct(
+          glm::round(origin + glm::sign(player.velocity))
+        , glm::round(origin + glm::vec2(player.velocity))
+        );
+      pul::physics::IntersectionResults pointResults;
+      plugin.physics.IntersectionRaycast(scene, pointRay, pointResults);
+
+      // update closest info
+      auto distToPlayer = glm::length(origin - glm::vec2(pointResults.origin));
+      if (
+            pointResults.collision
+         && distToPlayer >= 0.0f && distToPlayer < closestIntersectionDistance
+      ) {
+        closestIntersectionDistance = distToPlayer;
+        closestIntersectionPlayerOriginOffset = glm::vec2(pixIt);
+        closestPushDirection = pushDirection;
+        closestIntersectionPointResults = pointResults;
+      }
+
+      // apply iteration
+      if (layer.horizontal) { ++ pixIt.x; }
+      else                  { ++ pixIt.y; }
     }
   }
 
-  if (closestIntersection != -1ul) {
-    // the player now has to be moved corresponding to the nearest point
+  if (closestIntersectionPointResults.collision) {
+    spdlog::info("offset {} sign {}",
+      (closestIntersectionPlayerOriginOffset)
+    , glm::sign(closestIntersectionPlayerOriginOffset)
+      );
     playerOrigin =
-      glm::vec2(pointResults.origin) - pickPoints[closestIntersection];
+      glm::vec2(closestIntersectionPointResults.origin)
+    - closestIntersectionPlayerOriginOffset
+    + closestPushDirection
+    ;
+    player.velocity = glm::vec2(0);
   } else {
     playerOrigin += player.velocity;
   }
 
-  /*   glm::vec2 intersectionNormal = glm::vec2(0.0f); */
-
-  /*   { // calculate normal (TODO this should be precomputed) */
-  /*     for (auto point : std::vector<glm::vec2>{ */
-  /*       { -1.0f, -1.0f }, { +0.0f, -1.0f }, { +1.0f, -1.0f } */
-  /*     , { -1.0f, +0.0f },                   { +1.0f, +0.0f } */
-  /*     , { -1.0f, +1.0f }, { +0.0f, +1.0f }, { +1.0f, +1.0f } */
-  /*     }) { */
-  /*       auto pointInt = */
-  /*         pul::physics::IntersectorPoint{ */
-  /*           glm::i32vec2(glm::vec2(pointResults.origin) + point) */
-  /*         }; */
-  /*       if ( */
-  /*         pul::physics::IntersectionResults pointResult; */
-  /*         plugin.physics.IntersectionPoint(scene, pointInt, pointResult) */
-  /*       ) { */
-  /*         intersectionNormal += point; */
-  /*       } */
-  /*     } */
-
-  /*     // if there's no normal this is not a valid collision */
-  /*     if (intersectionNormal  == glm::vec2(0.0)) { */
-  /*       goto SKIP_INTERSECTION_EDGE_TEST; */
-  /*     } */
-
-  /*     intersectionNormal = glm::normalize(intersectionNormal); */
-  /*   } */
-
-  /* SKIP_INTERSECTION_EDGE_TEST: ; */
-
-  // now apply the border
-  //    0-1
-  //  > | | <
-  //  > | | <
-  //    2-3
-  //
-
-  // store origin so that the borders don't interfere with the other
-  glm::vec2 newOrigin = playerOrigin;
-
-  for (size_t i = 0; i < ::pickPoints.size(); ++ i) {
-    glm::vec2
-      point0 = pickPoints[i]
-    , point1 = pickPoints[(i+1)%pickPoints.size()]
-    ;
-
-    // shrink the border rays
-    switch (static_cast<::PickBorderType>(i)) {
-      case ::PickBorderType::Right:
-        point0.y += 1.0f;
-        point1.y -= 1.0f;
-      break;
-      case ::PickBorderType::Left:
-        point0.y -= 1.0f;
-        point1.y += 1.0f;
-      break;
-      case ::PickBorderType::Up:
-        point0.x += 1.0f;
-        point1.x -= 1.0f;
-      break;
-      case ::PickBorderType::Down:
-        point0.x -= 1.0f;
-        point1.x += 1.0f;
-      break;
-    }
-
-    auto borderRay =
-      pul::physics::IntersectorRay::Construct(
-        glm::round(point0 + playerOrigin)
-      , glm::round(point1 + playerOrigin)
-      );
-
-    pul::physics::IntersectionResults borderResults;
-    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
-
-    /* if (borderResults.collision) { */
-    /*   // get the origin of the intersection in relation to center of player */
-    /*   glm::vec2 origin = */
-    /*     glm::vec2(borderResults.origin) - playerOrigin - glm::vec2(0.0f, 32.0f); */
-
-    /*   playerOrigin -= origin; */
-    /* } */
-
-    if (!borderResults.collision) { continue; }
-
-    switch (static_cast<::PickBorderType>(i)) {
-      default: break;
-      case ::PickBorderType::Right:
-        player.velocity.x = glm::min(0.0f, player.velocity.x);
-
-        // find offset from the previous player origin minus some delta
-        borderRay =
-          pul::physics::IntersectorRay::Construct(
-            glm::round(
-              glm::vec2(player.prevOrigin.x - 6.0f, borderResults.origin.y)
-            )
-          , glm::round(glm::vec2(borderResults.origin))
-          );
-        plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
-
-        newOrigin.x = borderResults.origin.x - 6.0f;
-      break;
-      case ::PickBorderType::Left:
-        player.velocity.x = glm::max(0.0f, player.velocity.x);
-
-        // find offset from the previous player origin minus some delta
-        borderRay =
-          pul::physics::IntersectorRay::Construct(
-            glm::round(
-              glm::vec2(player.prevOrigin.x + 6.0f, borderResults.origin.y)
-            )
-          , glm::round(glm::vec2(borderResults.origin))
-          );
-        plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
-
-        newOrigin.x = borderResults.origin.x + 6.0f;
-      break;
-      case ::PickBorderType::Down:
-        player.velocity.y = glm::min(0.0f, player.velocity.y);
-
-        // find new depth from the previous player origin minus some delta
-        borderRay =
-          pul::physics::IntersectorRay::Construct(
-            glm::round(
-              glm::vec2(borderResults.origin.x, player.prevOrigin.y - 5.0f)
-            )
-          , glm::round(glm::vec2(borderResults.origin))
-          );
-        plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
-
-        newOrigin.y = borderResults.origin.y;
-      break;
-      case ::PickBorderType::Up:
-        player.velocity.y = glm::max(0.0f, player.velocity.y);
-
-        // find new depth from the previous player origin minus some delta
-        borderRay =
-          pul::physics::IntersectorRay::Construct(
-            glm::round(
-              glm::vec2(borderResults.origin.x, player.prevOrigin.y - 49.0f)
-            )
-          , glm::round(glm::vec2(borderResults.origin))
-          );
-        plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
-
-        newOrigin.y = borderResults.origin.y + 49.0f;
-      break;
-    }
-  }
-
-  playerOrigin = newOrigin;
+  player.grounded = false;
 
   { // ground check
-    glm::vec2 const
-      point0 = pickPoints[2] + glm::vec2(-1, 1.0f)
-    , point1 = pickPoints[3] + glm::vec2(+1, 1.0f)
+    glm::i32vec2 const
+      point0 = ::pickPoints[2] + glm::i32vec2(-1, 1.0f)
+    , point1 = ::pickPoints[3] + glm::i32vec2(+1, 1.0f)
     ;
     auto borderRay =
       pul::physics::IntersectorRay::Construct(
-        glm::round(point0 + playerOrigin)
-      , glm::round(point1 + playerOrigin)
+        glm::round(glm::vec2(point0) + playerOrigin)
+      , glm::round(glm::vec2(point1) + playerOrigin)
       );
 
     pul::physics::IntersectionResults borderResults;
@@ -596,50 +511,50 @@ void UpdatePlayerPhysics(
     }
   }
 
-  // -- wall clinging
-  player.prevWallClingLeft  = player.wallClingLeft;
-  player.prevWallClingRight = player.wallClingRight;
-  player.wallClingLeft = player.wallClingRight = false;
+  /* // -- wall clinging */
+  /* player.prevWallClingLeft  = player.wallClingLeft; */
+  /* player.prevWallClingRight = player.wallClingRight; */
+  /* player.wallClingLeft = player.wallClingRight = false; */
 
-  { // wall cling right
-    glm::vec2 const
-      point0 = pickPoints[1] + glm::vec2(+1.0f, +8.0f)
-    , point1 = pickPoints[2] + glm::vec2(+1.0f, -8.0f)
-    ;
-    auto borderRay =
-      pul::physics::IntersectorRay::Construct(
-        glm::round(point0 + playerOrigin)
-      , glm::round(point1 + playerOrigin)
-      );
+  /* { // wall cling right */
+  /*   glm::vec2 const */
+  /*     point0 = pickPoints[1] + glm::vec2(+1.0f, +8.0f) */
+  /*   , point1 = pickPoints[2] + glm::vec2(+1.0f, -8.0f) */
+  /*   ; */
+  /*   auto borderRay = */
+  /*     pul::physics::IntersectorRay::Construct( */
+  /*       glm::round(point0 + playerOrigin) */
+  /*     , glm::round(point1 + playerOrigin) */
+  /*     ); */
 
-    pul::physics::IntersectionResults borderResults;
-    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
+  /*   pul::physics::IntersectionResults borderResults; */
+  /*   plugin.physics.IntersectionRaycast(scene, borderRay, borderResults); */
 
-    if (borderResults.collision) {
-      player.wallClingRight = true;
-    }
-  }
+  /*   if (borderResults.collision) { */
+  /*     player.wallClingRight = true; */
+  /*   } */
+  /* } */
 
-  { // wall cling left
-    glm::vec2 const
-      point0 = pickPoints[0] + glm::vec2(-1.0f, +8.0f)
-    , point1 = pickPoints[3] + glm::vec2(-1.0f, -8.0f)
-    ;
-    auto borderRay =
-      pul::physics::IntersectorRay::Construct(
-        glm::round(point0 + playerOrigin)
-      , glm::round(point1 + playerOrigin)
-      );
+  /* { // wall cling left */
+  /*   glm::vec2 const */
+  /*     point0 = pickPoints[0] + glm::vec2(-1.0f, +8.0f) */
+  /*   , point1 = pickPoints[3] + glm::vec2(-1.0f, -8.0f) */
+  /*   ; */
+  /*   auto borderRay = */
+  /*     pul::physics::IntersectorRay::Construct( */
+  /*       glm::round(point0 + playerOrigin) */
+  /*     , glm::round(point1 + playerOrigin) */
+  /*     ); */
 
-    pul::physics::IntersectionResults borderResults;
-    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
+  /*   pul::physics::IntersectionResults borderResults; */
+  /*   plugin.physics.IntersectionRaycast(scene, borderRay, borderResults); */
 
-    if (borderResults.collision) {
-      player.wallClingLeft = true;
-    }
-  }
+  /*   if (borderResults.collision) { */
+  /*     player.wallClingLeft = true; */
+  /*   } */
+  /* } */
 
-  player.prevOrigin = playerOrigin;
+  /* player.prevOrigin = playerOrigin; */
 }
 
 void UpdatePlayerWeapon(
@@ -1045,7 +960,7 @@ void plugin::entity::UpdatePlayer(
       if (player.wallClingLeft || player.wallClingRight) {
         player.grounded = false;
 
-        float const totalVel = glm::length(player.velocity) + 4.0f;
+        float const totalVel = 7.0f;
 
         float const thetaRad =
           (player.wallClingRight ? -pul::Pi*0.25f : 0.0f) + glm::radians(-75.0f)
@@ -1599,7 +1514,7 @@ void plugin::entity::UiRenderPlayer(
   ImGui::Text("player physx points");
   for (size_t it = 0; it < ::pickPoints.size(); ++ it) {
     auto & pick = ::pickPoints[it];
-    ImGui::DragFloat2(fmt::format("pt {}", it).c_str(), &pick.x, 0.25f);
+    ImGui::DragInt2(fmt::format("pt {}", it).c_str(), &pick.x, 0.25f);
   }
 
   ImGui::Separator();
