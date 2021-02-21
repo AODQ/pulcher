@@ -1,16 +1,6 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 cmake_policy(VERSION 3.0)
 
-# use rpath so we can install .so files locally to lib (such as libstdc++.so.6
-#   etc) to allow pulcher to be portable across various distros
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-if(PULCHER_PLATFORM STREQUAL "Linux")
-  set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/")
-elseif(PULCHER_PLATFORM STREQUAL "macOS")
-  set(CMAKE_INSTALL_RPATH "@loader_path/../lib/")
-endif()
-
 if (PULCHER_PLATFORM STREQUAL "Win64")
   message("*-- compiling for Windows 64-bit platform")
   include(CMakeModules/win64.cmake)
@@ -19,8 +9,18 @@ elseif (PULCHER_PLATFORM STREQUAL "Linux")
 elseif (PULCHER_PLATFORM STREQUAL "macOS")
   message("*-- compiling for macOS 64-bit platform")
 else()
-  message("*-- defaulting to compile for Linux 64-bit platform")
+  message(WARNING "defaulting to compile for Linux 64-bit platform")
   set(PULCHER_PLATFORM "Linux")
+endif()
+
+# use rpath so we can install .so files locally to lib (such as libstdc++.so.6
+#   etc) to allow pulcher to be portable across various distros
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+if(PULCHER_PLATFORM STREQUAL "Linux")
+  set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/")
+elseif(PULCHER_PLATFORM STREQUAL "macOS")
+  set(CMAKE_INSTALL_RPATH "@loader_path/../lib/")
 endif()
 
 # silence OpenGL legacy warning
