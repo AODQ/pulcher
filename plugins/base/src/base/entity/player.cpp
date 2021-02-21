@@ -1,6 +1,7 @@
 #include <plugin-base/entity/player.hpp>
 
 #include <plugin-base/entity/weapon.hpp>
+
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>

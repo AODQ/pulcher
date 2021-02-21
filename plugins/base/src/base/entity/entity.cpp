@@ -1,10 +1,11 @@
 //  entity plugin
 
+#include <plugin-base/bot/bot.hpp>
+#include <plugin-base/debug/renderer.hpp>
 #include <plugin-base/entity/config.hpp>
 #include <plugin-base/entity/cursor.hpp>
 #include <plugin-base/entity/player.hpp>
 #include <plugin-base/entity/weapon.hpp>
-#include <plugin-base/debug/renderer.hpp>
 
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-audio/system.hpp>
@@ -35,7 +36,7 @@
 namespace {
 
 bool botPlays = false;
-bool showHitboxRendering = false;
+bool showHitboxRendering = true;
 
 } // -- namespace
 
@@ -57,12 +58,11 @@ PUL_PLUGIN_DECL void Entity_StartScene(
   // initialize debug
   plugin::debug::ShapesRenderInitialize();
 
-
   // bot/AI
-  /* for (size_t i = 0; i < 0; ++ i) { */
-  /*   entt::entity botEntity; */
-  /*   plugin::entity::ConstructPlayer(botEntity, plugin, scene, false); */
-  /* } */
+  for (size_t i = 0; i < 1; ++ i) {
+    entt::entity botEntity;
+    plugin::entity::ConstructPlayer(botEntity, plugin, scene, false);
+  }
 }
 
 PUL_PLUGIN_DECL void Entity_Shutdown(pul::core::SceneBundle & scene) {
@@ -461,59 +461,12 @@ PUL_PLUGIN_DECL void Entity_EntityUpdate(
       auto & origin = registry.get<pul::core::ComponentOrigin>(entity);
       auto & hitbox = registry.get<pul::core::ComponentHitboxAABB>(entity);
 
-      static std::random_device device;
-      static std::mt19937 generator(device());
-      static std::uniform_int_distribution<int> distribution(1, 1000);
-
       controller.previous = std::move(controller.current);
       controller.current = {};
 
-      if (::botPlays)
-      { // update controls
-
-        bool dir =
-            controller.previous.movementHorizontal
-         == pul::controls::Controller::Movement::Right
-        ;
-
-        static float angle = 0.0f;
-        if (distribution(generator) < 15) {
-          dir ^= 1;
-          controller.previous.movementHorizontal =
-            dir
-              ? pul::controls::Controller::Movement::Right
-              : pul::controls::Controller::Movement::Left
-          ;
-        }
-        if (distribution(generator) < 25) {
-          controller.current.jump = true;
-        }
-        if (distribution(generator) < 5) {
-          controller.current.crouch = true;
-        }
-        if (distribution(generator) < 10) {
-          controller.current.weaponSwitch += 1;
-        }
-        if (distribution(generator) < 10) {
-          controller.current.shootPrimary = true;
-        }
-        if (distribution(generator) < 10) {
-          controller.current.shootSecondary = true;
-        }
-        if (distribution(generator) < 10) {
-          controller.current.dash = true;
-        }
-        controller.current.lookAngle = dir ? -4 : +3;
-        controller.current.lookDirection =
-          glm::vec2(glm::cos(angle), glm::sin(angle));
-
-        {
-          controller.current.movementHorizontal =
-            dir
-              ? pul::controls::Controller::Movement::Right
-              : pul::controls::Controller::Movement::Left
-          ;
-        }
+      // update bot control input
+      if (::botPlays) {
+        plugin::bot::ApplyInput(plugin, scene, controller, bot, origin.origin);
       }
 
       plugin::entity::UpdatePlayer(
