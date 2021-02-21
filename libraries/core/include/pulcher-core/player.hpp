@@ -55,7 +55,7 @@ namespace pul::core {
 
     bool jumping = false;
     bool crouchSliding = false;
-    bool crouching = false;
+    bool crouching = false; bool prevCrouching = false;
     bool hasReleasedJump = false;
     bool grounded = false, prevGrounded = false;
     bool wallClingLeft = false, wallClingRight = false;

@@ -875,10 +875,48 @@ void plugin::entity::UpdatePlayer(
       }
     }
 
-    // -- process crouching
-    player.crouching = controller.crouch;
+    // -- reset animation angles
     playerAnim.instance.pieceToState["legs"].angle = 0.0f;
     playerAnim.instance.pieceToState["body"].angle = 0.0f;
+
+    // -- process crouching
+    player.crouching = controller.crouch;
+
+    // check if player can uncrouch from geometry
+    if (player.prevCrouching && !player.crouching) {
+
+      // just check the small gap on left/right side between crouch and stand
+      bool canUncrouch = true;
+
+      for (
+        int32_t x = ::pickPoints[Idx(::PickPointType::Ul)].x;
+        x != ::pickPoints[Idx(::PickPointType::Lr)].x;
+        ++ x
+      ) {
+        auto const origin = playerOrigin + glm::vec2(x, 0.0f);
+        auto const pointRay =
+          pul::physics::IntersectorRay::Construct(
+            glm::round(origin + glm::vec2(0.0f, ::pickPointUpCrouch))
+          , glm::round(origin + glm::vec2(0.0f, ::pickPointUpStand))
+          );
+
+        pul::physics::IntersectionResults pointResults;
+        plugin.physics.IntersectionRaycast(scene, pointRay, pointResults);
+
+        if (pointResults.collision) {
+          canUncrouch = false;
+          break;
+        }
+      }
+
+      if (!canUncrouch) {
+        player.crouching = true;
+        player.crouchSliding = false; // force sliding off
+      }
+    }
+
+    // at this point prev crouching is no longer used
+    player.prevCrouching = player.crouching;
 
     // if the player is crouch sliding, player remains crouched until the
     // animation is finished, the velocity is below crouch target, or the
@@ -891,6 +929,7 @@ void plugin::entity::UpdatePlayer(
     ) {
       player.crouching = true;
     }
+
 
     if (
         player.crouchSliding
