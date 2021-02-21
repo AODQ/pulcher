@@ -37,7 +37,7 @@ namespace {
   float inputAirAccelThreshold = 8.0f;
 
   float inputGravityAccelPreThresholdTime = 1.0f;
-  float inputGravityAccelPostThreshold = 0.84f;
+  float inputGravityAccelPostThreshold = 0.1f;
   float inputGravityAccelThreshold = 12.0f;
 
   float inputWalkAccelTarget = 2.0f;
@@ -484,11 +484,14 @@ void UpdatePlayerPhysics(
     - closestIntersectionPlayerOriginOffset
     + closestPushDirection
     ;
-    player.velocity = glm::vec2(0);
+    player.velocity =
+      player.velocity * (glm::vec2(1.0f) - glm::abs(closestPushDirection))
+    ;
   } else {
     playerOrigin += player.velocity;
   }
 
+  player.prevGrounded = player.grounded;
   player.grounded = false;
 
   { // ground check
@@ -511,50 +514,50 @@ void UpdatePlayerPhysics(
     }
   }
 
-  /* // -- wall clinging */
-  /* player.prevWallClingLeft  = player.wallClingLeft; */
-  /* player.prevWallClingRight = player.wallClingRight; */
-  /* player.wallClingLeft = player.wallClingRight = false; */
+  // -- wall clinging
+  player.prevWallClingLeft  = player.wallClingLeft;
+  player.prevWallClingRight = player.wallClingRight;
+  player.wallClingLeft = player.wallClingRight = false;
 
-  /* { // wall cling right */
-  /*   glm::vec2 const */
-  /*     point0 = pickPoints[1] + glm::vec2(+1.0f, +8.0f) */
-  /*   , point1 = pickPoints[2] + glm::vec2(+1.0f, -8.0f) */
-  /*   ; */
-  /*   auto borderRay = */
-  /*     pul::physics::IntersectorRay::Construct( */
-  /*       glm::round(point0 + playerOrigin) */
-  /*     , glm::round(point1 + playerOrigin) */
-  /*     ); */
+  { // wall cling right
+    glm::i32vec2 const
+      point0 = pickPoints[1] + glm::i32vec2(+1, +8)
+    , point1 = pickPoints[2] + glm::i32vec2(+1, -8)
+    ;
+    auto borderRay =
+      pul::physics::IntersectorRay::Construct(
+        glm::round(glm::vec2(point0) + playerOrigin)
+      , glm::round(glm::vec2(point1) + playerOrigin)
+      );
 
-  /*   pul::physics::IntersectionResults borderResults; */
-  /*   plugin.physics.IntersectionRaycast(scene, borderRay, borderResults); */
+    pul::physics::IntersectionResults borderResults;
+    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
 
-  /*   if (borderResults.collision) { */
-  /*     player.wallClingRight = true; */
-  /*   } */
-  /* } */
+    if (borderResults.collision) {
+      player.wallClingRight = true;
+    }
+  }
 
-  /* { // wall cling left */
-  /*   glm::vec2 const */
-  /*     point0 = pickPoints[0] + glm::vec2(-1.0f, +8.0f) */
-  /*   , point1 = pickPoints[3] + glm::vec2(-1.0f, -8.0f) */
-  /*   ; */
-  /*   auto borderRay = */
-  /*     pul::physics::IntersectorRay::Construct( */
-  /*       glm::round(point0 + playerOrigin) */
-  /*     , glm::round(point1 + playerOrigin) */
-  /*     ); */
+  { // wall cling left
+    glm::vec2 const
+      point0 = pickPoints[0] + glm::i32vec2(-1, +8)
+    , point1 = pickPoints[3] + glm::i32vec2(-1, -8)
+    ;
+    auto borderRay =
+      pul::physics::IntersectorRay::Construct(
+        glm::round(glm::vec2(point0) + playerOrigin)
+      , glm::round(glm::vec2(point1) + playerOrigin)
+      );
 
-  /*   pul::physics::IntersectionResults borderResults; */
-  /*   plugin.physics.IntersectionRaycast(scene, borderRay, borderResults); */
+    pul::physics::IntersectionResults borderResults;
+    plugin.physics.IntersectionRaycast(scene, borderRay, borderResults);
 
-  /*   if (borderResults.collision) { */
-  /*     player.wallClingLeft = true; */
-  /*   } */
-  /* } */
+    if (borderResults.collision) {
+      player.wallClingLeft = true;
+    }
+  }
 
-  /* player.prevOrigin = playerOrigin; */
+  player.prevOrigin = playerOrigin;
 }
 
 void UpdatePlayerWeapon(

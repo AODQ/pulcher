@@ -57,7 +57,7 @@ void NavMapSearchNode::PrintNodeInfo() {
 struct NavMesh {
 };
 
-NavMesh navMesh;
+/* NavMesh navMesh; */
 
 }
 
