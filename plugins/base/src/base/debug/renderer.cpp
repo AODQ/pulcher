@@ -24,7 +24,7 @@ namespace {
   ;
 
   constexpr size_t maxPrimitives = 500;
-  std::vector<glm::vec4> debugUploadBuffer;
+  std::vector<glm::vec4> debugUploadBuffer = {};
   // lines -> point -> circle
   constexpr size_t debugRenderLineBegin = 0;
   constexpr size_t debugBufferByteSize =
@@ -33,7 +33,7 @@ namespace {
     + ::maxPrimitives * sizeof(float) * 8 * 4 // circle
   ;
 
-  size_t debugRenderLineLength = -1ul;
+  size_t debugRenderLineLength = 0ul;
 
   // this specifies the number of draw-calls, it's different from the length
   // as that length will be cleared out after a swap, however we will still be
@@ -140,11 +140,24 @@ void plugin::debug::ShapesRenderInitialize() {
   (void)debugRenderCircle;
 }
 
+void plugin::debug::ShapesRenderShutdown() {
+  sg_destroy_pipeline(::debugRenderPoint.pipeline);
+  sg_destroy_shader(::debugRenderPoint.program);
+  sg_destroy_pipeline(::debugRenderLine.pipeline);
+  sg_destroy_shader(::debugRenderLine.program);
+  sg_destroy_pipeline(::debugRenderCircle.pipeline);
+  sg_destroy_shader(::debugRenderCircle.program);
+
+  ::debugBuffer.Destroy();
+
+  debugRenderLineLength = -1ul;
+}
+
 void plugin::debug::RenderLine(
   glm::vec2 start, glm::vec2 end, glm::vec3 color
 ) {
 
-  if (::debugRenderLineLength == ::maxPrimitives) { return; }
+  if (::debugRenderLineLength >= ::maxPrimitives) { return; }
 
   auto offset = ::debugRenderLineBegin + ::debugRenderLineLength*4;
 
@@ -192,9 +205,11 @@ void plugin::debug::ShapesRender(
 ) {
 
   // check if buffer needs to be updated
-  if (::debugRenderLineLength != -1ul) {
+  if (::debugRenderLineLength != 0ul) {
     plugin::debug::ShapesRenderSwap();
   }
+
+  if (::debugRenderLineDrawCalls == 0ul) { return; }
 
   glm::vec2 const cameraOrigin = scene.cameraOrigin;
 
@@ -223,18 +238,5 @@ void plugin::debug::ShapesRenderSwap() {
   ::debugRenderLineDrawCalls = ::debugRenderLineLength * 2;
 
   // reset buffers
-  ::debugRenderLineLength = -1ul;
+  ::debugRenderLineLength = 0ul;
 }
-
-/* void RenderPoint(glm::vec2 origin, glm::vec3 color); */
-/* void RenderLine(glm::vec2 start, glm::vec2 end, glm::vec3 color); */
-/* void RenderAabbByCorner( */
-/*   glm::vec2 upperLeft, glm::vec2 lowerRight, glm::vec3 color */
-/* ); */
-/* void RenderAabbByCenter(glm::vec2 center, glm::vec2 bounds, glm::vec3 color); */
-/* void RenderCircle(glm::vec2 center, float radius, glm::vec3 color); */
-
-/* void ShapesRenderInitialize(); */
-
-/* void ShapesRender(); */
-/* void ShapesRenderSwap(); */

@@ -52,9 +52,6 @@ void plugin::entity::StartScene(pul::core::SceneBundle & scene) {
   entt::entity playerEntity;
   plugin::entity::ConstructPlayer(playerEntity, scene, true);
 
-  // initialize debug
-  plugin::debug::ShapesRenderInitialize();
-
   // bot/AI
   for (size_t i = 0; i < 1; ++ i) {
     entt::entity botEntity;

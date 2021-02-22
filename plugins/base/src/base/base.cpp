@@ -1,6 +1,7 @@
 // --
 
 #include <plugin-base/animation/animation.hpp>
+#include <plugin-base/debug/renderer.hpp>
 #include <plugin-base/entity/entity.hpp>
 #include <plugin-base/map/map.hpp>
 #include <plugin-base/physics/physics.hpp>
@@ -28,13 +29,15 @@ PUL_PLUGIN_DECL void Plugin_Initialize(pul::core::SceneBundle & scene) {
 
   // last thing so all previous information has been loaded up
   plugin::entity::StartScene(scene);
+
+  // initialize debug
+  plugin::debug::ShapesRenderInitialize();
 }
 
 PUL_PLUGIN_DECL void Plugin_LoadMap(
   pul::core::SceneBundle & scene
 ) {
   plugin::map::LoadMap(scene, scene.config.mapPath.string().c_str());
-  plugin::entity::StartScene(scene);
 }
 
 PUL_PLUGIN_DECL void Plugin_Shutdown(pul::core::SceneBundle & scene) {
@@ -43,6 +46,7 @@ PUL_PLUGIN_DECL void Plugin_Shutdown(pul::core::SceneBundle & scene) {
   plugin::map::Shutdown();
   plugin::physics::ClearMapGeometry();
   plugin::entity::Shutdown(scene);
+  plugin::debug::ShapesRenderShutdown();
 }
 
 PUL_PLUGIN_DECL void Plugin_DebugUiDispatch(pul::core::SceneBundle & scene) {

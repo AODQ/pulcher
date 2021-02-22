@@ -13,6 +13,7 @@ namespace plugin::debug {
   void RenderCircle(glm::vec2 center, float radius, glm::vec3 color);
 
   void ShapesRenderInitialize();
+  void ShapesRenderShutdown();
 
   void ShapesRender(
     pul::core::SceneBundle const & scene
