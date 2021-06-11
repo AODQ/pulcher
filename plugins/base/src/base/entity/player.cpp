@@ -467,6 +467,8 @@ void UpdatePlayerPhysics(
         closestIntersectionPlayerOriginOffset = glm::vec2(pixIt);
         closestPushDirection = pushDirection;
         closestIntersectionPointResults = pointResults;
+
+        // attempt to compute normal
       }
 
       // apply iteration
@@ -476,10 +478,12 @@ void UpdatePlayerPhysics(
   }
 
   if (closestIntersectionPointResults.collision) {
-    spdlog::info("offset {} sign {}",
+    spdlog::info(
+      "offset {} push directoin {}",
       (closestIntersectionPlayerOriginOffset)
-    , glm::sign(closestIntersectionPlayerOriginOffset)
-      );
+    , closestPushDirection
+    );
+
     playerOrigin =
       glm::vec2(closestIntersectionPointResults.origin)
     - closestIntersectionPlayerOriginOffset

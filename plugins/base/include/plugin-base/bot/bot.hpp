@@ -11,14 +11,13 @@ namespace pul::physics { struct Tileset; }
 
 namespace plugin::bot {
 
-  void BuildNavigationMap(
-    std::vector<pul::physics::Tileset const *> const & tilesets
-  , std::vector<std::span<size_t>>             const & mapTileIndices
-  , std::vector<std::span<glm::u32vec2>>       const & mapTileOrigins
-  , std::vector<
-      std::span<pul::core::TileOrientation>
-    > const & mapTileOrientations
-  );
+  void BuildNavigationMap(char const * filename);
+
+  void SaveNavigationMap(char const * filename);
+
+  void Shutdown();
+
+  void DebugRender();
 
   void ApplyInput(
     pul::core::SceneBundle & scene

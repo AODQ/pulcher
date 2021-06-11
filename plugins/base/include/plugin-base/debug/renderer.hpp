@@ -10,7 +10,11 @@ namespace plugin::debug {
     glm::vec2 upperLeft, glm::vec2 lowerRight, glm::vec3 color
   );
   void RenderAabbByCenter(glm::vec2 center, glm::vec2 bounds, glm::vec3 color);
-  void RenderCircle(glm::vec2 center, float radius, glm::vec3 color);
+  void RenderCircle(
+    glm::vec2 const origin,
+    float const radius,
+    glm::vec3 const color
+  );
 
   void ShapesRenderInitialize();
   void ShapesRenderShutdown();

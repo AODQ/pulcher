@@ -560,6 +560,7 @@ void plugin::map::LoadMap(
   pul::core::SceneBundle & scene
 , char const * filename
 ) {
+  scene.mapFilename = filename;
   spdlog::info("Loading map '{}'", filename);
 
   cJSON * map;
@@ -713,9 +714,7 @@ void plugin::map::LoadMap(
     );
 
     // create navigation map
-    plugin::bot::BuildNavigationMap(
-      tilesets, mapTileIndices, mapTileOrigins, mapTileOrientations
-    );
+    plugin::bot::BuildNavigationMap(filename);
   }
 
   cJSON_Delete(map);

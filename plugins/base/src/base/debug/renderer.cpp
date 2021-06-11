@@ -199,6 +199,37 @@ void plugin::debug::RenderAabbByCenter(
   );
 }
 
+// sorry future self for how this circle is rendered, but your previous self
+// left the function decl in and didn't even implement this
+void plugin::debug::RenderCircle(
+  glm::vec2 const origin, float const radius, glm::vec3 const color
+) {
+  // render circle with lines
+  plugin::debug::RenderLine(
+    origin + glm::vec2(-radius, 0.0)
+  , origin + glm::vec2(0.0, +radius)
+  , color
+  );
+
+  plugin::debug::RenderLine(
+    origin + glm::vec2(0.0, +radius)
+  , origin + glm::vec2(+radius, 0.0)
+  , color
+  );
+
+  plugin::debug::RenderLine(
+    origin + glm::vec2(+radius, 0.0)
+  , origin + glm::vec2(0.0, -radius)
+  , color
+  );
+
+  plugin::debug::RenderLine(
+    origin + glm::vec2(0.0, -radius)
+  , origin + glm::vec2(-radius, 0.0)
+  , color
+  );
+}
+
 void plugin::debug::ShapesRender(
   pul::core::SceneBundle const & scene
 , pul::core::RenderBundleInstance const &

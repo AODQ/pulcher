@@ -1,6 +1,7 @@
 // --
 
 #include <plugin-base/animation/animation.hpp>
+#include <plugin-base/bot/bot.hpp>
 #include <plugin-base/debug/renderer.hpp>
 #include <plugin-base/entity/entity.hpp>
 #include <plugin-base/map/map.hpp>
@@ -46,6 +47,7 @@ PUL_PLUGIN_DECL void Plugin_Shutdown(pul::core::SceneBundle & scene) {
   plugin::map::Shutdown();
   plugin::physics::ClearMapGeometry();
   plugin::entity::Shutdown(scene);
+  plugin::bot::Shutdown();
   plugin::debug::ShapesRenderShutdown();
 }
 

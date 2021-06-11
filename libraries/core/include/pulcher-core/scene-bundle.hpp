@@ -36,13 +36,14 @@ namespace pul::core {
 
     glm::u32vec2 playerCenter = {};
 
+    char const * mapFilename;
+
     pul::animation::System & AnimationSystem();
     pul::controls::Controller & PlayerController();
     pul::core::PlayerMetaInfo & PlayerMetaInfo();
     pul::physics::DebugQueries & PhysicsDebugQueries();
     pul::audio::System & AudioSystem();
     pul::core::HudInfo & Hud();
-
 
     // store player between reloads
     pul::core::ComponentPlayer & StoredDebugPlayerComponent();

@@ -2,6 +2,7 @@
 
 #include <plugin-base/animation/animation.hpp>
 #include <plugin-base/animation/render.hpp>
+#include <plugin-base/bot/bot.hpp>
 #include <plugin-base/debug/renderer.hpp>
 #include <plugin-base/entity/cursor.hpp>
 #include <plugin-base/entity/entity.hpp>
@@ -156,6 +157,8 @@ PUL_PLUGIN_DECL void Plugin_RenderInterpolated(
   , interpolatedBundle
   , current.animationInterpolantOutputs
   );
+
+  plugin::bot::DebugRender();
 
   plugin::entity::RenderCursor(scene, interpolatedBundle);
   plugin::debug::ShapesRender(scene, interpolatedBundle);
