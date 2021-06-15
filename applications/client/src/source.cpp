@@ -4,6 +4,7 @@
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/player.hpp>
+#include <pulcher-core/random.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/imgui.hpp>
@@ -576,6 +577,7 @@ int main(int argc, char const ** argv) {
 
   spdlog::info("initializing pulcher");
   // -- initialize relevant components
+  pul::core::InitializeRandom(19993764);
   pul::gfx::InitializeContext(userConfig);
   ::PrintUserConfig(userConfig);
 
