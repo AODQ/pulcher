@@ -4,9 +4,10 @@ target_include_directories(pulcher-core PUBLIC "include/")
 target_sources(
   pulcher-core
   PRIVATE
+    src/pulcher-core/map.cpp
+    src/pulcher-core/random.cpp
     src/pulcher-core/scene-bundle.cpp
     src/pulcher-core/weapon.cpp
-    src/pulcher-core/map.cpp
 )
 
 set_target_properties(

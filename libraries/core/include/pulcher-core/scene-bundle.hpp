@@ -38,6 +38,8 @@ namespace pul::core {
 
     char const * mapFilename;
 
+    bool reloadPluginAtEndOfFrame = false;
+
     pul::animation::System & AnimationSystem();
     pul::controls::Controller & PlayerController();
     pul::core::PlayerMetaInfo & PlayerMetaInfo();

@@ -285,23 +285,7 @@ void ProcessRendering(
 
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
-      plugin.Shutdown(scene);
-
-      // reload configs
-      scene.PlayerMetaInfo() = {};
-
-      renderBundle = {};
-
-      // continue loading plugins
-      pul::plugin::UpdatePlugins(plugin);
-      plugin.Initialize(scene);
-
-      renderBundle = pul::core::RenderBundle::Construct(plugin, scene);
-
-      pul::controls::LoadControllerConfig(
-        pul::gfx::DisplayWindow()
-      , scene.PlayerController()
-      );
+      scene.reloadPluginAtEndOfFrame = true;
     }
     pul::imgui::ItemTooltip(
       "NOTE: RELOADING plugins will save animations, configs, etc"
@@ -649,6 +633,28 @@ int main(int argc, char const ** argv) {
     std::this_thread::sleep_for(std::chrono::milliseconds(0));
 
     timePreviousFrameBegin = timeFrameBegin;
+
+    if (sceneBundle.reloadPluginAtEndOfFrame) {
+      sceneBundle.reloadPluginAtEndOfFrame = false;
+
+      plugin.Shutdown(sceneBundle);
+
+      // reload configs
+      sceneBundle.PlayerMetaInfo() = {};
+
+      renderBundle = {};
+
+      // continue loading plugins
+      pul::plugin::UpdatePlugins(plugin);
+      plugin.Initialize(sceneBundle);
+
+      renderBundle = pul::core::RenderBundle::Construct(plugin, sceneBundle);
+
+      pul::controls::LoadControllerConfig(
+        pul::gfx::DisplayWindow()
+      , sceneBundle.PlayerController()
+      );
+    }
   }
 
   plugin.Shutdown(sceneBundle);
