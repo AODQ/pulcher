@@ -193,6 +193,7 @@ namespace pul::animation {
   };
 
   struct ComponentInstance {
+    // TODO move origin from Instance to here? as well as others?
     pul::animation::Instance instance;
   };
 

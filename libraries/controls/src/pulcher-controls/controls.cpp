@@ -103,6 +103,7 @@ void pul::controls::UpdateControls(
         case Type::Crouch:           current.crouch           |= active; break;
         case Type::Walk:             current.walk             |= active; break;
         case Type::Taunt:            current.taunt            |= active; break;
+        case Type::Noclip:           current.noclip           |= active; break;
         case Type::ShootPrimary:     current.shootPrimary     |= active; break;
         case Type::ShootSecondary:   current.shootSecondary   |= active; break;
         case Type::WeaponSwitchNext:
@@ -295,6 +296,7 @@ void pul::controls::LoadControllerConfig(
         , { "crouch",           Controller::ControlOutputType::Crouch          }
         , { "walk",             Controller::ControlOutputType::Walk            }
         , { "taunt",            Controller::ControlOutputType::Taunt           }
+        , { "noclip",           Controller::ControlOutputType::Noclip          }
         , { "shoot-primary",    Controller::ControlOutputType::ShootPrimary    }
         , { "shoot-secondary",  Controller::ControlOutputType::ShootSecondary  }
         , {"weapon-switch-next",Controller::ControlOutputType::WeaponSwitchNext}

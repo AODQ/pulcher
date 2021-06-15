@@ -35,6 +35,7 @@ namespace pul::controls {
     , WeaponSwitchWallbanger
     , WeaponSwitchPMF
     , WeaponSwitchUnarmed
+    , Noclip
     };
 
     struct Keymap {
@@ -61,6 +62,8 @@ namespace pul::controls {
       bool jump = false, dash = false, crouch = false, walk = false;
 
       bool taunt = false;
+
+      bool noclip = false;
 
       bool shootPrimary = false, shootSecondary = false;
 

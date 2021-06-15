@@ -103,6 +103,7 @@ void plugin::ui::DebugUiDispatch(pul::core::SceneBundle & sceneBundle) {
     ImGui::Columns(1);
 
     ImGui::Text("weapon switch %d", current.weaponSwitch);
+    ImGui::Text("noclip? %d", current.noclip);
 
   ImGui::End();
 

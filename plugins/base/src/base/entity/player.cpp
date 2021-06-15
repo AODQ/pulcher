@@ -804,14 +804,34 @@ void plugin::entity::UpdatePlayer(
 , pul::core::ComponentDamageable & damageable
 ) {
 
+  auto const & controller = controls.current;
+  auto const & controllerPrev = controls.previous;
+
+  // noclip controls override everything
+  if (controller.noclip && !controllerPrev.noclip) {
+    player.noclip = !player.noclip;
+  }
+
+  if (player.noclip) {
+    playerOrigin +=
+      glm::sign(
+        glm::vec2(
+          static_cast<float>(controller.movementHorizontal)
+        , static_cast<float>(controller.movementVertical)
+        )
+     )*5.0f
+    ;
+    player.velocity = glm::vec2(0.0f);
+    playerAnim.instance.origin = playerOrigin;
+    return;
+  }
+
+
   // add/remove 19 while doing calculations as it basically offsets the hitbox
   // to the center
   playerOrigin += glm::vec2(0.0f, 28.0f);
 
   auto & registry = scene.EnttRegistry();
-
-  auto const & controller = controls.current;
-  auto const & controllerPrev = controls.previous;
 
   player.prevAirVelocity = player.velocity.y;
 

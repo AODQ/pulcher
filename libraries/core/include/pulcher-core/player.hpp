@@ -61,6 +61,7 @@ namespace pul::core {
     bool wallClingLeft = false, wallClingRight = false;
     bool prevWallClingLeft = false, prevWallClingRight = false;
     bool landing = false; // landing until animation timer ends
+    bool noclip = false;
 
     std::array<float, Idx(pul::Direction::Size)> dashCooldown { 0.0f };
     std::array<bool, Idx(pul::Direction::Size)> dashLock { false };
