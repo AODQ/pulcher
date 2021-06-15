@@ -7,6 +7,7 @@
 #include <pulcher-animation/animation.hpp>
 #include <pulcher-core/enum.hpp>
 #include <pulcher-core/map.hpp>
+#include <pulcher-core/creature.hpp>
 #include <pulcher-core/pickup.hpp>
 #include <pulcher-core/player.hpp>
 #include <pulcher-core/scene-bundle.hpp>
@@ -389,6 +390,56 @@ void ParseLayerTile(
   }
 }
 
+void ParseLayerCreature(pul::core::SceneBundle & scene , cJSON * layer) {
+  auto & registry = scene.EnttRegistry();
+  cJSON * creatureobj;
+
+  cJSON_ArrayForEach(
+    creatureobj, cJSON_GetObjectItemCaseSensitive(layer, "objects")
+  ) {
+    std::string creatureLabel = {};
+
+    cJSON * creatureProperties;
+    cJSON_ArrayForEach(
+      creatureProperties
+    , cJSON_GetObjectItemCaseSensitive(creatureobj, "properties")
+    ) {
+      if (std::string{creatureProperties->string} == "creature-name") {
+        creatureLabel = std::string{creatureProperties->valuestring};
+      }
+    }
+
+    auto const origin =
+      glm::vec2 {
+          cJSON_GetObjectItemCaseSensitive(creatureobj, "x")->valueint
+        , cJSON_GetObjectItemCaseSensitive(creatureobj, "y")->valueint
+      }
+    ;
+
+    spdlog::info("adding of label: '{}' @ {}", creatureLabel, origin);
+    if (std::string{creatureLabel} == std::string{"lump"}) {
+      spdlog::info("adding for real");
+      auto lumpEntity = registry.create();
+      registry.emplace<pul::core::ComponentCreatureLump>(
+        lumpEntity,
+        pul::core::ComponentCreatureLump { .origin = origin, }
+      );
+
+      pul::animation::Instance lumpAnimationInstance;
+      plugin::animation::ConstructInstance(
+        scene, lumpAnimationInstance, scene.AnimationSystem()
+      , "creature-lump"
+      );
+
+      lumpAnimationInstance.origin = origin;
+      lumpAnimationInstance.pieceToState["body"].Apply("idle", true);
+      registry.emplace<pul::animation::ComponentInstance>(
+        lumpEntity, std::move(lumpAnimationInstance)
+      );
+    }
+  }
+}
+
 void ParseLayerObject(pul::core::SceneBundle & scene , cJSON * layer) {
   cJSON * object;
 
@@ -679,7 +730,11 @@ void plugin::map::LoadMap(
     if (layerType == "tilelayer") {
       ParseLayerTile(scene, layer, layerLabel);
     } else if (layerType == "objectgroup") {
-      ParseLayerObject(scene, layer);
+
+      if (std::string{layerLabel} == std::string{"creatures"})
+        ParseLayerCreature(scene, layer);
+      else
+        ParseLayerObject(scene, layer);
     } else {
       spdlog::error("unable to parse layer of type '{}'", layerType);
     }

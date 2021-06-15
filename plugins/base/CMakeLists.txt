@@ -8,6 +8,7 @@ target_sources(
     src/base/animation/render.cpp
     src/base/base.cpp
     src/base/bot/bot.cpp
+    src/base/bot/creature-lump.cpp
     src/base/debug/renderer.cpp
     src/base/entity/config.cpp
     src/base/entity/cursor.cpp

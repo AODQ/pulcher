@@ -2,6 +2,7 @@
 
 #include <plugin-base/animation/animation.hpp>
 #include <plugin-base/bot/bot.hpp>
+#include <plugin-base/bot/creature.hpp>
 #include <plugin-base/debug/renderer.hpp>
 #include <plugin-base/entity/config.hpp>
 #include <plugin-base/entity/cursor.hpp>
@@ -10,9 +11,11 @@
 #include <plugin-base/physics/physics.hpp>
 
 #include <pulcher-animation/animation.hpp>
+
 #include <pulcher-audio/system.hpp>
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/hud.hpp>
+#include <pulcher-core/creature.hpp>
 #include <pulcher-core/particle.hpp>
 #include <pulcher-core/pickup.hpp>
 #include <pulcher-core/player.hpp>
@@ -561,6 +564,20 @@ void plugin::entity::Update(pul::core::SceneBundle & scene) {
     }
   }
 
+  { // -- creature lump
+    auto view =
+      registry.view<
+        pul::core::ComponentCreatureLump
+      , pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
+      auto & creature = view.get<pul::core::ComponentCreatureLump>(entity);
+
+      plugin::bot::UpdateCreatureLump(scene, creature, animation);
+    }
+  }
 
   { // -- beams
     auto view =
@@ -687,6 +704,12 @@ void plugin::entity::DebugUiDispatch(pul::core::SceneBundle & scene) {
       auto & comp = registry.get<pul::core::ComponentOrigin>(entity);
       ImGui::Text("--- origin ---");
       ImGui::DragFloat2("origin", &comp.origin.x, 1.0f);
+    }
+
+    if (registry.has<pul::core::ComponentCreatureLump>(entity) && treeStart()) {
+      auto & comp = registry.get<pul::core::ComponentCreatureLump>(entity);
+      ImGui::Text("--- creature lump ---");
+      ImGui::DragFloat2("origin", &comp.origin.x, 1.0);
     }
 
     if (registry.has<pul::core::ComponentHitboxAABB>(entity) && treeStart()) {
