@@ -5,7 +5,6 @@ target_sources(
   pulcher-core
   PRIVATE
     src/pulcher-core/map.cpp
-    src/pulcher-core/random.cpp
     src/pulcher-core/scene-bundle.cpp
     src/pulcher-core/weapon.cpp
 )

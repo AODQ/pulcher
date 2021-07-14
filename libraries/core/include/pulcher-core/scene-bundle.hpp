@@ -4,6 +4,7 @@
 #include <pulcher-util/any.hpp>
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/pimpl.hpp>
+#include <pulcher-util/common-components.hpp>
 
 #include <glm/glm.hpp>
 
@@ -27,6 +28,8 @@ namespace pul::core {
     glm::vec2 playerOrigin = {};
     glm::i32vec2 cameraOrigin = {};
 
+    bool paused = false;
+
     float calculatedMsPerFrame = pul::util::MsPerFrame;
     size_t numCpuFrames = 0ul;
 
@@ -39,6 +42,7 @@ namespace pul::core {
     char const * mapFilename;
 
     bool reloadPluginAtEndOfFrame = false;
+    bool saveDataOnReloadPluginAtEndOfFrame = false;
 
     pul::animation::System & AnimationSystem();
     pul::controls::Controller & PlayerController();
@@ -49,7 +53,7 @@ namespace pul::core {
 
     // store player between reloads
     pul::core::ComponentPlayer & StoredDebugPlayerComponent();
-    pul::core::ComponentOrigin & StoredDebugPlayerOriginComponent();
+    pul::util::ComponentOrigin & StoredDebugPlayerOriginComponent();
 
     entt::registry & EnttRegistry();
 

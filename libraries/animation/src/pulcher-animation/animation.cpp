@@ -1,6 +1,7 @@
 #include <pulcher-animation/animation.hpp>
 
 #include <pulcher-util/log.hpp>
+#include <pulcher-util/random.hpp>
 
 size_t pul::animation::Animator::State::VariationIdxLookup(
   VariationRuntimeInfo const & variationRti
@@ -71,9 +72,8 @@ void pul::animation::Instance::StateInfo::Apply(
     case pul::animation::VariationType::Normal: break;
     case pul::animation::VariationType::Range: break;
     case pul::animation::VariationType::Random:
-      static size_t rand = 0ul;
-      ++ rand;
-      variationRti.random.idx = rand % state.variations.size();
+      variationRti.random.idx =
+        pul::util::RandomInt32(0, state.variations.size()-1);
     break;
   }
 }

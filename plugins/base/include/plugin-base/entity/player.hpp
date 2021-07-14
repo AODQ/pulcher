@@ -1,12 +1,12 @@
 #pragma once
 
+namespace entt { enum class entity: uint32_t; }
 namespace pul::animation { struct ComponentInstance; }
 namespace pul::controls { struct Controller; }
-namespace pul::core { struct ComponentPlayer; }
-namespace pul::core { struct ComponentHitboxAABB; }
-namespace pul::core { struct SceneBundle; }
 namespace pul::core { struct ComponentDamageable; }
-namespace entt { enum class entity: uint32_t; }
+namespace pul::core { struct ComponentPlayer; }
+namespace pul::core { struct SceneBundle; }
+namespace pul::util { struct ComponentHitboxAABB; }
 
 namespace plugin::entity {
 
@@ -21,7 +21,7 @@ namespace plugin::entity {
   , pul::controls::Controller const & controller
   , pul::core::ComponentPlayer & player
   , glm::vec2 & playerOrigin
-  , pul::core::ComponentHitboxAABB & hitboxAabb
+  , pul::util::ComponentHitboxAABB & hitboxAabb
   , pul::animation::ComponentInstance & playerAnimation
   , pul::core::ComponentDamageable & damageable
   );

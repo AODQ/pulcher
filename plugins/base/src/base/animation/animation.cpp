@@ -9,6 +9,7 @@
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
+#include <pulcher-util/random.hpp>
 
 #include <cjson/cJSON.h>
 #include <entt/entt.hpp>
@@ -27,17 +28,31 @@
 
 namespace {
 
-static size_t animationBufferMaxSize = 4096*4096*5; // ~50MB
+size_t animationBufferMaxSize = 4096*4096*5; // ~50MB
 
 /* static std::vector<pul::animation::Instance const *> debugRenderingInstances; */
 
-static size_t animMsTimer = 0ul;
-static bool animLoop = true;
-static float animShowPreviousSprite = 0.0f;
-static bool animShowZoom = false;
-static bool animPlaying = true;
-static bool animEmptyOnLoopEnd = false;
-static size_t animMaxTime = 100'000ul;
+size_t animMsTimer = 0ul;
+bool animLoop = true;
+float animShowPreviousSprite = 0.0f;
+bool animShowZoom = false;
+bool animPlaying = true;
+bool animEmptyOnLoopEnd = false;
+size_t animMaxTime = 100'000ul;
+
+glm::u32vec2 animRecordTileToAdd = glm::u32vec2(-1u, -1u);
+std::vector<pul::animation::Component> * animRecordComponent = nullptr;
+size_t animRecordComponentIt = -1;
+
+pul::animation::Animator        * hitboxEditorAnimator  = nullptr;
+pul::animation::Animator::Piece * hitboxEditorPiece     = nullptr;
+pul::animation::Component       * hitboxEditorComponent = nullptr;
+
+void ResetHitboxEdit() {
+  hitboxEditorAnimator  = nullptr;
+  hitboxEditorPiece     = nullptr;
+  hitboxEditorComponent = nullptr;
+}
 
 void JsonParseRecursiveSkeleton(
   cJSON * skeletalParentJson
@@ -94,6 +109,7 @@ std::vector<pul::animation::Component> JsonLoadComponents(
     }
 
     components.emplace_back(component);
+    ResetHitboxEdit();
   }
 
   return components;
@@ -227,6 +243,15 @@ void ComputeVertices(
         stateInfo.deltaTime = stateInfo.deltaTime - msDeltaTime;
         stateInfo.componentIt = (stateInfo.componentIt + 1) % components.size();
         hasUpdate = true;
+
+        // 'respin' random variation
+        if (
+            stateInfo.componentIt == 0
+         && state.variationType == pul::animation::VariationType::Random
+        ) {
+          stateInfo.variationRti.random.idx =
+            pul::util::RandomInt32(0, state.variations.size()-1);
+        }
       } else {
         if (stateInfo.componentIt < components.size()-1) {
           stateInfo.deltaTime = stateInfo.deltaTime - msDeltaTime;
@@ -546,7 +571,58 @@ void DisplayImGuiComponent(
 
   if (!::animShowZoom) {
     ImGui::NextColumn();
-    pul::imgui::DragInt2("tile", &component.tile.x, 0.025f);
+
+    auto prevComponent = component.tile;
+    if (pul::imgui::DragInt2("tile", &component.tile.x, 0.025f)) {
+
+      // initializes recording of tiles for animation insertion
+      if (
+          components.size() == 1 // FIXME temporary limitation to prevent crash
+       && ::animRecordComponent == nullptr && ImGui::GetIO().MouseDown[1]
+      ) {
+        ::animRecordTileToAdd = prevComponent;
+        ::animRecordComponent = &components;
+        ::animRecordComponentIt = componentIt;
+      }
+    } else if (
+        !ImGui::GetIO().MouseDown[0]
+     && !ImGui::GetIO().MouseDown[1]
+     && ::animRecordComponent == &components
+     && ::animRecordComponentIt == componentIt
+    ) {
+      // iterates the recorded tiles and inserts them into the animation
+
+      glm::i32vec2 const difference =
+        glm::i32vec2(component.tile) - glm::i32vec2(::animRecordTileToAdd)
+      ;
+
+      glm::i32vec2 const sgnMult =
+        glm::sign(
+          glm::i32vec2(component.tile) - glm::i32vec2(::animRecordTileToAdd)
+        )
+      ;
+
+      int32_t itFlat = 0;
+      for (
+        glm::u32vec2 it = ::animRecordTileToAdd;
+        itFlat < glm::abs(difference.x) + glm::abs(difference.y);
+        ++ itFlat
+      ) {
+
+        auto const idx = ::animRecordComponentIt + itFlat;
+        components.emplace(components.begin() + idx);
+        components[animRecordComponentIt + idx].tile = it;
+
+        ::ResetHitboxEdit();
+
+        it += sgnMult;
+      }
+
+      ::animRecordComponent = nullptr;
+      ::animRecordComponentIt = -1ul;
+
+      ::ResetHitboxEdit();
+    }
 
     pul::imgui::DragInt2("origin-offset", &component.originOffset.x, 0.025f);
     pul::imgui::DragInt("ms-time", &component.msDeltaTimeOverride, 0.25f);
@@ -554,12 +630,14 @@ void DisplayImGuiComponent(
     if (ImGui::Button("-")) {
       components.erase(components.begin() + componentIt);
       -- componentIt;
+      ::ResetHitboxEdit();
     }
 
     ImGui::SameLine();
     if (ImGui::Button("+")) {
       components
         .emplace(components.begin() + componentIt + 1, component);
+      ::ResetHitboxEdit();
     }
 
     ImGui::SameLine();
@@ -567,25 +645,38 @@ void DisplayImGuiComponent(
       components
         .emplace(components.begin() + componentIt + 1, component);
       components[componentIt+1].tile.x += 1;
+      ::ResetHitboxEdit();
     }
 
     ImGui::SameLine();
     if (ImGui::Button("+y")) {
       components
         .emplace(components.begin() + componentIt + 1, component);
+      ::ResetHitboxEdit();
       components[componentIt+1].tile.y += 1;
     }
 
     if (componentIt > 0ul) {
       ImGui::SameLine();
-      if(ImGui::Button("^"))
-        { std::swap(components[componentIt], components[componentIt-1]); }
+      if(ImGui::Button("^")) {
+        std::swap(components[componentIt], components[componentIt-1]);
+        ::ResetHitboxEdit();
+      }
     }
 
     if (componentIt < components.size()-1) {
       ImGui::SameLine();
-      if (ImGui::Button("V"))
-        { std::swap(components[componentIt], components[componentIt+1]); }
+      if (ImGui::Button("V")) {
+        std::swap(components[componentIt], components[componentIt+1]);
+        ::ResetHitboxEdit();
+      }
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("edit hitbox")) {
+      ::hitboxEditorAnimator = &animator;
+      ::hitboxEditorPiece = &piece;
+      ::hitboxEditorComponent = &components[componentIt];
     }
 
     ImGui::NextColumn();
@@ -681,6 +772,7 @@ void DisplayImGuiSkeleton(
 
     if (ImGui::Button("remove")) {
       skeletals.erase(skeletals.begin() + skeletalIdx);
+      ::ResetHitboxEdit();
       ReconstructInstances(scene);
 
       ImGui::TreePop();
@@ -973,12 +1065,12 @@ void LoadAnimation(
     // store animator
     animators[animator->label] = animator;
 
-    animator->spritesheet =
-      pul::gfx::Spritesheet::Construct(
-        pul::gfx::Image::Construct(
-          cJSON_GetObjectItemCaseSensitive(sheetJson, "filename")->valuestring
-        )
+    auto animationImage =
+      pul::gfx::Image::Construct(
+        cJSON_GetObjectItemCaseSensitive(sheetJson, "filename")->valuestring
       );
+
+    animator->spritesheet = pul::gfx::Spritesheet::Construct(animationImage);
 
     cJSON * pieceJson;
     cJSON_ArrayForEach(
@@ -1172,9 +1264,9 @@ void plugin::animation::LoadAnimations(
     desc.vs.uniform_blocks[2].uniforms[0].name = "cameraOrigin";
     desc.vs.uniform_blocks[2].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
-    desc.vs.uniform_blocks[3].size = sizeof(float) * 2;
-    desc.vs.uniform_blocks[3].uniforms[0].name = "textureResolution";
-    desc.vs.uniform_blocks[3].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
+    desc.fs.uniform_blocks[0].size = sizeof(float) * 2;
+    desc.fs.uniform_blocks[0].uniforms[0].name = "textureResolution";
+    desc.fs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
 
     desc.fs.images[0].name = "baseSampler";
     desc.fs.images[0].type = SG_IMAGETYPE_2D;
@@ -1215,19 +1307,37 @@ void plugin::animation::LoadAnimations(
     desc.fs.source = PUL_SHADER(
       uniform sampler2D baseSampler;
 
+      uniform vec2 textureResolution;
+
       in vec2 uvCoord;
       in vec2 vertexCoord;
 
       out vec4 outColor;
 
       void main() {
-        outColor = texture(baseSampler, uvCoord);
-        if (outColor.a < 0.1f)
-          { discard; }
         if (
             vertexCoord.y < 0.0001f || vertexCoord.x < 0.0001f
          || vertexCoord.y > 0.9999f || vertexCoord.x > 0.9999f
-        ) { discard; }
+        ) {
+          discard;
+        }
+
+        outColor = texture(baseSampler, uvCoord);
+        vec3 invTexel = vec3(1.0f / textureResolution, 0.0f);
+        if (
+            outColor.a == 0.0f
+            && (
+                texture(baseSampler, uvCoord+invTexel.xz).a > 0.1f
+             || texture(baseSampler, uvCoord+invTexel.zy).a > 0.1f
+             || texture(baseSampler, uvCoord-invTexel.xz).a > 0.1f
+             || texture(baseSampler, uvCoord-invTexel.zy).a > 0.1f
+            )
+        ) {
+          outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+        }
+
+        if (outColor.a < 0.1f)
+          { discard; }
       }
     );
 
@@ -1276,7 +1386,8 @@ void plugin::animation::LoadAnimations(
 void plugin::animation::Shutdown(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
-  ::SaveAnimations(scene.AnimationSystem());
+  if (scene.saveDataOnReloadPluginAtEndOfFrame)
+    ::SaveAnimations(scene.AnimationSystem());
 
   { // -- delete sokol animation information
     auto view = registry.view<pul::animation::ComponentInstance>();
@@ -1578,21 +1689,21 @@ void plugin::animation::DebugUiDispatch(
 
       if (ImGui::TreeNode(piecePair.first.c_str())) {
 
-      { // delete piece
-        if (ImGui::Button("x"))
-          { ImGui::OpenPopup("piece delete confirm"); }
+        { // delete piece
+          if (ImGui::Button("x"))
+            { ImGui::OpenPopup("piece delete confirm"); }
 
-        if (ImGui::BeginPopup("piece delete confirm")) {
-          if (ImGui::Button("confirm deletion")) {
-            animator.pieces.erase(animator.pieces.find(piecePair.first));
+          if (ImGui::BeginPopup("piece delete confirm")) {
+            if (ImGui::Button("confirm deletion")) {
+              animator.pieces.erase(animator.pieces.find(piecePair.first));
+              ::ResetHitboxEdit();
+              ImGui::EndPopup();
+              ImGui::TreePop();
+              break;
+            }
             ImGui::EndPopup();
-            ImGui::TreePop();
-            break;
           }
-          ImGui::EndPopup();
         }
-      }
-
 
         pul::imgui::Text(
           "img dimensions {}x{}"
@@ -1616,7 +1727,11 @@ void plugin::animation::DebugUiDispatch(
               )
             ) {
               if (newStateLabel != "") {
-                piece.states[newStateLabel] = {};
+                piece.states[newStateLabel] = pul::animation::Animator::State {
+                  .variationType = pul::animation::VariationType::Normal,
+                  .variations = {},
+                  .msDeltaTime = 100,
+                };
               }
               newStateLabel = "";
               ImGui::CloseCurrentPopup();
@@ -1640,11 +1755,27 @@ void plugin::animation::DebugUiDispatch(
             if (ImGui::BeginPopup("state delete confirm")) {
               if (ImGui::Button("confirm deletion")) {
                 piece.states.erase(piece.states.find(statePair.first));
+                ::ResetHitboxEdit();
                 ImGui::EndPopup();
                 ImGui::TreePop();
                 break;
               }
               ImGui::EndPopup();
+            }
+          }
+
+          ImGui::SameLine(); // "x" "set time"
+          if (ImGui::Button("set max loop time")) {
+            ::animMaxTime = 0ul;
+            auto & variations = statePair.second.variations;
+            for (size_t i = 0; i < variations.size(); ++ i) {
+              ::animMaxTime =
+                glm::max(
+                  ::animMaxTime
+                  , variations[i].normal.data.size()
+                  * statePair.second.msDeltaTime
+                )
+              ;
             }
           }
 
@@ -1707,6 +1838,7 @@ void plugin::animation::DebugUiDispatch(
 
           if (hasAddPartOption && ImGui::Button("add part")) {
             variations.emplace_back();
+            ::ResetHitboxEdit();
             variationChanged = true;
           }
 
@@ -1827,6 +1959,7 @@ void plugin::animation::DebugUiDispatch(
 
             if (ImGui::Button("remove")) {
               variations.erase(variations.begin()+variationIt);
+              ::ResetHitboxEdit();
               -- variationIt;
               ImGui::PopID();
             }
@@ -1878,6 +2011,7 @@ void plugin::animation::DebugUiDispatch(
                     componentsDefault.size() == 0ul
                  && ImGui::Button("add default")
                 ) {
+                  ::ResetHitboxEdit();
                   componentsDefault.emplace_back();
                 }
 
@@ -1899,6 +2033,7 @@ void plugin::animation::DebugUiDispatch(
                   ImGui::PopID();
                 } else {
                   if (ImGui::Button("add flipped")) {
+                    ::ResetHitboxEdit();
                     componentsFlipped.emplace_back();
                   }
                 }
@@ -1937,6 +2072,82 @@ void plugin::animation::DebugUiDispatch(
     }
 
     ImGui::End();
+  }
+
+  if (::hitboxEditorAnimator)
+  { // -- display hitbox
+
+    assert(
+      ::hitboxEditorComponent && ::hitboxEditorAnimator && ::hitboxEditorPiece
+    );
+
+    bool isOpen = true;
+    ImGui::Begin("Hitbox editor", &isOpen);
+
+    auto  piece = *::hitboxEditorPiece;
+    auto & hitboxes = ::hitboxEditorComponent->hitbox;
+
+    // save position to render hitboxes on top of spritesheet with later
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    ImVec2 posPostSpritesheet;
+
+    if (!isOpen) {
+      ::ResetHitboxEdit();
+      goto END_HITBOX_EDITOR;
+    }
+
+    ImGuiRenderSpritesheetTile(
+      *::hitboxEditorAnimator
+    , *::hitboxEditorPiece
+    , *::hitboxEditorComponent
+    , 1.0f /* alpha */
+    );
+
+    posPostSpritesheet = ImGui::GetCursorScreenPos();
+    ImGui::SetCursorScreenPos(p);
+
+    { // render hitboxes
+      ImDrawList * drawList = ImGui::GetWindowDrawList();
+
+      p = ImVec2(p.x + piece.dimensions.x/2.0f, p.y + piece.dimensions.y/2.0f);
+
+      for (auto & hitbox : hitboxes) {
+        if (!hitbox.hasAabb) { continue; }
+        auto & aabb = hitbox.aabb;
+        drawList->AddRect(
+          ImVec2(
+            p.x + aabb.offset.x - aabb.dimensions.x/2.0f,
+            p.y + aabb.offset.y - aabb.dimensions.y/2.0f
+          ),
+          ImVec2(
+            p.x + aabb.offset.x + aabb.dimensions.x/2.0f,
+            p.y + aabb.offset.y + aabb.dimensions.y/2.0f
+          ),
+          IM_COL32(255, 0, 0, 255)
+        );
+      }
+    }
+
+    ImGui::SetCursorScreenPos(posPostSpritesheet);
+
+    // allow user to edit hitboxes
+    for (size_t i = 0; i < hitboxes.size(); ++ i) {
+      auto & hitbox = hitboxes[i];
+      if (!hitbox.hasAabb && ImGui::Button("add hitbox")) {
+        hitbox.hasAabb = true;
+        hitbox.aabb = {};
+      }
+      if (!hitbox.hasAabb) { continue; }
+
+      pul::imgui::DragInt2("dimensions", &hitbox.aabb.dimensions.x, 0.2f);
+      pul::imgui::DragInt2("offset", &hitbox.aabb.offset.x, 0.2f);
+
+      ImGui::Separator();
+    }
+
+    ImGui::End();
+
+    END_HITBOX_EDITOR:;
   }
 
   /* ImGui::Begin("animation debug"); */

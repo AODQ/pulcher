@@ -7,6 +7,7 @@
 #include <pulcher-core/player.hpp>
 #include <pulcher-physics/intersections.hpp>
 #include <pulcher-plugin/plugin.hpp>
+#include <pulcher-util/common-components.hpp>
 
 #include <entt/entt.hpp>
 
@@ -17,7 +18,7 @@ struct pul::core::SceneBundle::Impl {
   pul::controls::Controller playerController;
   pul::physics::DebugQueries physicsQueries;
   pul::core::ComponentPlayer storedDebugPlayerComponent;
-  pul::core::ComponentOrigin storedDebugPlayerOriginComponent;
+  pul::util::ComponentOrigin storedDebugPlayerOriginComponent;
   pul::core::HudInfo hudInfo;
 
   entt::registry enttRegistry;
@@ -61,7 +62,7 @@ pul::core::SceneBundle::StoredDebugPlayerComponent() {
   return impl->storedDebugPlayerComponent;
 }
 
-pul::core::ComponentOrigin &
+pul::util::ComponentOrigin &
 pul::core::SceneBundle::StoredDebugPlayerOriginComponent() {
   return impl->storedDebugPlayerOriginComponent;
 }

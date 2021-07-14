@@ -274,10 +274,15 @@ namespace plugin::entity {
   );
 
   // ignoreEntity - can be null, describes which entity to be ignored
+  // TODO make this a more generic damage hitbox
   bool WeaponDamageCircle(
     pul::core::SceneBundle & scene
   , glm::vec2 const & origin, float const radius
   , float const damage, float const force
   , entt::entity const ignoredEntity
+  , glm::vec2 const overrideTargetDamageDirection = glm::vec2(0.0f)
   );
+
+  // TODO make a more generic hitbox structure that can be chained
+  // (as in multiple hitboxes)
 }

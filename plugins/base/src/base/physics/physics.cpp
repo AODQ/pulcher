@@ -123,8 +123,8 @@ void plugin::physics::EntityIntersectionRaycast(
 
   auto view =
     registry.view<
-      pul::core::ComponentHitboxAABB
-    , pul::core::ComponentOrigin
+      pul::util::ComponentHitboxAABB
+    , pul::util::ComponentOrigin
     >();
 
   intersectionResults.entities.clear();
@@ -135,14 +135,15 @@ void plugin::physics::EntityIntersectionRaycast(
   ;
 
   for (auto & entity : view) {
-    auto const & hitbox = view.get<pul::core::ComponentHitboxAABB>(entity);
-    auto const & origin = view.get<pul::core::ComponentOrigin>(entity);
+    auto const & hitbox = view.get<pul::util::ComponentHitboxAABB>(entity);
+    auto const & origin = view.get<pul::util::ComponentOrigin>(entity);
 
     float intersectionLength;
     bool const intersection =
       ::IntersectionRayAabb(
         rayOriginBegin, rayOriginEnd
-      , origin.origin, glm::vec2(hitbox.dimensions)
+      , origin.origin + glm::vec2(hitbox.offset)
+      , glm::vec2(hitbox.dimensions)
       , intersectionLength
       );
 
@@ -170,21 +171,22 @@ void plugin::physics::EntityIntersectionCircle(
 
   auto view =
     registry.view<
-      pul::core::ComponentHitboxAABB
-    , pul::core::ComponentOrigin
+      pul::util::ComponentHitboxAABB
+    , pul::util::ComponentOrigin
     >();
 
   intersectionResults.entities.clear();
 
   for (auto & entity : view) {
-    auto const & hitbox = view.get<pul::core::ComponentHitboxAABB>(entity);
-    auto const & origin = view.get<pul::core::ComponentOrigin>(entity);
+    auto const & hitbox = view.get<pul::util::ComponentHitboxAABB>(entity);
+    auto const & origin = view.get<pul::util::ComponentOrigin>(entity);
 
     glm::vec2 closestOrigin;
     bool intersection =
       ::IntersectionCircleAabb(
         glm::vec2(circle.origin), circle.radius
-      , origin.origin + glm::vec2(hitbox.offset), glm::vec2(hitbox.dimensions)
+      , origin.origin + glm::vec2(hitbox.offset)
+      , glm::vec2(hitbox.dimensions)
       , closestOrigin
       );
 

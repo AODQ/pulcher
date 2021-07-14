@@ -63,6 +63,16 @@ void plugin::animation::RenderInterpolated(
       , bufferData.data(), bufferData.size() * sizeof(glm::vec4)
       );
 
+    float textureResolution[2];
+    textureResolution[0] = instance.animator->spritesheet.width;
+    textureResolution[1] = instance.animator->spritesheet.height;
+    sg_apply_uniforms(
+      SG_SHADERSTAGE_FS
+    , 0
+    , &textureResolution[0]
+    , sizeof(float) * 2ul
+    );
+
     auto bindings = animationSystem.sgBindings;
     bindings.vertex_buffer_offsets[0] = offset;
     bindings.vertex_buffer_offsets[1] = offset;

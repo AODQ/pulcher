@@ -2896,6 +2896,7 @@ bool plugin::entity::WeaponDamageCircle(
 , glm::vec2 const & origin, float radius
 , float const damage, float const force
 , entt::entity ignoredEntity
+, glm::vec2 overrideTargetDamageDirection
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -2921,11 +2922,15 @@ bool plugin::entity::WeaponDamageCircle(
 
     pul::core::DamageInfo damageInfo;
     { // calculate damage info
-      glm::vec2 dir =
+      glm::vec2 dir = overrideTargetDamageDirection;
+
+      // if there is no override, use angle between target/hitbox-center
+      if (dir == glm::vec2(0.0f))
         glm::vec2(std::get<0>(entityIntersection)) - origin;
-      if (dir == glm::vec2(0.0f)) {
+
+      // just assume up when the direction is 0
+      if (dir == glm::vec2(0.0f))
         dir = glm::vec2(0, -radius);
-      }
 
       float const forceRatio = 1.0f - glm::length(dir) / radius;
 

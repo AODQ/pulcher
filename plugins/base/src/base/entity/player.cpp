@@ -286,7 +286,7 @@ void PlayerCheckPickups(
 , pul::core::ComponentPlayer & player
 , pul::core::ComponentDamageable & damageable
 , glm::vec2 & playerOrigin
-, pul::core::ComponentHitboxAABB &
+, pul::util::ComponentHitboxAABB &
 ) {
   auto & registry = scene.EnttRegistry();
 
@@ -366,7 +366,7 @@ void UpdatePlayerPhysics(
   pul::core::SceneBundle & scene
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
-, pul::core::ComponentHitboxAABB & hitbox
+, pul::util::ComponentHitboxAABB & hitbox
 ) {
   // if no velocity do nothing
   if (player.velocity == glm::vec2(0.0f)) { return; }
@@ -570,7 +570,7 @@ void UpdatePlayerWeapon(
 , pul::controls::Controller const & controls
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
-, pul::core::ComponentHitboxAABB &
+, pul::util::ComponentHitboxAABB &
 , pul::animation::ComponentInstance & playerAnim
 ) {
   auto const & registry = scene.EnttRegistry();
@@ -738,7 +738,7 @@ void plugin::entity::ConstructPlayer(
   registry.emplace<pul::core::ComponentPlayer>(entity);
   auto damageable = pul::core::ComponentDamageable { 100, 0 };
   registry.emplace<pul::core::ComponentDamageable>(entity, damageable);
-  registry.emplace<pul::core::ComponentOrigin>(entity);
+  registry.emplace<pul::util::ComponentOrigin>(entity);
   registry.emplace<pul::controls::ComponentController>(entity);
   registry.emplace<pul::core::ComponentCamera>(entity);
   registry.emplace<pul::core::ComponentLabel>(entity, "Player");
@@ -753,17 +753,17 @@ void plugin::entity::ConstructPlayer(
 
   auto & player = registry.get<pul::core::ComponentPlayer>(entity);
   [[maybe_unused]]
-  auto & playerOrigin = registry.get<pul::core::ComponentOrigin>(entity);
+  auto & playerOrigin = registry.get<pul::util::ComponentOrigin>(entity);
 
   { // hitbox
-    pul::core::ComponentHitboxAABB hitbox;
+    pul::util::ComponentHitboxAABB hitbox;
     hitbox.dimensions = glm::i32vec2(15, 50);
-    registry.emplace<pul::core::ComponentHitboxAABB>(entity, hitbox);
+    registry.emplace<pul::util::ComponentHitboxAABB>(entity, hitbox);
   }
 
   // choose map origin
   if (scene.PlayerMetaInfo().playerSpawnPoints.size() > 0ul) {
-    registry.get<pul::core::ComponentOrigin>(entity).origin =
+    registry.get<pul::util::ComponentOrigin>(entity).origin =
       scene.PlayerMetaInfo().playerSpawnPoints[0];
   }
 
@@ -799,7 +799,7 @@ void plugin::entity::UpdatePlayer(
 , pul::controls::Controller const & controls
 , pul::core::ComponentPlayer & player
 , glm::vec2 & playerOrigin
-, pul::core::ComponentHitboxAABB & hitbox
+, pul::util::ComponentHitboxAABB & hitbox
 , pul::animation::ComponentInstance & playerAnim
 , pul::core::ComponentDamageable & damageable
 ) {

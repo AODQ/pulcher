@@ -9,6 +9,8 @@ target_sources(
     src/base/base.cpp
     src/base/bot/bot.cpp
     src/base/bot/creature-lump.cpp
+    src/base/bot/creature-moldwing.cpp
+    src/base/bot/creature-vapivara.cpp
     src/base/debug/renderer.cpp
     src/base/entity/config.cpp
     src/base/entity/cursor.cpp

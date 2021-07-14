@@ -54,7 +54,7 @@ void plugin::entity::StartScene(pul::core::SceneBundle & scene) {
   plugin::entity::ConstructPlayer(playerEntity, scene, true);
 
   // bot/AI
-  for (size_t i = 0; i < 1; ++ i) {
+  for (size_t i = 1; i < 1; ++ i) {
     entt::entity botEntity;
     plugin::entity::ConstructPlayer(botEntity, scene, false);
   }
@@ -64,14 +64,15 @@ void plugin::entity::Shutdown(pul::core::SceneBundle & scene) {
   auto & registry = scene.EnttRegistry();
 
   // save config
-  plugin::config::SaveConfig();
+  if (scene.saveDataOnReloadPluginAtEndOfFrame)
+    plugin::config::SaveConfig();
 
   // store player
   auto view =
     registry.view<
       pul::core::ComponentPlayerControllable, pul::core::ComponentPlayer
     , pul::core::ComponentCamera, pul::animation::ComponentInstance
-    , pul::core::ComponentOrigin
+    , pul::util::ComponentOrigin
     >();
 
   for (auto entity : view) {
@@ -79,7 +80,7 @@ void plugin::entity::Shutdown(pul::core::SceneBundle & scene) {
     scene.StoredDebugPlayerComponent() =
       std::move(view.get<pul::core::ComponentPlayer>(entity));
     scene.StoredDebugPlayerOriginComponent() =
-      std::move(view.get<pul::core::ComponentOrigin>(entity));
+      std::move(view.get<pul::util::ComponentOrigin>(entity));
   }
 
   // delete registry
@@ -442,8 +443,8 @@ void plugin::entity::Update(pul::core::SceneBundle & scene) {
       auto & damageable = view.get<pul::core::ComponentDamageable>(entity);
       auto & controller =
         view.get<pul::controls::ComponentController>(entity).controller;
-      auto & origin = registry.get<pul::core::ComponentOrigin>(entity);
-      auto & hitbox = registry.get<pul::core::ComponentHitboxAABB>(entity);
+      auto & origin = registry.get<pul::util::ComponentOrigin>(entity);
+      auto & hitbox = registry.get<pul::util::ComponentHitboxAABB>(entity);
 
       controller.previous = std::move(controller.current);
       controller.current = {};
@@ -465,19 +466,18 @@ void plugin::entity::Update(pul::core::SceneBundle & scene) {
   { // -- debug hitbox lines
     auto view =
       registry.view<
-        pul::core::ComponentHitboxAABB, pul::core::ComponentOrigin
+        pul::util::ComponentHitboxAABB, pul::util::ComponentOrigin
       >();
 
     for (auto & entity : view) {
       // get origin/dimensions, for dimensions multiply by half in order to
       // get its "radius" or whatever
-      auto const & dim =
-        glm::vec2(
-          view.get<pul::core::ComponentHitboxAABB>(entity).dimensions
-        ) * 0.5f
-      ;
+      auto & hitbox = view.get<pul::util::ComponentHitboxAABB>(entity);
+      auto const & dim = glm::vec2(hitbox.dimensions) * 0.5f;
       auto const & origin =
-        view.get<pul::core::ComponentOrigin>(entity).origin;
+        view.get<pul::util::ComponentOrigin>(entity).origin
+      + glm::vec2(hitbox.offset)
+      ;
 
       plugin::debug::RenderAabbByCenter(
         origin, dim, glm::vec3(0.7f, 0.8f, 1.0f)
@@ -493,14 +493,14 @@ void plugin::entity::Update(pul::core::SceneBundle & scene) {
       , pul::core::ComponentPlayer,pul::core::ComponentCamera
       , pul::animation::ComponentInstance
       , pul::core::ComponentDamageable
-      , pul::core::ComponentOrigin
-      , pul::core::ComponentHitboxAABB
+      , pul::util::ComponentOrigin
+      , pul::util::ComponentHitboxAABB
       >();
 
     for (auto entity : view) {
       auto & player = view.get<pul::core::ComponentPlayer>(entity);
-      auto & origin = registry.get<pul::core::ComponentOrigin>(entity);
-      auto & hitbox = registry.get<pul::core::ComponentHitboxAABB>(entity);
+      auto & origin = registry.get<pul::util::ComponentOrigin>(entity);
+      auto & hitbox = registry.get<pul::util::ComponentHitboxAABB>(entity);
       auto & damageable = view.get<pul::core::ComponentDamageable>(entity);
 
       plugin::entity::UpdatePlayer(
@@ -569,13 +569,36 @@ void plugin::entity::Update(pul::core::SceneBundle & scene) {
       registry.view<
         pul::core::ComponentCreatureLump
       , pul::animation::ComponentInstance
+      , pul::core::ComponentDamageable
+      , pul::util::ComponentOrigin
       >();
 
     for (auto entity : view) {
-      auto & animation = view.get<pul::animation::ComponentInstance>(entity);
-      auto & creature = view.get<pul::core::ComponentCreatureLump>(entity);
+      plugin::bot::UpdateCreatureLump(scene, entity);
+    }
+  }
 
-      plugin::bot::UpdateCreatureLump(scene, creature, animation);
+  { // -- creature moldwing
+    auto view =
+      registry.view<
+        pul::core::ComponentCreatureMoldWing
+      , pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      plugin::bot::UpdateCreatureMoldWing(scene, entity);
+    }
+  }
+
+  { // -- creature vapivara
+    auto view =
+      registry.view<
+        pul::core::ComponentCreatureVapivara
+      , pul::animation::ComponentInstance
+      >();
+
+    for (auto entity : view) {
+      plugin::bot::UpdateCreatureVapivara(scene, entity);
     }
   }
 
@@ -700,22 +723,40 @@ void plugin::entity::DebugUiDispatch(pul::core::SceneBundle & scene) {
       pul::imgui::SliderInt("armor", &comp.armor, 0u, 200u);
     }
 
-    if (registry.has<pul::core::ComponentOrigin>(entity) && treeStart()) {
-      auto & comp = registry.get<pul::core::ComponentOrigin>(entity);
+    if (registry.has<pul::util::ComponentOrigin>(entity) && treeStart()) {
+      auto & comp = registry.get<pul::util::ComponentOrigin>(entity);
       ImGui::Text("--- origin ---");
       ImGui::DragFloat2("origin", &comp.origin.x, 1.0f);
     }
 
-    if (registry.has<pul::core::ComponentCreatureLump>(entity) && treeStart()) {
-      auto & comp = registry.get<pul::core::ComponentCreatureLump>(entity);
-      ImGui::Text("--- creature lump ---");
+    if (
+        registry.has<pul::core::ComponentCreatureMoldWing>(entity)
+      && treeStart()
+    ) {
+      auto & comp = registry.get<pul::core::ComponentCreatureMoldWing>(entity);
+      ImGui::Text("--- creature moldwing ---");
       ImGui::DragFloat2("origin", &comp.origin.x, 1.0);
     }
 
-    if (registry.has<pul::core::ComponentHitboxAABB>(entity) && treeStart()) {
-      auto & comp = registry.get<pul::core::ComponentHitboxAABB>(entity);
+    if (
+        registry.has<pul::core::ComponentCreatureVapivara>(entity)
+      && treeStart()
+    ) {
+      ImGui::Text("--- creature vapivara ---");
+      plugin::bot::ImGuiCreatureVapivara(scene, entity);
+    }
+
+    if (registry.has<pul::core::ComponentCreatureLump>(entity) && treeStart()) {
+      auto & comp = registry.get<pul::core::ComponentCreatureLump>(entity);
+      (void)comp;
+      ImGui::Text("--- creature lump [TODO] ---");
+    }
+
+    if (registry.has<pul::util::ComponentHitboxAABB>(entity) && treeStart()) {
+      auto & comp = registry.get<pul::util::ComponentHitboxAABB>(entity);
       ImGui::Text("--- hitbox AABB ---");
       pul::imgui::DragInt2("dimensions", &comp.dimensions.x, 1.0f);
+      pul::imgui::DragInt2("offset", &comp.offset.x, 1.0f);
     }
 
     if (registry.has<pul::core::ComponentPlayer>(entity) && treeStart()) {

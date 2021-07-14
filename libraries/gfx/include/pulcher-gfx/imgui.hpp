@@ -50,14 +50,25 @@ namespace pul::imgui {
 
   template <typename T>
   bool DragInt2(char const * label, T * value, float accel = 1.0f) {
-    std::array<int, 2> valueAsInt =
-      { static_cast<int>(value[0]), static_cast<int>(value[1]) };
+    std::array<int32_t, 2> valueAsInt =
+      { static_cast<int32_t>(value[0]), static_cast<int32_t>(value[1]) };
 
     bool result = ImGui::DragInt2(label, valueAsInt.data(), accel);
+
+    if constexpr (std::is_unsigned<T>::value) {
+      valueAsInt[0] =
+        glm::clamp(valueAsInt[0], 0, std::numeric_limits<int32_t>::max())
+      ;
+      valueAsInt[1] =
+        glm::clamp(valueAsInt[1], 0, std::numeric_limits<int32_t>::max())
+      ;
+    }
+
     if (result) {
       value[0] = static_cast<T>(valueAsInt[0]);
       value[1] = static_cast<T>(valueAsInt[1]);
     }
+
     return result;
   }
 

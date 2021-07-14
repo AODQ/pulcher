@@ -4,7 +4,6 @@
 #include <pulcher-controls/controls.hpp>
 #include <pulcher-core/config.hpp>
 #include <pulcher-core/player.hpp>
-#include <pulcher-core/random.hpp>
 #include <pulcher-core/scene-bundle.hpp>
 #include <pulcher-gfx/context.hpp>
 #include <pulcher-gfx/imgui.hpp>
@@ -14,6 +13,7 @@
 #include <pulcher-util/consts.hpp>
 #include <pulcher-util/enum.hpp>
 #include <pulcher-util/log.hpp>
+#include <pulcher-util/random.hpp>
 
 #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wshadow"
@@ -235,6 +235,7 @@ void ProcessRendering(
 
   static glm::vec3 screenClearColor = glm::vec3(0.7f, 0.4f, .4f);
 
+  if (!scene.paused)
   { // -- render scene
     sg_pass_action passAction = {};
     passAction.colors[0].action = SG_ACTION_CLEAR;
@@ -286,14 +287,24 @@ void ProcessRendering(
     ImGui::Begin("Diagnostics");
     if (ImGui::Button("Reload plugins")) {
       scene.reloadPluginAtEndOfFrame = true;
+      scene.saveDataOnReloadPluginAtEndOfFrame = false;
     }
-    pul::imgui::ItemTooltip(
-      "NOTE: RELOADING plugins will save animations, configs, etc"
-    );
+    ImGui::SameLine();
+    if (ImGui::Button("Reload plugins & SAVE")) {
+      scene.reloadPluginAtEndOfFrame = true;
+      scene.saveDataOnReloadPluginAtEndOfFrame = true;
+      pul::imgui::ItemTooltip(
+        "NOTE: RELOADING plugins will save animations, configs, etc"
+      );
+    }
     ImGui::SameLine();
     if (ImGui::Button("reset ms/frame")) {
       scene.calculatedMsPerFrame = pul::util::MsPerFrame;
     }
+
+    ImGui::SameLine();
+    ImGui::Checkbox("paused", &scene.paused);
+
     ImGui::SliderFloat(
       "ms / frame", &scene.calculatedMsPerFrame
     , 1.0f, 1000.0f/0.9f
@@ -561,7 +572,7 @@ int main(int argc, char const ** argv) {
 
   spdlog::info("initializing pulcher");
   // -- initialize relevant components
-  pul::core::InitializeRandom(19993764);
+  pul::util::InitializeRandom(19993764);
   pul::gfx::InitializeContext(userConfig);
   ::PrintUserConfig(userConfig);
 
@@ -604,6 +615,9 @@ int main(int argc, char const ** argv) {
         // -- process logic
         ++ calculatedFrames;
         msToCalculate -= sceneBundle.calculatedMsPerFrame;
+
+        if (sceneBundle.paused) continue;
+
         ::ProcessLogic(plugin, sceneBundle);
 
         // -- update render bundle
@@ -616,7 +630,10 @@ int main(int argc, char const ** argv) {
       auto const msDeltaInterp =
         msToCalculate / sceneBundle.calculatedMsPerFrame
       ;
-      auto renderBundleInterp = renderBundle.Interpolate(plugin, msDeltaInterp);
+
+      pul::core::RenderBundleInstance renderBundleInterp;
+      if (!sceneBundle.paused)
+        renderBundleInterp = renderBundle.Interpolate(plugin, msDeltaInterp);
 
       // -- rendering, unlimited Hz
       ::ProcessRendering(
@@ -630,14 +647,19 @@ int main(int argc, char const ** argv) {
       sceneBundle.AudioSystem().Update(sceneBundle);
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(0));
+    if (!sceneBundle.paused)
+      std::this_thread::sleep_for(std::chrono::milliseconds(0));
+    else
+      std::this_thread::sleep_for(std::chrono::milliseconds(11));
 
     timePreviousFrameBegin = timeFrameBegin;
 
     if (sceneBundle.reloadPluginAtEndOfFrame) {
-      sceneBundle.reloadPluginAtEndOfFrame = false;
 
       plugin.Shutdown(sceneBundle);
+
+      sceneBundle.reloadPluginAtEndOfFrame = false;
+      sceneBundle.saveDataOnReloadPluginAtEndOfFrame = false;
 
       // reload configs
       sceneBundle.PlayerMetaInfo() = {};

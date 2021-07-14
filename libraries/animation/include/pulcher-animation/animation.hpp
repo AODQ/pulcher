@@ -2,6 +2,7 @@
 
 #include <pulcher-gfx/sokol.hpp>
 #include <pulcher-gfx/spritesheet.hpp>
+#include <pulcher-util/common-components.hpp>
 #include <pulcher-util/log.hpp>
 
 #include <array>
@@ -39,10 +40,19 @@ namespace pul::animation {
 
   */
 
+  struct ComponentHitbox {
+    bool hasAabb;
+    pul::util::ComponentHitboxAABB aabb;
+  };
+
   struct Component {
+    // FIXME , for some reason if you print tile.x here sometimes, especially
+    //         within the editor, it prints out garbage values, although the
+    //         vector itself displays correct values. It breaks `==` etc.
     glm::u32vec2 tile = {};
     glm::i32vec2 originOffset = {};
     uint32_t msDeltaTimeOverride = -1u;
+    std::array<ComponentHitbox, 2> hitbox;
   };
 
   enum class VariationType {
@@ -181,6 +191,7 @@ namespace pul::animation {
 
     bool hasCalculatedCachedInfo = false;
 
+    // TODO this should come from componentOrigin
     glm::vec2 origin = glm::vec2(0.0);
 
     size_t drawCallCount = 0ul;

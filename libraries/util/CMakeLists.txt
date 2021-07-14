@@ -8,6 +8,7 @@ target_sources(
     src/pulcher-util/consts.cpp
     src/pulcher-util/enum.cpp
     src/pulcher-util/log.cpp
+    src/pulcher-util/random.cpp
 )
 
 set_target_properties(

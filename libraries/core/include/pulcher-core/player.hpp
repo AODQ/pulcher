@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pulcher-core/weapon.hpp>
+#include <pulcher-util/common-components.hpp>
 #include <pulcher-util/consts.hpp>
 
 #include <entt/entt.hpp>
@@ -20,15 +21,6 @@ namespace pul::core {
     int16_t armor = 0;
 
     std::vector<DamageInfo> frameDamageInfos = {};
-  };
-
-  struct ComponentOrigin {
-    glm::vec2 origin = {};
-  };
-
-  struct ComponentHitboxAABB {
-    glm::i32vec2 dimensions;
-    glm::i32vec2 offset = glm::vec2(0);
   };
 
   struct ComponentPlayer {
