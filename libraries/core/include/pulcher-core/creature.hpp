@@ -119,8 +119,14 @@ namespace pul::core {
       > state = StateStandUp { };
     };
 
+    struct StateRollAttack {
+      bool isPrecharging = true;
+      bool isHalting = false;
+      int32_t timer = 100;
+    };
+
     std::variant<
-      StateCalm, StateIntimidate
+      StateCalm, StateIntimidate, StateRollAttack
     > state
       = StateCalm {}
     ;

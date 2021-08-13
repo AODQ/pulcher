@@ -40,11 +40,6 @@ namespace pul::animation {
 
   */
 
-  struct ComponentHitbox {
-    bool hasAabb;
-    pul::util::ComponentHitboxAABB aabb;
-  };
-
   struct Component {
     // FIXME , for some reason if you print tile.x here sometimes, especially
     //         within the editor, it prints out garbage values, although the
@@ -52,7 +47,8 @@ namespace pul::animation {
     glm::u32vec2 tile = {};
     glm::i32vec2 originOffset = {};
     uint32_t msDeltaTimeOverride = -1u;
-    std::array<ComponentHitbox, 2> hitbox;
+		size_t numHitboxes = 0; // max 8
+    std::array<ComponentHitbox, 8> hitbox;
   };
 
   enum class VariationType {

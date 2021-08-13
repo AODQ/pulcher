@@ -23,10 +23,12 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
   * calm *        ___.--> * aggressive *
   ********       /        **************
      ||          ^              |
-    Idle [start]<+<--------.  StandUp --> AttackClose
-     |           ^         |    |   ^------'
-     V [random]  |         '- StandDown
-    Roam ---------
+  .>Idle [start]<+<--------.  StandUp --> AttackClose
+  |  |           ^         |    |   ^------'
+  |  V [random]  |         '- StandDown
+  | Roam ---------
+	|
+	'-------------------> RollAttack
 
 **/
 
@@ -72,6 +74,12 @@ void plugin::bot::ImGuiCreatureVapivara(
           ImGui::Text(" *** --- ATTACK CLOSE");
         },
       }, intimidate.state);
+    },
+    [&](Vapivara::StateRollAttack & rollAttack) {
+      ImGui::Text(" --- ROLL ATTACK");
+      ImGui::Text("     timer: %d",       rollAttack.timer);
+      ImGui::Text("     halting: %d",     rollAttack.isHalting);
+      ImGui::Text("     precharging: %d", rollAttack.isPrecharging);
     },
   }, self.state);
 }
@@ -172,15 +180,24 @@ void plugin::bot::UpdateCreatureVapivara(
 
             glm::vec2 const dist = glm::abs(targetOrigin - origin);
 
+            const bool isFacing =
+              ((targetOrigin.x < origin.x) ^ animationState.flip)
+            ;
+
             if (
-                ((targetOrigin.x < origin.x) ^ animationState.flip)
-              && dist.x < 255.0f
+                isFacing && dist.x < 255.0f && pul::util::RandomBoolBiased(15)
             ) {
               self.state = Vapivara::StateIntimidate {
                 Vapivara::StateIntimidate::StateStandUp {
                   .timer = pul::util::RandomInt32(60, 240),
                 },
               };
+            }
+
+            if (
+                isFacing && dist.x < 855.0f && pul::util::RandomBoolBiased(5)
+            ) {
+              self.state = Vapivara::StateRollAttack { };
             }
 
             /* if (glm::length(dist) < 640.0f) { */
@@ -218,10 +235,11 @@ void plugin::bot::UpdateCreatureVapivara(
 
             glm::vec2 const dist = glm::abs(targetOrigin - origin);
 
-            if (
-                ((targetOrigin.x < origin.x) ^ animationState.flip)
-              && dist.x < 32.0f
-            ) {
+            const bool isFacing =
+              ((targetOrigin.x < origin.x) ^ animationState.flip)
+            ;
+
+            if (isFacing && dist.x < 32.0f) {
               intimidate.state = Vapivara::StateIntimidate::StateAttackClose {};
               return;
             }
@@ -254,6 +272,39 @@ void plugin::bot::UpdateCreatureVapivara(
           };
         },
       }, intimidate.state);
+    },
+    [&](Vapivara::StateRollAttack & rollAttack) {
+      if (rollAttack.isPrecharging) {
+        animationState.Apply("precharge");
+        rollAttack.isPrecharging = !animationState.animationFinished;
+        return;
+      }
+
+      const float direction = animationState.flip ? +1.0f : -1.0f;
+
+      if (rollAttack.isHalting) {
+        animationState.Apply("halt");
+        rollAttack.isHalting = !animationState.animationFinished;
+
+        origin.x += direction * (1.5f - animationState.componentIt/5.0f);
+
+        if (!rollAttack.isHalting) {
+          self.state = Vapivara::StateCalm { };
+        }
+
+        return;
+      }
+
+      // charging
+      animationState.Apply("charge-loop");
+
+      origin.x += direction * 3.75f;
+
+      if (rollAttack.timer <= 0) {
+        rollAttack.isHalting = true;
+      }
+
+      rollAttack.timer -= 1;
     },
   }, self.state);
 

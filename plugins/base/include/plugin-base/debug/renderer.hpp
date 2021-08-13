@@ -24,4 +24,5 @@ namespace plugin::debug {
   , pul::core::RenderBundleInstance const & renderBundle
   );
   void ShapesRenderSwap();
+  void ShapesUpdateSwap();
 }

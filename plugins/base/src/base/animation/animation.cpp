@@ -108,6 +108,30 @@ std::vector<pul::animation::Component> JsonLoadComponents(
       component.originOffset.y = offY->valueint;
     }
 
+    // hitboxes
+    component.numHitboxes =
+      static_cast<size_t>(
+        cJSON_GetObjectItemCaseSensitive(componentJson, "has-hitbox")->valueint
+      );
+    for (size_t i = 0ul; i < component.numHitboxes; ++ i) {
+      for (auto & hitboxPart :
+        { std::tuple<std::string, int32_t *>
+          {"dim-x", &component.hitbox[i].dimensions.x},
+          {"dim-y", &component.hitbox[i].dimensions.y},
+          {"off-x", &component.hitbox[i].offset.x},
+          {"off-y", &component.hitbox[i]joffset.y},
+        }
+      ) {
+        *std::get<1>(hitboxPart) =
+          cJSON_GetObjectItemCaseSensitive(
+            componentJson,
+            fmt::format("hitbox-{}-{}", i, std::get<0>(hitboxPart)).string()
+          )->valueint
+        ;
+      }
+    }
+
+
     components.emplace_back(component);
     ResetHitboxEdit();
   }
@@ -1324,17 +1348,17 @@ void plugin::animation::LoadAnimations(
 
         outColor = texture(baseSampler, uvCoord);
         vec3 invTexel = vec3(1.0f / textureResolution, 0.0f);
-        if (
-            outColor.a == 0.0f
-            && (
-                texture(baseSampler, uvCoord+invTexel.xz).a > 0.1f
-             || texture(baseSampler, uvCoord+invTexel.zy).a > 0.1f
-             || texture(baseSampler, uvCoord-invTexel.xz).a > 0.1f
-             || texture(baseSampler, uvCoord-invTexel.zy).a > 0.1f
-            )
-        ) {
-          outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-        }
+        /* if ( */
+        /*     outColor.a == 0.0f */
+        /*     && ( */
+        /*         texture(baseSampler, uvCoord+invTexel.xz).a > 0.1f */
+        /*      || texture(baseSampler, uvCoord+invTexel.zy).a > 0.1f */
+        /*      || texture(baseSampler, uvCoord-invTexel.xz).a > 0.1f */
+        /*      || texture(baseSampler, uvCoord-invTexel.zy).a > 0.1f */
+        /*     ) */
+        /* ) { */
+        /*   outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); */
+        /* } */
 
         if (outColor.a < 0.1f)
           { discard; }
@@ -2111,8 +2135,8 @@ void plugin::animation::DebugUiDispatch(
 
       p = ImVec2(p.x + piece.dimensions.x/2.0f, p.y + piece.dimensions.y/2.0f);
 
-      for (auto & hitbox : hitboxes) {
-        if (!hitbox.hasAabb) { continue; }
+      for (size_t it = 0; it < ::hitboxEditorComponent->numHitboxes; ++ it) {
+        auto & hitbox = hitboxes[it];
         auto & aabb = hitbox.aabb;
         drawList->AddRect(
           ImVec2(
@@ -2131,19 +2155,21 @@ void plugin::animation::DebugUiDispatch(
     ImGui::SetCursorScreenPos(posPostSpritesheet);
 
     // allow user to edit hitboxes
-    for (size_t i = 0; i < hitboxes.size(); ++ i) {
-      auto & hitbox = hitboxes[i];
-      if (!hitbox.hasAabb && ImGui::Button("add hitbox")) {
-        hitbox.hasAabb = true;
-        hitbox.aabb = {};
-      }
-      if (!hitbox.hasAabb) { continue; }
+    for (size_t it = 0; it < ::hitboxEditorComponent->numHitboxes; ++ it) {
+      auto & hitbox = hitboxes[it];
 
       pul::imgui::DragInt2("dimensions", &hitbox.aabb.dimensions.x, 0.2f);
       pul::imgui::DragInt2("offset", &hitbox.aabb.offset.x, 0.2f);
 
       ImGui::Separator();
     }
+
+    if (
+      if (!hitbox.hasAabb && ImGui::Button("add hitbox")) {
+        hitbox.hasAabb = true;
+        hitbox.aabb = {};
+      }
+      if (!hitbox.hasAabb) { continue; }
 
     ImGui::End();
 

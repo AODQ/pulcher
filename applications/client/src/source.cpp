@@ -50,6 +50,12 @@ auto StartupOptions() -> argparse::ArgumentParser {
   ;
 
   options
+    .add_argument("-s")
+    .help("scene scale resolution")
+    .default_value(std::string{"960x720"})
+  ;
+
+  options
     .add_argument("-m")
     .help(("map path"))
     .default_value(std::string{"assets/base/map/calamity/map-calamity.json"})
@@ -79,10 +85,12 @@ auto CreateUserConfig(argparse::ArgumentParser const & userResults)
 
   std::string windowResolution;
   std::string framebufferResolution;
+  std::string sceneResolution;
 
   try {
     windowResolution = userResults.get<std::string>("-w");
     framebufferResolution = userResults.get<std::string>("-r");
+    sceneResolution = userResults.get<std::string>("-s");
     config.mapPath = std::filesystem::path{userResults.get<std::string>("-m")};
     if (userResults.get<bool>("-d")) {
       spdlog::set_level(spdlog::level::debug);
@@ -122,6 +130,23 @@ auto CreateUserConfig(argparse::ArgumentParser const & userResults)
         )
       );
     config.framebufferDimFloat = glm::vec2(config.framebufferDim);
+  } else {
+    spdlog::error("framebuffer resolution incorrect format, must use WxH");
+  }
+
+  config.sceneResolution = config.framebufferDim;
+  if (
+      auto xLen = sceneResolution.find("x");
+      xLen != std::string::npos && xLen < sceneResolution.size()-1ul
+  ) {
+    config.sceneResolution.x =
+      static_cast<uint16_t>(std::stoi(sceneResolution.substr(0ul, xLen)));
+    config.sceneResolution.y =
+      static_cast<uint16_t>(
+        std::stoi(
+          sceneResolution.substr(xLen+1ul, sceneResolution.size())
+        )
+      );
   } else {
     spdlog::error("framebuffer resolution incorrect format, must use WxH");
   }
@@ -453,7 +478,7 @@ void ProcessRendering(
 
       ImGui::Image(
         reinterpret_cast<void *>(pul::gfx::SceneImageColor().id)
-      , ImVec2(scene.config.framebufferDim.x, scene.config.framebufferDim.y)
+      , ImVec2(scene.config.sceneResolution.x, scene.config.sceneResolution.y)
       , ImVec2(0, 1)
       , ImVec2(1, 0)
       , ImVec4(1, 1, 1, 1)

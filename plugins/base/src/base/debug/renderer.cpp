@@ -34,6 +34,7 @@ namespace {
   ;
 
   size_t debugRenderLineLength = 0ul;
+  bool hasUpdatedThisFrame = false;
 
   // this specifies the number of draw-calls, it's different from the length
   // as that length will be cleared out after a swap, however we will still be
@@ -258,6 +259,9 @@ void plugin::debug::ShapesRender(
 
 void plugin::debug::ShapesRenderSwap() {
 
+  if (hasUpdatedThisFrame) return;
+  hasUpdatedThisFrame = true;
+
   // upload data
   sg_update_buffer(
     ::debugBuffer.buffer
@@ -270,4 +274,8 @@ void plugin::debug::ShapesRenderSwap() {
 
   // reset buffers
   ::debugRenderLineLength = 0ul;
+}
+
+void plugin::debug::ShapesUpdateSwap() {
+  hasUpdatedThisFrame = false;
 }
