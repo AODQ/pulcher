@@ -48,6 +48,28 @@ pul::animation::Animator        * hitboxEditorAnimator  = nullptr;
 pul::animation::Animator::Piece * hitboxEditorPiece     = nullptr;
 pul::animation::Component       * hitboxEditorComponent = nullptr;
 
+glm::vec3 hitboxColor(pul::util::HitboxTag tag) {
+  std::array<glm::vec3, Idx(pul::util::HitboxTag::Size)> const hitboxColors = {
+    glm::vec3(1.0f, 0.0f, 0.0f), // damager
+    glm::vec3(0.0f, 1.0f, 0.0f), // damageable
+    glm::vec3(0.0f, 0.0f, 1.0f), // collision
+
+    glm::vec3(1.0f, 0.6f, 0.6f), // invalid
+  };
+
+  // invalid/0 gets the worst color
+  if (Idx(tag) == 0b0) return hitboxColors[hitboxColors.size()-1];
+
+  // reduce the colors
+  glm::vec3 color = glm::vec3(0.0f);
+  for (size_t it = 1; it < Idx(pul::util::HitboxTag::Size); ++ it) {
+    if ((1 << (it-1)) & Idx(tag))
+      color += hitboxColors[it-1];
+  }
+
+  return color;
+}
+
 void ResetHitboxEdit() {
   hitboxEditorAnimator  = nullptr;
   hitboxEditorPiece     = nullptr;
@@ -109,33 +131,39 @@ std::vector<pul::animation::Component> JsonLoadComponents(
     }
 
     // hitboxes
-    component.numHitboxes =
-      static_cast<size_t>(
-        cJSON_GetObjectItemCaseSensitive(componentJson, "has-hitbox")->valueint
-      );
-    for (size_t i = 0ul; i < component.numHitboxes; ++ i) {
+    cJSON * hitboxJson;
+    size_t numHitboxes = 0;
+    cJSON_ArrayForEach(
+      hitboxJson,
+      cJSON_GetObjectItemCaseSensitive(componentJson, "hitboxes")
+    ) {
+
       for (auto & hitboxPart :
         { std::tuple<std::string, int32_t *>
-          {"dim-x", &component.hitbox[i].dimensions.x},
-          {"dim-y", &component.hitbox[i].dimensions.y},
-          {"off-x", &component.hitbox[i].offset.x},
-          {"off-y", &component.hitbox[i]joffset.y},
+          {"dim-x", &component.hitboxes[numHitboxes].dimensions.x},
+          {"dim-y", &component.hitboxes[numHitboxes].dimensions.y},
+          {"off-x", &component.hitboxes[numHitboxes].offset.x},
+          {"off-y", &component.hitboxes[numHitboxes].offset.y},
+          {"tag",   &Idx(component.hitboxes[numHitboxes].tag)},
         }
       ) {
         *std::get<1>(hitboxPart) =
           cJSON_GetObjectItemCaseSensitive(
             componentJson,
-            fmt::format("hitbox-{}-{}", i, std::get<0>(hitboxPart)).string()
+            std::get<0>(hitboxPart).c_str()
           )->valueint
         ;
       }
+
+      ++ numHitboxes;
     }
+    component.numHitboxes = numHitboxes;
 
-
+    // store component
     components.emplace_back(component);
-    ResetHitboxEdit();
   }
 
+  ResetHitboxEdit();
   return components;
 }
 
@@ -840,6 +868,32 @@ cJSON * SaveAnimationComponent(
       componentJson, "ms-delta-time-override"
     , cJSON_CreateInt(component.msDeltaTimeOverride)
     );
+
+    cJSON * hitboxArray = cJSON_CreateArray();
+
+    for (size_t it = 0; it < component.numHitboxes; ++ it) {
+      for (auto & hitboxPart :
+        { std::tuple<std::string, int32_t *>
+          {"dim-x", &component.hitboxes[i].dimensions.x},
+          {"dim-y", &component.hitboxes[i].dimensions.y},
+          {"off-x", &component.hitboxes[i].offset.x},
+          {"off-y", &component.hitboxes[i].offset.y},
+          {"tag", &Idx(component.hitboxes[i].tag)},
+        }
+      ) {
+        cJSON * hitbox = cJSON_CreateObject();
+
+        cJSON_AddItemToObject(
+          hitbox,
+          std::get<0>(hitboxPart).c_str(),
+          static_cast<int32_t>(cJSON_CreateInt(std::get<1>(hitboxPart))
+        );
+
+        cJSON_AddItemToArray(hitboxArray, hitbox);
+      }
+    }
+
+    cJSON_AddItemToObject(componentJson, hitboxArray);
   }
 
   return componentsJson;
@@ -2109,7 +2163,7 @@ void plugin::animation::DebugUiDispatch(
     ImGui::Begin("Hitbox editor", &isOpen);
 
     auto  piece = *::hitboxEditorPiece;
-    auto & hitboxes = ::hitboxEditorComponent->hitbox;
+    auto & hitboxes = ::hitboxEditorComponent->hitboxes;
 
     // save position to render hitboxes on top of spritesheet with later
     ImVec2 p = ImGui::GetCursorScreenPos();
@@ -2137,17 +2191,18 @@ void plugin::animation::DebugUiDispatch(
 
       for (size_t it = 0; it < ::hitboxEditorComponent->numHitboxes; ++ it) {
         auto & hitbox = hitboxes[it];
-        auto & aabb = hitbox.aabb;
+
+        glm::vec3 const color = ::hitboxColor(hitbox.tag);
         drawList->AddRect(
           ImVec2(
-            p.x + aabb.offset.x - aabb.dimensions.x/2.0f,
-            p.y + aabb.offset.y - aabb.dimensions.y/2.0f
+            p.x + hitbox.offset.x - hitbox.dimensions.x/2.0f,
+            p.y + hitbox.offset.y - hitbox.dimensions.y/2.0f
           ),
           ImVec2(
-            p.x + aabb.offset.x + aabb.dimensions.x/2.0f,
-            p.y + aabb.offset.y + aabb.dimensions.y/2.0f
+            p.x + hitbox.offset.x + hitbox.dimensions.x/2.0f,
+            p.y + hitbox.offset.y + hitbox.dimensions.y/2.0f
           ),
-          IM_COL32(255, 0, 0, 255)
+          IM_COL32(255*color.r, 255*color.g, 255*color.b, 255)
         );
       }
     }
@@ -2158,18 +2213,66 @@ void plugin::animation::DebugUiDispatch(
     for (size_t it = 0; it < ::hitboxEditorComponent->numHitboxes; ++ it) {
       auto & hitbox = hitboxes[it];
 
-      pul::imgui::DragInt2("dimensions", &hitbox.aabb.dimensions.x, 0.2f);
-      pul::imgui::DragInt2("offset", &hitbox.aabb.offset.x, 0.2f);
+      ImGui::PushID(it);
+
+      pul::imgui::DragInt2("dimensions", &hitbox.dimensions.x, 0.2f);
+      pul::imgui::DragInt2("offset", &hitbox.offset.x, 0.2f);
+
+      // add/remove tags
+      for (
+        auto const tagInfo : { std::tuple<pul::util::HitboxTag, char const *>
+          { pul::util::HitboxTag::Damager,    "Damager"    },
+          { pul::util::HitboxTag::Damageable, "Damageable" },
+          { pul::util::HitboxTag::Collision,  "Collision"  },
+        }
+      ) {
+        auto exists = static_cast<bool>(hitbox.tag & std::get<0>(tagInfo));
+        if (ImGui::Checkbox(std::get<1>(tagInfo), &exists)) {
+          if (exists) // add tag
+            hitbox.tag = hitbox.tag | std::get<0>(tagInfo);
+          else // remove tag
+            hitbox.tag = hitbox.tag & (~Idx(std::get<0>(tagInfo)));
+        }
+      }
+
+      glm::vec3 color = ::hitboxColor(hitbox.tag);
+      ImGui::ColorEdit3(
+        "",
+        &color.x,
+        (
+          ImGuiColorEditFlags_NoPicker
+        | ImGuiColorEditFlags_NoOptions
+        | ImGuiColorEditFlags_NoInputs
+        | ImGuiColorEditFlags_NoDragDrop
+        )
+      );
+
+      // delete hitbox
+      if (ImGui::Button("x")) {
+        ::hitboxEditorComponent->numHitboxes -= 1;
+        for (size_t j = it; j < ::hitboxEditorComponent->numHitboxes; ++ j) {
+          ::hitboxEditorComponent->hitboxes[j] =
+            ::hitboxEditorComponent->hitboxes[j+1]
+          ;
+        }
+      }
+
+      ImGui::PopID();
 
       ImGui::Separator();
     }
 
+    // add hitbox if requested
     if (
-      if (!hitbox.hasAabb && ImGui::Button("add hitbox")) {
-        hitbox.hasAabb = true;
-        hitbox.aabb = {};
-      }
-      if (!hitbox.hasAabb) { continue; }
+        ::hitboxEditorComponent->numHitboxes < hitboxes.size()
+     && ImGui::Button("add")
+    ) {
+      hitboxes[::hitboxEditorComponent->numHitboxes] = {
+        .dimensions = glm::i32vec2(4, 4),
+        .offset     = glm::i32vec2(0, 0),
+      };
+      ::hitboxEditorComponent->numHitboxes += 1;
+    }
 
     ImGui::End();
 

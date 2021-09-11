@@ -6,6 +6,7 @@ target_sources(
   PRIVATE
     src/pulcher-util/any.cpp
     src/pulcher-util/consts.cpp
+    src/pulcher-util/common-components.cpp
     src/pulcher-util/enum.cpp
     src/pulcher-util/log.cpp
     src/pulcher-util/random.cpp

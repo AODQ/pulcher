@@ -1,3 +1,10 @@
 third-party/
 assets/
 .git/
+.cache/
+.vscode/
+
+.fdignore
+.rgignore
+.gitmodules
+compile_commands.json

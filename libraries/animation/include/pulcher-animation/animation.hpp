@@ -47,8 +47,8 @@ namespace pul::animation {
     glm::u32vec2 tile = {};
     glm::i32vec2 originOffset = {};
     uint32_t msDeltaTimeOverride = -1u;
-		size_t numHitboxes = 0; // max 8
-    std::array<ComponentHitbox, 8> hitbox;
+    size_t numHitboxes = 0; // max 8
+    std::array<pul::util::ComponentHitboxAABB, 8> hitboxes;
   };
 
   enum class VariationType {
