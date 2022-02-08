@@ -26,7 +26,8 @@ target_sources(
 target_link_libraries(
   plugin-base
   PRIVATE
-    EnTT cjson pulcher-core pulcher-gfx pulcher-physics
+    chaiscript
+    EnTT cjson pulcher-core pulcher-gfx pulcher-physics box2d
     pulcher-controls pulcher-animation pulcher-audio
     fmod
     micropather

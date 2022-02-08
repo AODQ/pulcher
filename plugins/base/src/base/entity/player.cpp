@@ -17,6 +17,7 @@
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
 
+#include <box2d/box2d.h>
 #include <entt/entt.hpp>
 #include <imgui/imgui.hpp>
 
@@ -792,6 +793,15 @@ void plugin::entity::ConstructPlayer(
   registry.emplace<pul::animation::ComponentInstance>(
     player.weaponAnimation, std::move(weaponInstance)
   );
+
+  { // physics
+    player.physicsBody = (
+      plugin::physics::CreateDynamicBody(
+        playerOrigin.origin,
+        glm::vec2(7.5f, 25.0f)
+      )
+    );
+  }
 }
 
 void plugin::entity::UpdatePlayer(
@@ -812,6 +822,21 @@ void plugin::entity::UpdatePlayer(
     player.noclip = !player.noclip;
   }
 
+  playerOrigin.x = player.physicsBody->GetPosition().x*10.0f;
+  playerOrigin.y = player.physicsBody->GetPosition().y*10.0f;
+
+  spdlog::info("player origin: {}", playerOrigin);
+  playerAnim.instance.origin = playerOrigin;
+
+  player.physicsBody->ApplyForce(
+    b2Vec2(
+        static_cast<float>(controller.movementHorizontal)*10.0f*0.1f,
+        0.0f
+    ),
+    b2Vec2(0.0, 0.0),
+    true
+  );
+
   if (player.noclip) {
     playerOrigin +=
       glm::sign(
@@ -831,737 +856,739 @@ void plugin::entity::UpdatePlayer(
   // to the center
   playerOrigin += glm::vec2(0.0f, 28.0f);
 
-  auto & registry = scene.EnttRegistry();
-
-  player.prevAirVelocity = player.velocity.y;
-
-  // error checking
-  if (glm::abs(player.velocity.x) > 1000.0f) {
-    spdlog::error("player velocity too high (for now)");
-    player.velocity.x = 0.0f;
-  }
-
-  if (glm::abs(player.velocity.y) > 1000.0f) {
-    spdlog::error("player velocity too high (for now)");
-    player.velocity.y = 0.0f;
-  }
-
-  if (
-      glm::isnan(player.velocity.x) || glm::isnan(player.velocity.y)
-   || glm::isinf(player.velocity.x) || glm::isinf(player.velocity.y)
-  ) {
-    spdlog::error("floating point corruption on player velocity");
-    player.velocity.x = 0.0f;
-    player.velocity.y = 0.0f;
-    player.storedVelocity.x = 0.0f;
-    player.storedVelocity.y = 0.0f;
-  }
-
-  bool
-    frameVerticalJump   = false
-  , frameHorizontalJump = false
-  , frameVerticalDash   = false
-  , frameHorizontalDash = false
-  , frameWalljump       = false
-  ;
-
-  bool const frameStartGrounded = player.grounded;
-  bool const prevCrouchSliding = player.crouchSliding;
-
-  // update damageable
-  for (auto & damage : damageable.frameDamageInfos) {
-    player.velocity += damage.directionForce;
-    damageable.health = glm::max(damageable.health - damage.damage, 0);
-
-    // pop origin up if grounded if there is Y force
-    if (player.grounded && damage.directionForce.y < 0.0f) {
-      playerOrigin.y -= 2.0f;
-    }
-
-    player.grounded = false;
-  }
-  damageable.frameDamageInfos = {};
-
-  using MovementControl = pul::controls::Controller::Movement;
-
-  { // -- process inputs / events
-
-    // -- gravity
-
-    // apply only when in air & only if dash zero gravity isn't in effect
-    if (player.dashZeroGravityTime <= 0.0f && !player.grounded) {
-      if (player.velocity.y <= ::inputGravityAccelThreshold) {
-        player.velocity.y +=
-          ::CalculateAccelFromTarget(
-            ::inputGravityAccelPreThresholdTime, ::inputGravityAccelThreshold
-          );
-      } else {
-        player.velocity.y += ::inputGravityAccelPostThreshold;
-      }
-    }
-
-    // -- reset animation angles
-    playerAnim.instance.pieceToState["legs"].angle = 0.0f;
-    playerAnim.instance.pieceToState["body"].angle = 0.0f;
-
-    // -- process crouching
-    player.prevCrouching = player.crouching;
-    player.crouching = controller.crouch;
-
-    // check if player can uncrouch from geometry
-    if (player.prevCrouching && !player.crouching) {
-
-      // just check the small gap on left/right side between crouch and stand
-      bool canUncrouch = true;
-
-      for (
-        int32_t x = ::pickPoints[Idx(::PickPointType::Ul)].x;
-        x != ::pickPoints[Idx(::PickPointType::Lr)].x;
-        ++ x
-      ) {
-        auto const origin = playerOrigin + glm::vec2(x, 0.0f);
-        auto const pointRay =
-          pul::physics::IntersectorRay::Construct(
-            glm::round(origin + glm::vec2(0.0f, ::pickPointUpCrouch))
-          , glm::round(origin + glm::vec2(0.0f, ::pickPointUpStand))
-          );
-
-        pul::physics::IntersectionResults pointResults;
-        plugin::physics::IntersectionRaycast(scene, pointRay, pointResults);
-
-        if (pointResults.collision) {
-          canUncrouch = false;
-          break;
-        }
-      }
-
-      if (!canUncrouch) {
-        player.crouching = true;
-        player.crouchSliding = false; // force sliding off
-      }
-    }
-
-    // if the player is crouch sliding, player remains crouched until the
-    // animation is finished, the velocity is below crouch target, or the
-    // player is jumping
-    if (
-        player.crouchSliding
-     && !player.jumping
-     && glm::abs(player.velocity.x) >= inputCrouchAccelTarget
-     && !playerAnim.instance.pieceToState["legs"].animationFinished
-    ) {
-      player.crouching = true;
-    }
-
-
-    if (
-        player.crouchSliding
-     && (
-          !player.crouching
-       || glm::abs(player.velocity.x) < inputCrouchAccelTarget
-       || player.jumping
-       || !player.grounded
-        )
-    ) {
-      player.crouchSliding = false;
-    }
-
-    if (player.crouchSlideCooldown > 0.0f)
-      { player.crouchSlideCooldown -= pul::util::MsPerFrame; }
-
-    if (player.slideFrictionTime > 0.0f)
-      { player.slideFrictionTime -= pul::util::MsPerFrame; }
-
-    // -- process jumping
-    player.jumping = controller.jump;
-
-    // set jump timer if falling this frame
-    if (player.prevGrounded && !player.grounded) {
-      player.jumpFallTime = ::jumpAfterFallTime;
-    }
-
-    if (player.jumpFallTime > 0.0f)
-      { player.jumpFallTime -= pul::util::MsPerFrame; }
-
-    if (!player.jumping) {
-      player.storedVelocity = player.velocity;
-      player.hasReleasedJump = true;
-    }
-
-    // make sure that jumping only happens if player has released jump yet
-    if (player.grounded && !player.hasReleasedJump) {
-      player.jumping = false;
-    }
-
-    if ((player.jumpFallTime > 0.0f || player.grounded) && player.jumping) {
-      if (controller.movementHorizontal == MovementControl::None) {
-        player.velocity.y = -::jumpingVerticalAccel;
-        frameVerticalJump = true;
-      } else {
-
-        float thetaRad = glm::radians(::jumpingHorizontalTheta);
-
-        player.velocity.y = -::jumpingHorizontalAccel * glm::sin(thetaRad);
-        player.velocity.x = player.storedVelocity.x;
-
-        if (glm::abs(player.velocity.x) < jumpingHorizontalAccelMax) {
-          player.velocity.x +=
-            + glm::sign(static_cast<float>(controller.movementHorizontal))
-            * ::jumpingHorizontalAccel * glm::cos(thetaRad)
-          ;
-        }
-
-        frameHorizontalJump = true;
-      }
-      player.grounded = false;
-      player.hasReleasedJump = false;
-      player.jumpFallTime = 0.0f;
-    }
-
-    // -- process walljumping
-
-    // with jump you can hold space, this is not true for walljumps tho
-    if (player.jumping && !controllerPrev.jump && !player.prevGrounded) {
-      if (player.wallClingLeft || player.wallClingRight) {
-        player.grounded = false;
-
-        float const totalVel = 7.0f;
-
-        float const thetaRad =
-          (player.wallClingRight ? -pul::Pi*0.25f : 0.0f) + glm::radians(-75.0f)
-        ;
-
-        player.velocity.y = glm::sin(thetaRad) * totalVel;
-        player.velocity.x = glm::cos(thetaRad) * totalVel;
-
-        frameWalljump = true;
-      }
-    }
-
-    // -- process horizontal movement
-    float inputAccel = static_cast<float>(controller.movementHorizontal);
-    float const facingDirection = inputAccel;
-
-    bool frictionApplies = true;
-    bool applyInputAccel = true;
-
-    if (player.crouchSliding) {
-      applyInputAccel = false;
-    } else if (player.grounded) {
-      if (player.jumping) {
-        // this frame the player will jump
-        frictionApplies = false;
-      } else if (controller.movementHorizontal != MovementControl::None) {
-        if (controller.walk) {
-          ApplyGroundedMovement(
-            facingDirection, player.velocity.x
-          , ::inputWalkAccelTime, ::inputWalkAccelTarget
-          , frictionApplies, inputAccel
-          );
-        } else if (player.crouching) {
-          if (
-              (player.prevGrounded ? !player.prevCrouching : !prevCrouchSliding)
-            && player.crouchSlideCooldown <= 0.0f
-          ) {
-            player.crouchSliding = true;
-            applyInputAccel = false;
-
-            // apply crouch boost, similar to dash boost
-            player.velocity.x =
-              glm::max(
-                ::slideAccel + glm::length(player.velocity.x)
-              , ::slideMinVelocity
-              ) * facingDirection
-            ;
-
-            player.crouchSlideCooldown = ::slideCooldown;
-            player.slideFrictionTime = ::slideFrictionTransitionTime;
-          } else {
-            ApplyGroundedMovement(
-              facingDirection, player.velocity.x
-            , ::inputCrouchAccelTime, ::inputCrouchAccelTarget
-            , frictionApplies, inputAccel
-            );
-          }
-        } else {
-          ApplyGroundedMovement(
-            facingDirection, player.velocity.x
-          , ::inputRunAccelTime, ::inputRunAccelTarget
-          , frictionApplies, inputAccel
-          );
-        }
-
-        // if the target goal is reached then the accel is 0, but we still want
-        // to keep it around
-        if (inputAccel != 0.0f)
-          { player.prevFrameGroundAcceleration = inputAccel; }
-
-        // do not allow this since it has no friction to transition w/
-        if (player.crouchSliding)
-          { player.prevFrameGroundAcceleration = 0.0f; }
-      }
-    } else {
-      if (facingDirection*player.velocity.x <= ::inputAirAccelThreshold) {
-        inputAccel *=
-          ::CalculateAccelFromTarget(
-            ::inputAirAccelPreThresholdTime
-          , ::inputAirAccelThreshold
-          );
-      } else {
-        inputAccel *= ::inputAirAccelPostThreshold;
-      }
-
-      // set ground accel to 0 on no input
-      if (controller.movementHorizontal == MovementControl::None)
-        { player.prevFrameGroundAcceleration = 0.0f; }
-
-      // mix inputAccel with grounded movement to give proper ground-air
-      // transition
-      if (player.jumpFallTime > 0.0f && !player.crouchSliding) {
-        inputAccel =
-          glm::mix(
-            inputAccel
-          , player.prevFrameGroundAcceleration*::frictionGrounded
-          , player.jumpFallTime / ::jumpAfterFallTime
-          );
-      }
-
-      frictionApplies = false;
-
-      // friction applies if player is crouching and moving opposite direction
-      // while in air
-      if (
-          glm::sign(player.velocity.x) != 0.0f
-       && glm::sign(inputAccel) != 0.0f
-       && player.crouching
-       && glm::sign(inputAccel) != glm::sign(player.velocity.x)
-      ) {
-        frictionApplies = true;
-      }
-
-      // nullify velocity if clinging to wall
-      if (player.wallClingLeft)
-        inputAccel = glm::max(0.0f, inputAccel);
-
-      if (player.wallClingRight)
-        inputAccel = glm::min(0.0f, inputAccel);
-    }
-
-    if (applyInputAccel)
-      { player.velocity.x += inputAccel; }
-
-    // -- process friction
-    if (frictionApplies) {
-      if (player.crouchSliding) {
-        float const friction =
-          glm::mix(
-            ::slideFriction, 1.0f
-          , player.slideFrictionTime <= 0.0f
-              ? 0.0f
-              : glm::pow(
-                player.slideFrictionTime / ::slideFrictionTransitionTime
-              , ::slideFrictionTransitionPow
-              )
-          );
-        player.velocity.x *= friction;
-      } else {
-        player.velocity.x *= ::frictionGrounded;
-      }
-    }
-
-    // -- process horizontal ground stop
-    if (
-        inputAccel == 0.0f && player.grounded
-     && glm::abs(player.velocity.x) < ::horizontalGroundedVelocityStop
-    ) {
-      /* player.velocity.x = 0.0f; */
-    }
-
-    // -- process dashing
-    for (auto & playerDashCooldown : player.dashCooldown) {
-      if (playerDashCooldown > 0.0f)
-        { playerDashCooldown -= pul::util::MsPerFrame; }
-    }
-
-    // clear dash lock if either we land, or we are jumping on this frame (thus
-    // player will not be grounded)
-    if (
-        !player.prevGrounded
-     && (frameHorizontalJump || frameVerticalJump || player.grounded)
-    ) {
-      for (auto & dashLock : player.dashLock)
-        { dashLock = false; }
-    }
-    if (player.dashZeroGravityTime > 0.0f) {
-      player.dashZeroGravityTime -= pul::util::MsPerFrame;
-      // if grounded then gravity time has been nullified
-      if (player.grounded || !controller.dash)
-        { player.dashZeroGravityTime = 0.0f; }
-    }
-
-    // player has a limited amount of dashes in air, so reset that if grounded
-    // at the start of frame
-    if (frameStartGrounded)
-      { player.midairDashesLeft = ::maxAirDashes; }
-
-    if (
-      !controllerPrev.dash && controller.dash
-    && player.dashCooldown[Idx(controller.movementDirection)] <= 0.0f
-    && player.dashLock[Idx(controller.movementDirection)] == false
-    && player.midairDashesLeft > 0
-    ) {
-      glm::vec2 const scaledVelocity = player.velocity;
-
-      float const transfers =
-        CalculateDashTransferVelocity(
-          glm::i32vec2(
-            static_cast<int32_t>(controller.movementHorizontal)
-          , static_cast<int32_t>(controller.movementVertical)
-          )
-        , NormalizeVelocityAxis(player.velocity)
-        );
-
-      float velocityMultiplier =
-          transfers*(::dashAccel + glm::length(scaledVelocity));
-
-      // add dashMin
-      if (velocityMultiplier < ::dashMinVelocity) {
-        velocityMultiplier =
-          velocityMultiplier / ::dashMinVelocity * ::dashMinVelocityMultiplier
-        + ::dashMinVelocity
-        ;
-      }
-
-      if (controller.movementVertical != MovementControl::None) {
-        frameVerticalDash = true;
-      } else {
-        frameHorizontalDash = true;
-      }
-
-      auto direction =
-        glm::vec2(
-          controller.movementHorizontal, controller.movementVertical
-        );
-
-      // if no keys are pressed just guess where player wants to go
-      if (
-          controller.movementHorizontal == MovementControl::None
-       && controller.movementVertical == MovementControl::None
-      ) {
-        direction.x = player.velocity.x >= 0.0f ? +1.0f : -1.0f;
-      }
-
-      if (player.grounded) {
-        playerOrigin.y -= 8.0f;
-      }
-
-      player.velocity = velocityMultiplier * glm::normalize(direction);
-      player.grounded = false;
-
-      player.dashCooldown[Idx(controller.movementDirection)] = ::dashCooldown;
-      player.dashLock[Idx(controller.movementDirection)] = true;
-      player.dashZeroGravityTime = ::dashGravityTime;
-      -- player.midairDashesLeft;
-    }
-  }
-
-  ::UpdatePlayerPhysics(scene, player, playerOrigin, hitbox);
-
-  const float velocityXAbs = glm::abs(player.velocity.x);
-
-  { // -- apply animations
-
-    // -- set leg animation
-    auto & legInfo = playerAnim.instance.pieceToState["legs"];
-    auto & bodyInfo = playerAnim.instance.pieceToState["body"];
-
-    if (player.grounded) { // grounded animations
-      if (!player.crouchSliding) {
-        bodyInfo.Apply("center");
-        bodyInfo.angle = 0.0f;
-      }
-
-      if (!player.crouching && (!player.prevGrounded || player.landing)) {
-        player.landing = true;
-        auto & stateInfo = playerAnim.instance.pieceToState["legs"];
-        stateInfo.Apply("landing");
-        if (stateInfo.animationFinished) { player.landing = false; }
-      } else {
-        // check walk/run animation turns before applying stand/walk/run
-        bool const applyTurning = false;
-
-        bool const moving =
-          controller.movementHorizontal != MovementControl::None
-        ;
-
-        bool const running =
-            !player.wallClingLeft && !player.wallClingRight
-         && !controller.walk && !player.crouching && moving
-        ;
-        bool const crouching = player.crouching && moving;
-        bool const walking =
-            !player.wallClingLeft && !player.wallClingRight
-         && controller.walk && !player.crouching && moving
-        ;
-
-        if (legInfo.label == "run-turn") {
-          if (legInfo.animationFinished) { legInfo.Apply("run"); }
-        } else if (legInfo.label == "walk-turn") {
-          if (legInfo.animationFinished) { legInfo.Apply("walk"); }
-        } else if (walking && velocityXAbs <= inputWalkAccelTarget) {
-          legInfo.Apply(applyTurning ? "walk-turn" : "walk");
-        } else if (crouching && velocityXAbs <= inputCrouchAccelTarget) {
-          legInfo.Apply("crouch-walk");
-        } else if (running && velocityXAbs <= inputRunAccelTarget) {
-          legInfo.Apply(applyTurning ? "run-turn" : "run");
-        } else {
-          if (player.crouchSliding) {
-            legInfo.Apply("crouch-slide");
-            if (legInfo.componentIt > 0) {
-              legInfo.angle = pul::Pi;
-              bodyInfo.Apply("crouch-center");
-              bodyInfo.angle =
-                (player.velocity.x > 0.0f ? -1.0f : +1.0f) * pul::Pi/1.5f;
-            } else {
-              // first frame is transition crouch
-              legInfo.angle =
-                (player.velocity.x > 0.0f ? +1.0f : -1.0f) * pul::Pi/2.0f;
-              bodyInfo.Apply("crouch-transition");
-            }
-          } else if (player.crouching)
-            { legInfo.Apply("crouch-idle"); }
-          else
-            { legInfo.Apply("stand"); }
-        }
-      }
-    } else { // air animations
-
-      playerAnim.instance.pieceToState["body"].Apply("center");
-
-      if (frameVerticalJump) {
-        playerAnim.instance.pieceToState["legs"].Apply("jump-high", true);
-      } else if (frameHorizontalJump) {
-        static bool swap = false;
-        swap ^= 1;
-        playerAnim
-          .instance.pieceToState["legs"]
-          .Apply(swap ? "jump-strafe-0" : "jump-strafe-1");
-      } else if (frameVerticalDash) {
-        playerAnim.instance.pieceToState["legs"].Apply("dash-vertical");
-      } else if (frameHorizontalDash) {
-        static bool swap = false;
-        swap ^= 1;
-        playerAnim
-          .instance.pieceToState["legs"]
-          .Apply(swap ? "dash-horizontal-0" : "dash-horizontal-1");
-      } else if (frameWalljump) {
-        static bool swap = false;
-        swap ^= 1;
-        playerAnim
-          .instance.pieceToState["legs"]
-          .Apply(swap ? "walljump-0" : "walljump-1");
-      } else if (player.prevGrounded) {
-        // logically can only have falled down
-        playerAnim.instance.pieceToState["legs"].Apply("air-idle");
-      } else {
-        if (legInfo.label == "dash-vertical" && legInfo.animationFinished) {
-          // switch to air idle
-          playerAnim.instance.pieceToState["legs"].Apply("air-idle");
-        }
-      }
-    }
-
-    auto const & currentWeaponInfo =
-      pul::core::weaponInfo[Idx(player.inventory.currentWeapon)];
-
-    // -- arm animation
-    bool playerDirFlip = playerAnim.instance.pieceToState["legs"].flip;
-    switch (currentWeaponInfo.requiredHands) {
-      case 0:
-        if (player.grounded) {
-          if (player.crouching) {
-            playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
-            playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
-          }
-          else if (legInfo.label == "walk" || legInfo.label == "walk-turn") {
-            playerAnim.instance.pieceToState["arm-back"].Apply("unequip-walk");
-            playerAnim.instance.pieceToState["arm-front"].Apply("unequip-walk");
-          }
-          else if (legInfo.label == "run" || legInfo.label == "run-turn") {
-            playerAnim.instance.pieceToState["arm-back"].Apply("unequip-run");
-            playerAnim.instance.pieceToState["arm-front"].Apply("unequip-run");
-          } else {
-            playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
-            playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
-          }
-        } else {
-          playerAnim.instance.pieceToState["arm-back"].Apply("alarmed");
-          playerAnim.instance.pieceToState["arm-front"].Apply("alarmed");
-        }
-      break;
-      case 1:
-        if (playerDirFlip)
-          playerAnim.instance.pieceToState["arm-back"].Apply("equip-1H");
-        else
-          playerAnim.instance.pieceToState["arm-front"].Apply("equip-1H");
-      break;
-      case 2:
-        playerAnim.instance.pieceToState["arm-back"].Apply("equip-2H");
-        playerAnim.instance.pieceToState["arm-front"].Apply("equip-2H");
-      break;
-    }
-
-    if (
-        controller.movementHorizontal
-     == pul::controls::Controller::Movement::Right
-    ) {
-      playerDirFlip = true;
-    }
-    else if (
-        controller.movementHorizontal
-     == pul::controls::Controller::Movement::Left
-    ) {
-      playerDirFlip = false;
-    }
-
-    playerAnim.instance.pieceToState["legs"].flip = playerDirFlip;
-
-    float const angle =
-      std::atan2(controller.lookDirection.x, controller.lookDirection.y);
-    player.lookAtAngle = angle;
-    player.flip = playerDirFlip;
-
-    playerAnim.instance.pieceToState["arm-back"].angle
-      = playerAnim.instance.pieceToState["arm-front"].angle
-      = angle
-    ;
-
-    playerAnim.instance.pieceToState["head"].angle = angle;
-
-    playerAnim.instance.origin = playerOrigin;
-
-    // center weapon origin, first have to update cache for this animation to
-    // get the hand position
-    {
-      plugin::animation::UpdateCache(playerAnim.instance);
-      auto & handState = playerAnim.instance.pieceToState["weapon-placeholder"];
-
-      char const * weaponStr = ToStr(player.inventory.currentWeapon);
-
-      auto & weaponAnimation =
-        registry.get<pul::animation::ComponentInstance>(
-          player.weaponAnimation
-        ).instance;
-
-      // nothing should render if unarmed
-      weaponAnimation.visible =
-        player.inventory.currentWeapon != pul::core::WeaponType::Unarmed;
-
-      auto & weaponState = weaponAnimation.pieceToState["weapons"];
-
-      weaponState.Apply(weaponStr);
-
-      weaponAnimation.origin = playerAnim.instance.origin;
-
-      weaponState.angle = playerAnim.instance.pieceToState["arm-front"].angle;
-      weaponState.flip = playerAnim.instance.pieceToState["legs"].flip;
-
-      plugin::animation::UpdateCacheWithPrecalculatedMatrix(
-        weaponAnimation, handState.cachedLocalSkeletalMatrix
-      );
-
-    }
-  }
-
-  ::UpdatePlayerWeapon(
-    scene, controls, player, playerOrigin, hitbox, playerAnim
-  );
-  ::PlayerCheckPickups(scene, player, damageable, playerOrigin, hitbox);
-
-  // -- set audio
-  auto & audioSystem = scene.AudioSystem();
-
-  if (frameVerticalJump || frameHorizontalJump || frameWalljump) {
-    pul::audio::EventInfo audioEvent;
-    audioEvent.event = pul::audio::event::Type::CharacterMovementJump;
-    audioEvent.origin = playerOrigin;
-    audioSystem.DispatchEventOneOff(audioEvent);
-  }
-
-  if (player.crouchSliding && !prevCrouchSliding) {
-    pul::audio::EventInfo audioEvent;
-    audioEvent.event = pul::audio::event::Type::CharacterMovementSlide;
-    audioEvent.params = { {"velocity.x", glm::abs(player.velocity.x)} };
-    audioEvent.origin = playerOrigin;
-    audioSystem.DispatchEventOneOff(audioEvent);
-  }
-
-  if (frameHorizontalDash || frameVerticalDash) {
-    pul::audio::EventInfo audioEvent;
-    audioEvent.event = pul::audio::event::Type::CharacterMovementDash;
-    audioEvent.origin = playerOrigin;
-    audioSystem.DispatchEventOneOff(audioEvent);
-  }
-
-  if (controller.taunt && !controllerPrev.taunt) {
-    pul::audio::EventInfo audioEvent;
-    audioEvent.event = pul::audio::event::Type::CharacterDialogueTaunt;
-    audioEvent.origin = playerOrigin;
-    audioSystem.DispatchEventOneOff(audioEvent);
-  }
-
-  auto & legInfo = playerAnim.instance.pieceToState["legs"];
-
-  bool playCrouchWalkAudio = false;
-
-  if (player.grounded && legInfo.label == "crouch-walk") {
-    static size_t prevComp = 0;
-    playCrouchWalkAudio |=
-        (prevComp % 5 != 0) && legInfo.componentIt % 5 == 0
-     && legInfo.componentIt != 0
-    ;
-    prevComp = legInfo.componentIt;
-  }
-
-  if (player.grounded && legInfo.label == "walk") {
-    static size_t prevComp = 0;
-    playCrouchWalkAudio |=
-        (prevComp % 3 != 0) && legInfo.componentIt % 3 == 0
-     && legInfo.componentIt != 0
-    ;
-    prevComp = legInfo.componentIt;
-  }
-
-  if (player.grounded && legInfo.label == "run") {
-    static size_t prevComp = 0;
-    playCrouchWalkAudio |=
-        (prevComp % 3 != 0) && legInfo.componentIt % 3 == 0
-     && legInfo.componentIt != 0
-    ;
-    prevComp = legInfo.componentIt;
-  }
-
-  if (playCrouchWalkAudio) {
-    pul::audio::EventInfo audioEvent;
-    audioEvent.event = pul::audio::event::Type::CharacterMovementStep;
-    audioEvent.params = { {"type", 2.0f} }; // 'normal'
-    audioEvent.origin = playerOrigin;
-    audioSystem.DispatchEventOneOff(audioEvent);
-  }
-
-  if (
-      !player.prevGrounded && frameStartGrounded
-   && player.prevAirVelocity > 1.0f
-  ) {
-    pul::audio::EventInfo audioEvent;
-    audioEvent.event = pul::audio::event::Type::CharacterMovementLand;
-    audioEvent.origin = playerOrigin;
-    audioEvent.params = {
-      {"type", 2.0f} // 'normal'
-    , {"force", glm::abs(player.prevAirVelocity/8.0f)}
-    };
-    audioSystem.DispatchEventOneOff(audioEvent);
-  }
+
+
+  /* auto & registry = scene.EnttRegistry(); */
+
+  /* player.prevAirVelocity = player.velocity.y; */
+
+  /* // error checking */
+  /* if (glm::abs(player.velocity.x) > 1000.0f) { */
+  /*   spdlog::error("player velocity too high (for now)"); */
+  /*   player.velocity.x = 0.0f; */
+  /* } */
+
+  /* if (glm::abs(player.velocity.y) > 1000.0f) { */
+  /*   spdlog::error("player velocity too high (for now)"); */
+  /*   player.velocity.y = 0.0f; */
+  /* } */
+
+  /* if ( */
+  /*     glm::isnan(player.velocity.x) || glm::isnan(player.velocity.y) */
+  /*  || glm::isinf(player.velocity.x) || glm::isinf(player.velocity.y) */
+  /* ) { */
+  /*   spdlog::error("floating point corruption on player velocity"); */
+  /*   player.velocity.x = 0.0f; */
+  /*   player.velocity.y = 0.0f; */
+  /*   player.storedVelocity.x = 0.0f; */
+  /*   player.storedVelocity.y = 0.0f; */
+  /* } */
+
+  /* bool */
+  /*   frameVerticalJump   = false */
+  /* , frameHorizontalJump = false */
+  /* , frameVerticalDash   = false */
+  /* , frameHorizontalDash = false */
+  /* , frameWalljump       = false */
+  /* ; */
+
+  /* bool const frameStartGrounded = player.grounded; */
+  /* bool const prevCrouchSliding = player.crouchSliding; */
+
+  /* // update damageable */
+  /* for (auto & damage : damageable.frameDamageInfos) { */
+  /*   player.velocity += damage.directionForce; */
+  /*   damageable.health = glm::max(damageable.health - damage.damage, 0); */
+
+  /*   // pop origin up if grounded if there is Y force */
+  /*   if (player.grounded && damage.directionForce.y < 0.0f) { */
+  /*     playerOrigin.y -= 2.0f; */
+  /*   } */
+
+  /*   player.grounded = false; */
+  /* } */
+  /* damageable.frameDamageInfos = {}; */
+
+  /* using MovementControl = pul::controls::Controller::Movement; */
+
+  /* { // -- process inputs / events */
+
+  /*   // -- gravity */
+
+  /*   // apply only when in air & only if dash zero gravity isn't in effect */
+  /*   if (player.dashZeroGravityTime <= 0.0f && !player.grounded) { */
+  /*     if (player.velocity.y <= ::inputGravityAccelThreshold) { */
+  /*       player.velocity.y += */
+  /*         ::CalculateAccelFromTarget( */
+  /*           ::inputGravityAccelPreThresholdTime, ::inputGravityAccelThreshold */
+  /*         ); */
+  /*     } else { */
+  /*       player.velocity.y += ::inputGravityAccelPostThreshold; */
+  /*     } */
+  /*   } */
+
+  /*   // -- reset animation angles */
+  /*   playerAnim.instance.pieceToState["legs"].angle = 0.0f; */
+  /*   playerAnim.instance.pieceToState["body"].angle = 0.0f; */
+
+  /*   // -- process crouching */
+  /*   player.prevCrouching = player.crouching; */
+  /*   player.crouching = controller.crouch; */
+
+  /*   // check if player can uncrouch from geometry */
+  /*   if (player.prevCrouching && !player.crouching) { */
+
+  /*     // just check the small gap on left/right side between crouch and stand */
+  /*     bool canUncrouch = true; */
+
+  /*     for ( */
+  /*       int32_t x = ::pickPoints[Idx(::PickPointType::Ul)].x; */
+  /*       x != ::pickPoints[Idx(::PickPointType::Lr)].x; */
+  /*       ++ x */
+  /*     ) { */
+  /*       auto const origin = playerOrigin + glm::vec2(x, 0.0f); */
+  /*       auto const pointRay = */
+  /*         pul::physics::IntersectorRay::Construct( */
+  /*           glm::round(origin + glm::vec2(0.0f, ::pickPointUpCrouch)) */
+  /*         , glm::round(origin + glm::vec2(0.0f, ::pickPointUpStand)) */
+  /*         ); */
+
+  /*       pul::physics::IntersectionResults pointResults; */
+  /*       plugin::physics::IntersectionRaycast(scene, pointRay, pointResults); */
+
+  /*       if (pointResults.collision) { */
+  /*         canUncrouch = false; */
+  /*         break; */
+  /*       } */
+  /*     } */
+
+  /*     if (!canUncrouch) { */
+  /*       player.crouching = true; */
+  /*       player.crouchSliding = false; // force sliding off */
+  /*     } */
+  /*   } */
+
+  /*   // if the player is crouch sliding, player remains crouched until the */
+  /*   // animation is finished, the velocity is below crouch target, or the */
+  /*   // player is jumping */
+  /*   if ( */
+  /*       player.crouchSliding */
+  /*    && !player.jumping */
+  /*    && glm::abs(player.velocity.x) >= inputCrouchAccelTarget */
+  /*    && !playerAnim.instance.pieceToState["legs"].animationFinished */
+  /*   ) { */
+  /*     player.crouching = true; */
+  /*   } */
+
+
+  /*   if ( */
+  /*       player.crouchSliding */
+  /*    && ( */
+  /*         !player.crouching */
+  /*      || glm::abs(player.velocity.x) < inputCrouchAccelTarget */
+  /*      || player.jumping */
+  /*      || !player.grounded */
+  /*       ) */
+  /*   ) { */
+  /*     player.crouchSliding = false; */
+  /*   } */
+
+  /*   if (player.crouchSlideCooldown > 0.0f) */
+  /*     { player.crouchSlideCooldown -= pul::util::MsPerFrame; } */
+
+  /*   if (player.slideFrictionTime > 0.0f) */
+  /*     { player.slideFrictionTime -= pul::util::MsPerFrame; } */
+
+  /*   // -- process jumping */
+  /*   player.jumping = controller.jump; */
+
+  /*   // set jump timer if falling this frame */
+  /*   if (player.prevGrounded && !player.grounded) { */
+  /*     player.jumpFallTime = ::jumpAfterFallTime; */
+  /*   } */
+
+  /*   if (player.jumpFallTime > 0.0f) */
+  /*     { player.jumpFallTime -= pul::util::MsPerFrame; } */
+
+  /*   if (!player.jumping) { */
+  /*     player.storedVelocity = player.velocity; */
+  /*     player.hasReleasedJump = true; */
+  /*   } */
+
+  /*   // make sure that jumping only happens if player has released jump yet */
+  /*   if (player.grounded && !player.hasReleasedJump) { */
+  /*     player.jumping = false; */
+  /*   } */
+
+  /*   if ((player.jumpFallTime > 0.0f || player.grounded) && player.jumping) { */
+  /*     if (controller.movementHorizontal == MovementControl::None) { */
+  /*       player.velocity.y = -::jumpingVerticalAccel; */
+  /*       frameVerticalJump = true; */
+  /*     } else { */
+
+  /*       float thetaRad = glm::radians(::jumpingHorizontalTheta); */
+
+  /*       player.velocity.y = -::jumpingHorizontalAccel * glm::sin(thetaRad); */
+  /*       player.velocity.x = player.storedVelocity.x; */
+
+  /*       if (glm::abs(player.velocity.x) < jumpingHorizontalAccelMax) { */
+  /*         player.velocity.x += */
+  /*           + glm::sign(static_cast<float>(controller.movementHorizontal)) */
+  /*           * ::jumpingHorizontalAccel * glm::cos(thetaRad) */
+  /*         ; */
+  /*       } */
+
+  /*       frameHorizontalJump = true; */
+  /*     } */
+  /*     player.grounded = false; */
+  /*     player.hasReleasedJump = false; */
+  /*     player.jumpFallTime = 0.0f; */
+  /*   } */
+
+  /*   // -- process walljumping */
+
+  /*   // with jump you can hold space, this is not true for walljumps tho */
+  /*   if (player.jumping && !controllerPrev.jump && !player.prevGrounded) { */
+  /*     if (player.wallClingLeft || player.wallClingRight) { */
+  /*       player.grounded = false; */
+
+  /*       float const totalVel = 7.0f; */
+
+  /*       float const thetaRad = */
+  /*         (player.wallClingRight ? -pul::Pi*0.25f : 0.0f) + glm::radians(-75.0f) */
+  /*       ; */
+
+  /*       player.velocity.y = glm::sin(thetaRad) * totalVel; */
+  /*       player.velocity.x = glm::cos(thetaRad) * totalVel; */
+
+  /*       frameWalljump = true; */
+  /*     } */
+  /*   } */
+
+  /*   // -- process horizontal movement */
+  /*   float inputAccel = static_cast<float>(controller.movementHorizontal); */
+  /*   float const facingDirection = inputAccel; */
+
+  /*   bool frictionApplies = true; */
+  /*   bool applyInputAccel = true; */
+
+  /*   if (player.crouchSliding) { */
+  /*     applyInputAccel = false; */
+  /*   } else if (player.grounded) { */
+  /*     if (player.jumping) { */
+  /*       // this frame the player will jump */
+  /*       frictionApplies = false; */
+  /*     } else if (controller.movementHorizontal != MovementControl::None) { */
+  /*       if (controller.walk) { */
+  /*         ApplyGroundedMovement( */
+  /*           facingDirection, player.velocity.x */
+  /*         , ::inputWalkAccelTime, ::inputWalkAccelTarget */
+  /*         , frictionApplies, inputAccel */
+  /*         ); */
+  /*       } else if (player.crouching) { */
+  /*         if ( */
+  /*             (player.prevGrounded ? !player.prevCrouching : !prevCrouchSliding) */
+  /*           && player.crouchSlideCooldown <= 0.0f */
+  /*         ) { */
+  /*           player.crouchSliding = true; */
+  /*           applyInputAccel = false; */
+
+  /*           // apply crouch boost, similar to dash boost */
+  /*           player.velocity.x = */
+  /*             glm::max( */
+  /*               ::slideAccel + glm::length(player.velocity.x) */
+  /*             , ::slideMinVelocity */
+  /*             ) * facingDirection */
+  /*           ; */
+
+  /*           player.crouchSlideCooldown = ::slideCooldown; */
+  /*           player.slideFrictionTime = ::slideFrictionTransitionTime; */
+  /*         } else { */
+  /*           ApplyGroundedMovement( */
+  /*             facingDirection, player.velocity.x */
+  /*           , ::inputCrouchAccelTime, ::inputCrouchAccelTarget */
+  /*           , frictionApplies, inputAccel */
+  /*           ); */
+  /*         } */
+  /*       } else { */
+  /*         ApplyGroundedMovement( */
+  /*           facingDirection, player.velocity.x */
+  /*         , ::inputRunAccelTime, ::inputRunAccelTarget */
+  /*         , frictionApplies, inputAccel */
+  /*         ); */
+  /*       } */
+
+  /*       // if the target goal is reached then the accel is 0, but we still want */
+  /*       // to keep it around */
+  /*       if (inputAccel != 0.0f) */
+  /*         { player.prevFrameGroundAcceleration = inputAccel; } */
+
+  /*       // do not allow this since it has no friction to transition w/ */
+  /*       if (player.crouchSliding) */
+  /*         { player.prevFrameGroundAcceleration = 0.0f; } */
+  /*     } */
+  /*   } else { */
+  /*     if (facingDirection*player.velocity.x <= ::inputAirAccelThreshold) { */
+  /*       inputAccel *= */
+  /*         ::CalculateAccelFromTarget( */
+  /*           ::inputAirAccelPreThresholdTime */
+  /*         , ::inputAirAccelThreshold */
+  /*         ); */
+  /*     } else { */
+  /*       inputAccel *= ::inputAirAccelPostThreshold; */
+  /*     } */
+
+  /*     // set ground accel to 0 on no input */
+  /*     if (controller.movementHorizontal == MovementControl::None) */
+  /*       { player.prevFrameGroundAcceleration = 0.0f; } */
+
+  /*     // mix inputAccel with grounded movement to give proper ground-air */
+  /*     // transition */
+  /*     if (player.jumpFallTime > 0.0f && !player.crouchSliding) { */
+  /*       inputAccel = */
+  /*         glm::mix( */
+  /*           inputAccel */
+  /*         , player.prevFrameGroundAcceleration*::frictionGrounded */
+  /*         , player.jumpFallTime / ::jumpAfterFallTime */
+  /*         ); */
+  /*     } */
+
+  /*     frictionApplies = false; */
+
+  /*     // friction applies if player is crouching and moving opposite direction */
+  /*     // while in air */
+  /*     if ( */
+  /*         glm::sign(player.velocity.x) != 0.0f */
+  /*      && glm::sign(inputAccel) != 0.0f */
+  /*      && player.crouching */
+  /*      && glm::sign(inputAccel) != glm::sign(player.velocity.x) */
+  /*     ) { */
+  /*       frictionApplies = true; */
+  /*     } */
+
+  /*     // nullify velocity if clinging to wall */
+  /*     if (player.wallClingLeft) */
+  /*       inputAccel = glm::max(0.0f, inputAccel); */
+
+  /*     if (player.wallClingRight) */
+  /*       inputAccel = glm::min(0.0f, inputAccel); */
+  /*   } */
+
+  /*   if (applyInputAccel) */
+  /*     { player.velocity.x += inputAccel; } */
+
+  /*   // -- process friction */
+  /*   if (frictionApplies) { */
+  /*     if (player.crouchSliding) { */
+  /*       float const friction = */
+  /*         glm::mix( */
+  /*           ::slideFriction, 1.0f */
+  /*         , player.slideFrictionTime <= 0.0f */
+  /*             ? 0.0f */
+  /*             : glm::pow( */
+  /*               player.slideFrictionTime / ::slideFrictionTransitionTime */
+  /*             , ::slideFrictionTransitionPow */
+  /*             ) */
+  /*         ); */
+  /*       player.velocity.x *= friction; */
+  /*     } else { */
+  /*       player.velocity.x *= ::frictionGrounded; */
+  /*     } */
+  /*   } */
+
+  /*   // -- process horizontal ground stop */
+  /*   if ( */
+  /*       inputAccel == 0.0f && player.grounded */
+  /*    && glm::abs(player.velocity.x) < ::horizontalGroundedVelocityStop */
+  /*   ) { */
+  /*     /1* player.velocity.x = 0.0f; *1/ */
+  /*   } */
+
+  /*   // -- process dashing */
+  /*   for (auto & playerDashCooldown : player.dashCooldown) { */
+  /*     if (playerDashCooldown > 0.0f) */
+  /*       { playerDashCooldown -= pul::util::MsPerFrame; } */
+  /*   } */
+
+  /*   // clear dash lock if either we land, or we are jumping on this frame (thus */
+  /*   // player will not be grounded) */
+  /*   if ( */
+  /*       !player.prevGrounded */
+  /*    && (frameHorizontalJump || frameVerticalJump || player.grounded) */
+  /*   ) { */
+  /*     for (auto & dashLock : player.dashLock) */
+  /*       { dashLock = false; } */
+  /*   } */
+  /*   if (player.dashZeroGravityTime > 0.0f) { */
+  /*     player.dashZeroGravityTime -= pul::util::MsPerFrame; */
+  /*     // if grounded then gravity time has been nullified */
+  /*     if (player.grounded || !controller.dash) */
+  /*       { player.dashZeroGravityTime = 0.0f; } */
+  /*   } */
+
+  /*   // player has a limited amount of dashes in air, so reset that if grounded */
+  /*   // at the start of frame */
+  /*   if (frameStartGrounded) */
+  /*     { player.midairDashesLeft = ::maxAirDashes; } */
+
+  /*   if ( */
+  /*     !controllerPrev.dash && controller.dash */
+  /*   && player.dashCooldown[Idx(controller.movementDirection)] <= 0.0f */
+  /*   && player.dashLock[Idx(controller.movementDirection)] == false */
+  /*   && player.midairDashesLeft > 0 */
+  /*   ) { */
+  /*     glm::vec2 const scaledVelocity = player.velocity; */
+
+  /*     float const transfers = */
+  /*       CalculateDashTransferVelocity( */
+  /*         glm::i32vec2( */
+  /*           static_cast<int32_t>(controller.movementHorizontal) */
+  /*         , static_cast<int32_t>(controller.movementVertical) */
+  /*         ) */
+  /*       , NormalizeVelocityAxis(player.velocity) */
+  /*       ); */
+
+  /*     float velocityMultiplier = */
+  /*         transfers*(::dashAccel + glm::length(scaledVelocity)); */
+
+  /*     // add dashMin */
+  /*     if (velocityMultiplier < ::dashMinVelocity) { */
+  /*       velocityMultiplier = */
+  /*         velocityMultiplier / ::dashMinVelocity * ::dashMinVelocityMultiplier */
+  /*       + ::dashMinVelocity */
+  /*       ; */
+  /*     } */
+
+  /*     if (controller.movementVertical != MovementControl::None) { */
+  /*       frameVerticalDash = true; */
+  /*     } else { */
+  /*       frameHorizontalDash = true; */
+  /*     } */
+
+  /*     auto direction = */
+  /*       glm::vec2( */
+  /*         controller.movementHorizontal, controller.movementVertical */
+  /*       ); */
+
+  /*     // if no keys are pressed just guess where player wants to go */
+  /*     if ( */
+  /*         controller.movementHorizontal == MovementControl::None */
+  /*      && controller.movementVertical == MovementControl::None */
+  /*     ) { */
+  /*       direction.x = player.velocity.x >= 0.0f ? +1.0f : -1.0f; */
+  /*     } */
+
+  /*     if (player.grounded) { */
+  /*       playerOrigin.y -= 8.0f; */
+  /*     } */
+
+  /*     player.velocity = velocityMultiplier * glm::normalize(direction); */
+  /*     player.grounded = false; */
+
+  /*     player.dashCooldown[Idx(controller.movementDirection)] = ::dashCooldown; */
+  /*     player.dashLock[Idx(controller.movementDirection)] = true; */
+  /*     player.dashZeroGravityTime = ::dashGravityTime; */
+  /*     -- player.midairDashesLeft; */
+  /*   } */
+  /* } */
+
+  /* ::UpdatePlayerPhysics(scene, player, playerOrigin, hitbox); */
+
+  /* const float velocityXAbs = glm::abs(player.velocity.x); */
+
+  /* { // -- apply animations */
+
+  /*   // -- set leg animation */
+  /*   auto & legInfo = playerAnim.instance.pieceToState["legs"]; */
+  /*   auto & bodyInfo = playerAnim.instance.pieceToState["body"]; */
+
+  /*   if (player.grounded) { // grounded animations */
+  /*     if (!player.crouchSliding) { */
+  /*       bodyInfo.Apply("center"); */
+  /*       bodyInfo.angle = 0.0f; */
+  /*     } */
+
+  /*     if (!player.crouching && (!player.prevGrounded || player.landing)) { */
+  /*       player.landing = true; */
+  /*       auto & stateInfo = playerAnim.instance.pieceToState["legs"]; */
+  /*       stateInfo.Apply("landing"); */
+  /*       if (stateInfo.animationFinished) { player.landing = false; } */
+  /*     } else { */
+  /*       // check walk/run animation turns before applying stand/walk/run */
+  /*       bool const applyTurning = false; */
+
+  /*       bool const moving = */
+  /*         controller.movementHorizontal != MovementControl::None */
+  /*       ; */
+
+  /*       bool const running = */
+  /*           !player.wallClingLeft && !player.wallClingRight */
+  /*        && !controller.walk && !player.crouching && moving */
+  /*       ; */
+  /*       bool const crouching = player.crouching && moving; */
+  /*       bool const walking = */
+  /*           !player.wallClingLeft && !player.wallClingRight */
+  /*        && controller.walk && !player.crouching && moving */
+  /*       ; */
+
+  /*       if (legInfo.label == "run-turn") { */
+  /*         if (legInfo.animationFinished) { legInfo.Apply("run"); } */
+  /*       } else if (legInfo.label == "walk-turn") { */
+  /*         if (legInfo.animationFinished) { legInfo.Apply("walk"); } */
+  /*       } else if (walking && velocityXAbs <= inputWalkAccelTarget) { */
+  /*         legInfo.Apply(applyTurning ? "walk-turn" : "walk"); */
+  /*       } else if (crouching && velocityXAbs <= inputCrouchAccelTarget) { */
+  /*         legInfo.Apply("crouch-walk"); */
+  /*       } else if (running && velocityXAbs <= inputRunAccelTarget) { */
+  /*         legInfo.Apply(applyTurning ? "run-turn" : "run"); */
+  /*       } else { */
+  /*         if (player.crouchSliding) { */
+  /*           legInfo.Apply("crouch-slide"); */
+  /*           if (legInfo.componentIt > 0) { */
+  /*             legInfo.angle = pul::Pi; */
+  /*             bodyInfo.Apply("crouch-center"); */
+  /*             bodyInfo.angle = */
+  /*               (player.velocity.x > 0.0f ? -1.0f : +1.0f) * pul::Pi/1.5f; */
+  /*           } else { */
+  /*             // first frame is transition crouch */
+  /*             legInfo.angle = */
+  /*               (player.velocity.x > 0.0f ? +1.0f : -1.0f) * pul::Pi/2.0f; */
+  /*             bodyInfo.Apply("crouch-transition"); */
+  /*           } */
+  /*         } else if (player.crouching) */
+  /*           { legInfo.Apply("crouch-idle"); } */
+  /*         else */
+  /*           { legInfo.Apply("stand"); } */
+  /*       } */
+  /*     } */
+  /*   } else { // air animations */
+
+  /*     playerAnim.instance.pieceToState["body"].Apply("center"); */
+
+  /*     if (frameVerticalJump) { */
+  /*       playerAnim.instance.pieceToState["legs"].Apply("jump-high", true); */
+  /*     } else if (frameHorizontalJump) { */
+  /*       static bool swap = false; */
+  /*       swap ^= 1; */
+  /*       playerAnim */
+  /*         .instance.pieceToState["legs"] */
+  /*         .Apply(swap ? "jump-strafe-0" : "jump-strafe-1"); */
+  /*     } else if (frameVerticalDash) { */
+  /*       playerAnim.instance.pieceToState["legs"].Apply("dash-vertical"); */
+  /*     } else if (frameHorizontalDash) { */
+  /*       static bool swap = false; */
+  /*       swap ^= 1; */
+  /*       playerAnim */
+  /*         .instance.pieceToState["legs"] */
+  /*         .Apply(swap ? "dash-horizontal-0" : "dash-horizontal-1"); */
+  /*     } else if (frameWalljump) { */
+  /*       static bool swap = false; */
+  /*       swap ^= 1; */
+  /*       playerAnim */
+  /*         .instance.pieceToState["legs"] */
+  /*         .Apply(swap ? "walljump-0" : "walljump-1"); */
+  /*     } else if (player.prevGrounded) { */
+  /*       // logically can only have falled down */
+  /*       playerAnim.instance.pieceToState["legs"].Apply("air-idle"); */
+  /*     } else { */
+  /*       if (legInfo.label == "dash-vertical" && legInfo.animationFinished) { */
+  /*         // switch to air idle */
+  /*         playerAnim.instance.pieceToState["legs"].Apply("air-idle"); */
+  /*       } */
+  /*     } */
+  /*   } */
+
+  /*   auto const & currentWeaponInfo = */
+  /*     pul::core::weaponInfo[Idx(player.inventory.currentWeapon)]; */
+
+  /*   // -- arm animation */
+  /*   bool playerDirFlip = playerAnim.instance.pieceToState["legs"].flip; */
+  /*   switch (currentWeaponInfo.requiredHands) { */
+  /*     case 0: */
+  /*       if (player.grounded) { */
+  /*         if (player.crouching) { */
+  /*           playerAnim.instance.pieceToState["arm-back"].Apply("alarmed"); */
+  /*           playerAnim.instance.pieceToState["arm-front"].Apply("alarmed"); */
+  /*         } */
+  /*         else if (legInfo.label == "walk" || legInfo.label == "walk-turn") { */
+  /*           playerAnim.instance.pieceToState["arm-back"].Apply("unequip-walk"); */
+  /*           playerAnim.instance.pieceToState["arm-front"].Apply("unequip-walk"); */
+  /*         } */
+  /*         else if (legInfo.label == "run" || legInfo.label == "run-turn") { */
+  /*           playerAnim.instance.pieceToState["arm-back"].Apply("unequip-run"); */
+  /*           playerAnim.instance.pieceToState["arm-front"].Apply("unequip-run"); */
+  /*         } else { */
+  /*           playerAnim.instance.pieceToState["arm-back"].Apply("alarmed"); */
+  /*           playerAnim.instance.pieceToState["arm-front"].Apply("alarmed"); */
+  /*         } */
+  /*       } else { */
+  /*         playerAnim.instance.pieceToState["arm-back"].Apply("alarmed"); */
+  /*         playerAnim.instance.pieceToState["arm-front"].Apply("alarmed"); */
+  /*       } */
+  /*     break; */
+  /*     case 1: */
+  /*       if (playerDirFlip) */
+  /*         playerAnim.instance.pieceToState["arm-back"].Apply("equip-1H"); */
+  /*       else */
+  /*         playerAnim.instance.pieceToState["arm-front"].Apply("equip-1H"); */
+  /*     break; */
+  /*     case 2: */
+  /*       playerAnim.instance.pieceToState["arm-back"].Apply("equip-2H"); */
+  /*       playerAnim.instance.pieceToState["arm-front"].Apply("equip-2H"); */
+  /*     break; */
+  /*   } */
+
+  /*   if ( */
+  /*       controller.movementHorizontal */
+  /*    == pul::controls::Controller::Movement::Right */
+  /*   ) { */
+  /*     playerDirFlip = true; */
+  /*   } */
+  /*   else if ( */
+  /*       controller.movementHorizontal */
+  /*    == pul::controls::Controller::Movement::Left */
+  /*   ) { */
+  /*     playerDirFlip = false; */
+  /*   } */
+
+  /*   playerAnim.instance.pieceToState["legs"].flip = playerDirFlip; */
+
+  /*   float const angle = */
+  /*     std::atan2(controller.lookDirection.x, controller.lookDirection.y); */
+  /*   player.lookAtAngle = angle; */
+  /*   player.flip = playerDirFlip; */
+
+  /*   playerAnim.instance.pieceToState["arm-back"].angle */
+  /*     = playerAnim.instance.pieceToState["arm-front"].angle */
+  /*     = angle */
+  /*   ; */
+
+  /*   playerAnim.instance.pieceToState["head"].angle = angle; */
+
+  /*   playerAnim.instance.origin = playerOrigin; */
+
+  /*   // center weapon origin, first have to update cache for this animation to */
+  /*   // get the hand position */
+  /*   { */
+  /*     plugin::animation::UpdateCache(playerAnim.instance); */
+  /*     auto & handState = playerAnim.instance.pieceToState["weapon-placeholder"]; */
+
+  /*     char const * weaponStr = ToStr(player.inventory.currentWeapon); */
+
+  /*     auto & weaponAnimation = */
+  /*       registry.get<pul::animation::ComponentInstance>( */
+  /*         player.weaponAnimation */
+  /*       ).instance; */
+
+  /*     // nothing should render if unarmed */
+  /*     weaponAnimation.visible = */
+  /*       player.inventory.currentWeapon != pul::core::WeaponType::Unarmed; */
+
+  /*     auto & weaponState = weaponAnimation.pieceToState["weapons"]; */
+
+  /*     weaponState.Apply(weaponStr); */
+
+  /*     weaponAnimation.origin = playerAnim.instance.origin; */
+
+  /*     weaponState.angle = playerAnim.instance.pieceToState["arm-front"].angle; */
+  /*     weaponState.flip = playerAnim.instance.pieceToState["legs"].flip; */
+
+  /*     plugin::animation::UpdateCacheWithPrecalculatedMatrix( */
+  /*       weaponAnimation, handState.cachedLocalSkeletalMatrix */
+  /*     ); */
+
+  /*   } */
+  /* } */
+
+  /* ::UpdatePlayerWeapon( */
+  /*   scene, controls, player, playerOrigin, hitbox, playerAnim */
+  /* ); */
+  /* ::PlayerCheckPickups(scene, player, damageable, playerOrigin, hitbox); */
+
+  /* // -- set audio */
+  /* auto & audioSystem = scene.AudioSystem(); */
+
+  /* if (frameVerticalJump || frameHorizontalJump || frameWalljump) { */
+  /*   pul::audio::EventInfo audioEvent; */
+  /*   audioEvent.event = pul::audio::event::Type::CharacterMovementJump; */
+  /*   audioEvent.origin = playerOrigin; */
+  /*   audioSystem.DispatchEventOneOff(audioEvent); */
+  /* } */
+
+  /* if (player.crouchSliding && !prevCrouchSliding) { */
+  /*   pul::audio::EventInfo audioEvent; */
+  /*   audioEvent.event = pul::audio::event::Type::CharacterMovementSlide; */
+  /*   audioEvent.params = { {"velocity.x", glm::abs(player.velocity.x)} }; */
+  /*   audioEvent.origin = playerOrigin; */
+  /*   audioSystem.DispatchEventOneOff(audioEvent); */
+  /* } */
+
+  /* if (frameHorizontalDash || frameVerticalDash) { */
+  /*   pul::audio::EventInfo audioEvent; */
+  /*   audioEvent.event = pul::audio::event::Type::CharacterMovementDash; */
+  /*   audioEvent.origin = playerOrigin; */
+  /*   audioSystem.DispatchEventOneOff(audioEvent); */
+  /* } */
+
+  /* if (controller.taunt && !controllerPrev.taunt) { */
+  /*   pul::audio::EventInfo audioEvent; */
+  /*   audioEvent.event = pul::audio::event::Type::CharacterDialogueTaunt; */
+  /*   audioEvent.origin = playerOrigin; */
+  /*   audioSystem.DispatchEventOneOff(audioEvent); */
+  /* } */
+
+  /* auto & legInfo = playerAnim.instance.pieceToState["legs"]; */
+
+  /* bool playCrouchWalkAudio = false; */
+
+  /* if (player.grounded && legInfo.label == "crouch-walk") { */
+  /*   static size_t prevComp = 0; */
+  /*   playCrouchWalkAudio |= */
+  /*       (prevComp % 5 != 0) && legInfo.componentIt % 5 == 0 */
+  /*    && legInfo.componentIt != 0 */
+  /*   ; */
+  /*   prevComp = legInfo.componentIt; */
+  /* } */
+
+  /* if (player.grounded && legInfo.label == "walk") { */
+  /*   static size_t prevComp = 0; */
+  /*   playCrouchWalkAudio |= */
+  /*       (prevComp % 3 != 0) && legInfo.componentIt % 3 == 0 */
+  /*    && legInfo.componentIt != 0 */
+  /*   ; */
+  /*   prevComp = legInfo.componentIt; */
+  /* } */
+
+  /* if (player.grounded && legInfo.label == "run") { */
+  /*   static size_t prevComp = 0; */
+  /*   playCrouchWalkAudio |= */
+  /*       (prevComp % 3 != 0) && legInfo.componentIt % 3 == 0 */
+  /*    && legInfo.componentIt != 0 */
+  /*   ; */
+  /*   prevComp = legInfo.componentIt; */
+  /* } */
+
+  /* if (playCrouchWalkAudio) { */
+  /*   pul::audio::EventInfo audioEvent; */
+  /*   audioEvent.event = pul::audio::event::Type::CharacterMovementStep; */
+  /*   audioEvent.params = { {"type", 2.0f} }; // 'normal' */
+  /*   audioEvent.origin = playerOrigin; */
+  /*   audioSystem.DispatchEventOneOff(audioEvent); */
+  /* } */
+
+  /* if ( */
+  /*     !player.prevGrounded && frameStartGrounded */
+  /*  && player.prevAirVelocity > 1.0f */
+  /* ) { */
+  /*   pul::audio::EventInfo audioEvent; */
+  /*   audioEvent.event = pul::audio::event::Type::CharacterMovementLand; */
+  /*   audioEvent.origin = playerOrigin; */
+  /*   audioEvent.params = { */
+  /*     {"type", 2.0f} // 'normal' */
+  /*   , {"force", glm::abs(player.prevAirVelocity/8.0f)} */
+  /*   }; */
+  /*   audioSystem.DispatchEventOneOff(audioEvent); */
+  /* } */
 
   playerOrigin -= glm::vec2(0.0f, 28.0f);
 }

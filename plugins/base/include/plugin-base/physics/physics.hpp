@@ -3,6 +3,8 @@
 #include <span>
 #include <vector>
 
+struct b2Body;
+
 namespace pul::core { enum class TileOrientation : size_t; }
 namespace pul::core { struct SceneBundle; }
 namespace pul::gfx { struct Image; }
@@ -47,6 +49,14 @@ namespace plugin::physics {
   , pul::physics::IntersectorRay const & ray
   , pul::physics::IntersectionResults & intersectionResults
   );
+
+  b2Body * CreateDynamicBody(
+    glm::vec2 originCentered
+  , glm::vec2 halfDimension
+  );
+
+  // applies single step of world
+  void SimulatePhysics();
 
   bool IntersectionRaycast(
     pul::core::SceneBundle &

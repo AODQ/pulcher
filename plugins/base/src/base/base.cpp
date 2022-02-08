@@ -21,6 +21,7 @@ PUL_PLUGIN_DECL void Plugin_LogicUpdate(
 ) {
   plugin::entity::Update(scene);
   plugin::animation::UpdateFrame(scene);
+  plugin::physics::SimulatePhysics();
 }
 
 PUL_PLUGIN_DECL void Plugin_Initialize(pul::core::SceneBundle & scene) {

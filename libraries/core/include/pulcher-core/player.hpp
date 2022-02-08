@@ -9,6 +9,8 @@
 #include <array>
 #include <vector>
 
+struct b2Body;
+
 namespace pul::core {
 
   struct DamageInfo {
@@ -63,6 +65,8 @@ namespace pul::core {
     pul::core::Inventory inventory;
 
     entt::entity weaponAnimation;
+
+    b2Body * physicsBody = nullptr;
   };
 
   struct PlayerMetaInfo {

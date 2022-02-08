@@ -13,6 +13,7 @@
 #include <pulcher-util/log.hpp>
 #include <pulcher-util/math.hpp>
 
+#include <box2d/box2d.h>
 #include <entt/entt.hpp>
 #include <glad/glad.hpp>
 #include <imgui/imgui.hpp>
@@ -20,9 +21,99 @@
 #include <span>
 #include <vector>
 
+namespace Consts {
+  constexpr float pixelsToMeters = 0.1f;
+  constexpr float metersToPixels = 1.0f/pixelsToMeters;
+  constexpr float simulationTimeStep = 1.0f/60.0f;
+  constexpr float simulationVelocityIterations = 6;
+  constexpr float simulationPositionIterations = 2;
+}
+
 namespace {
 
+struct boxDebugDraw : public b2Draw {
+  void DrawPolygon(
+    b2Vec2 const * vertices,
+    int32_t verticesCount,
+    b2Color const & color
+  ) {
+    for (int32_t it = 0; it < verticesCount-1; ++ it) {
+      plugin::debug::RenderLine(
+        glm::vec2(vertices[it  ].x, vertices[it  ].y)*Consts::metersToPixels,
+        glm::vec2(vertices[it+1].x, vertices[it+1].y)*Consts::metersToPixels,
+        glm::vec3(color.r, color.g, color.b)
+      );
+    }
+  }
+
+  void DrawSolidPolygon(
+    b2Vec2 const * vertices,
+    int32 verticesCount,
+    b2Color const & color
+  ) {
+    this->DrawPolygon(vertices, verticesCount, color);
+  }
+
+  /// Draw a circle.
+  void DrawCircle(
+    b2Vec2 const & center,
+    float radius,
+    b2Color const & color
+  ) {
+    plugin::debug::RenderCircle(
+      glm::vec2(center.x, center.y)*Consts::metersToPixels,
+      radius,
+      glm::vec3(color.r, color.g, color.b)
+    );
+  }
+
+  /// Draw a solid circle.
+  void DrawSolidCircle(
+    b2Vec2 const & center,
+    float radius,
+    b2Vec2 const & /*axis*/,
+    b2Color const & color
+  ) {
+    this->DrawCircle(center, radius, color);
+  }
+
+  /// Draw a line segment.
+  void DrawSegment(
+    b2Vec2 const & p1,
+    b2Vec2 const & p2,
+    b2Color const & color
+  ) {
+    plugin::debug::RenderLine(
+      glm::vec2(p1.x, p1.y)*Consts::metersToPixels,
+      glm::vec2(p2.x, p2.y)*Consts::metersToPixels,
+      glm::vec3(color.r, color.g, color.b)
+    );
+  }
+
+  /// Draw a transform. Choose your own length scale.
+  /// @param xf a transform.
+  void DrawTransform(
+    b2Transform const & /*xf*/
+  ) {
+  }
+
+  /// Draw a point.
+  void DrawPoint(
+    b2Vec2 const & p,
+    float /*size*/,
+    b2Color const & color
+  ) {
+    plugin::debug::RenderPoint(
+      glm::vec2(p.x, p.y)*Consts::metersToPixels,
+      glm::vec3(color.r, color.g, color.b)
+    );
+  }
+};
+
 bool showPhysicsQueries = true;
+
+std::unique_ptr<b2World> boxWorld;
+boxDebugDraw boxWorldDebugDraw;
 
 // basically, when doings physics, we want tile lookups to be cached / quick,
 // and we only want to do one tile intersection test per tile-grid. In other
@@ -236,6 +327,7 @@ void plugin::physics::ProcessTileset(
 }
 
 void plugin::physics::ClearMapGeometry() {
+  boxWorld = nullptr;
   tilemapLayer = {};
 }
 
@@ -246,6 +338,11 @@ void plugin::physics::LoadMapGeometry(
 , std::vector<std::span<pul::core::TileOrientation>> const & mapTileOrientations
 ) {
   plugin::physics::ClearMapGeometry();
+  boxWorld = std::make_unique<b2World>(b2Vec2(0.0f, 12.0f));
+  boxWorldDebugDraw.SetFlags(b2Draw::e_shapeBit | b2Draw::e_aabbBit);
+  boxWorld->SetDebugDraw(&boxWorldDebugDraw);
+
+  // debug draw setup
 
   // -- assert tilesets.size == mapTileIndices.size == mapTileOrigins.size
   if (tilesets.size() != mapTileOrigins.size()) {
@@ -305,8 +402,56 @@ void plugin::physics::LoadMapGeometry(
       tile.imageTileIdx = imageTileIdx;
       tile.origin       = tileOrigin;
       tile.orientation  = tileOrientation;
+
+      if (tile.imageTileIdx > 0) {
+        b2BodyDef tileBodyDef;
+        tileBodyDef.position.Set(
+          tileOrigin.x*32.0f*Consts::pixelsToMeters,
+          tileOrigin.y*32.0f*Consts::pixelsToMeters
+        );
+
+        b2Body * tileBody = boxWorld->CreateBody(&tileBodyDef);
+        b2PolygonShape tileBox;
+        tileBox.SetAsBox(16.0f, 16.0f);
+        tileBody->CreateFixture(&tileBox, 0.0f);
+      }
     }
   }
+}
+
+b2Body * plugin::physics::CreateDynamicBody(
+  glm::vec2 originCentered,
+  glm::vec2 halfDimension
+) {
+  b2BodyDef bodyDef;
+  bodyDef.type = b2_dynamicBody;
+  bodyDef.position.Set(
+    originCentered.x*Consts::pixelsToMeters,
+    originCentered.y*Consts::pixelsToMeters
+  );
+
+  b2PolygonShape polygon;
+  polygon.SetAsBox(
+    halfDimension.x*Consts::pixelsToMeters,
+    halfDimension.y*Consts::pixelsToMeters
+  );
+
+  b2Body * tileBody = boxWorld->CreateBody(&bodyDef);
+  b2FixtureDef fixtureDef;
+  fixtureDef.shape = &polygon;
+  fixtureDef.density = 1.0f;
+  fixtureDef.friction = 0.3f;
+  tileBody->CreateFixture(&fixtureDef);
+  return tileBody;
+}
+
+void plugin::physics::SimulatePhysics() {
+  boxWorld->Step(
+    Consts::simulationTimeStep,
+    Consts::simulationVelocityIterations,
+    Consts::simulationPositionIterations
+  );
+  boxWorld->DebugDraw();
 }
 
 bool plugin::physics::InverseSceneIntersectionRaycast(

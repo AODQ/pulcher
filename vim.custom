@@ -1,0 +1,4 @@
+function! MakeprgRelease()
+  let &makeprg = 'make -C ../build/ -j1 install'
+  make
+endfunction

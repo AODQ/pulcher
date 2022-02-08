@@ -24,6 +24,7 @@
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.hpp>
 #include <process.hpp>
+#include <box2d/box2d.h>
 
 #include <chrono>
 #include <string>

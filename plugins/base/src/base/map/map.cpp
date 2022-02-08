@@ -392,133 +392,133 @@ void ParseLayerTile(
 
 void ParseLayerCreature(pul::core::SceneBundle & scene , cJSON * layer) {
   auto & registry = scene.EnttRegistry();
-  cJSON * creatureobj;
+  /* cJSON * creatureobj; */
 
-  cJSON_ArrayForEach(
-    creatureobj, cJSON_GetObjectItemCaseSensitive(layer, "objects")
-  ) {
-    std::string creatureLabel = {};
+  /* cJSON_ArrayForEach( */
+  /*   creatureobj, cJSON_GetObjectItemCaseSensitive(layer, "objects") */
+  /* ) { */
+  /*   std::string creatureLabel = {}; */
 
-    cJSON * creatureProperties;
-    cJSON_ArrayForEach(
-      creatureProperties
-    , cJSON_GetObjectItemCaseSensitive(creatureobj, "properties")
-    ) {
-      if (std::string{creatureProperties->string} == "creature-name") {
-        creatureLabel = std::string{creatureProperties->valuestring};
-      }
-    }
+  /*   cJSON * creatureProperties; */
+  /*   cJSON_ArrayForEach( */
+  /*     creatureProperties */
+  /*   , cJSON_GetObjectItemCaseSensitive(creatureobj, "properties") */
+  /*   ) { */
+  /*     if (std::string{creatureProperties->string} == "creature-name") { */
+  /*       creatureLabel = std::string{creatureProperties->valuestring}; */
+  /*     } */
+  /*   } */
 
-    auto const origin =
-      glm::vec2 {
-          cJSON_GetObjectItemCaseSensitive(creatureobj, "x")->valueint
-        , cJSON_GetObjectItemCaseSensitive(creatureobj, "y")->valueint
-      }
-    ;
+  /*   auto const origin = */
+  /*     glm::vec2 { */
+  /*         cJSON_GetObjectItemCaseSensitive(creatureobj, "x")->valueint */
+  /*       , cJSON_GetObjectItemCaseSensitive(creatureobj, "y")->valueint */
+  /*     } */
+  /*   ; */
 
-    if (std::string{creatureLabel} == std::string{"lump"}) {
-      auto lumpEntity = registry.create();
-      registry.emplace<pul::core::ComponentCreatureLump>(
-        lumpEntity,
-        pul::core::ComponentCreatureLump {}
-      );
-      registry.emplace<pul::util::ComponentOrigin>(
-        lumpEntity,
-        pul::util::ComponentOrigin { .origin = origin, }
-      );
-      registry.emplace<pul::util::ComponentHitboxAABB>(
-        lumpEntity,
-        pul::util::ComponentHitboxAABB {
-          .dimensions = glm::i32vec2(15, 40),
-          .offset     = glm::i32vec2(0, -20),
-        }
-      );
-      registry.emplace<pul::core::ComponentDamageable>(
-        lumpEntity,
-        pul::core::ComponentDamageable { .health = 100, }
-      );
+  /*   if (std::string{creatureLabel} == std::string{"lump"}) { */
+  /*     auto lumpEntity = registry.create(); */
+  /*     registry.emplace<pul::core::ComponentCreatureLump>( */
+  /*       lumpEntity, */
+  /*       pul::core::ComponentCreatureLump {} */
+  /*     ); */
+  /*     registry.emplace<pul::util::ComponentOrigin>( */
+  /*       lumpEntity, */
+  /*       pul::util::ComponentOrigin { .origin = origin, } */
+  /*     ); */
+  /*     registry.emplace<pul::util::ComponentHitboxAABB>( */
+  /*       lumpEntity, */
+  /*       pul::util::ComponentHitboxAABB { */
+  /*         .dimensions = glm::i32vec2(15, 40), */
+  /*         .offset     = glm::i32vec2(0, -20), */
+  /*       } */
+  /*     ); */
+  /*     registry.emplace<pul::core::ComponentDamageable>( */
+  /*       lumpEntity, */
+  /*       pul::core::ComponentDamageable { .health = 100, } */
+  /*     ); */
 
-      pul::animation::Instance lumpAnimationInstance;
-      plugin::animation::ConstructInstance(
-        scene, lumpAnimationInstance, scene.AnimationSystem()
-      , "creature-lump"
-      );
+  /*     pul::animation::Instance lumpAnimationInstance; */
+  /*     plugin::animation::ConstructInstance( */
+  /*       scene, lumpAnimationInstance, scene.AnimationSystem() */
+  /*     , "creature-lump" */
+  /*     ); */
 
-      lumpAnimationInstance.origin = origin;
-      lumpAnimationInstance.pieceToState["body"].Apply("idle", true);
-      registry.emplace<pul::animation::ComponentInstance>(
-        lumpEntity, std::move(lumpAnimationInstance)
-      );
-    } else if (std::string{creatureLabel} == std::string{"moldwing"}) {
-      auto moldEntity = registry.create();
-      registry.emplace<pul::core::ComponentCreatureMoldWing>(
-        moldEntity,
-        pul::core::ComponentCreatureMoldWing { .origin = origin, }
-      );
+  /*     lumpAnimationInstance.origin = origin; */
+  /*     lumpAnimationInstance.pieceToState["body"].Apply("idle", true); */
+  /*     registry.emplace<pul::animation::ComponentInstance>( */
+  /*       lumpEntity, std::move(lumpAnimationInstance) */
+  /*     ); */
+  /*   } else if (std::string{creatureLabel} == std::string{"moldwing"}) { */
+  /*     auto moldEntity = registry.create(); */
+  /*     registry.emplace<pul::core::ComponentCreatureMoldWing>( */
+  /*       moldEntity, */
+  /*       pul::core::ComponentCreatureMoldWing { .origin = origin, } */
+  /*     ); */
 
-      registry.emplace<pul::util::ComponentOrigin>(
-        moldEntity,
-        pul::util::ComponentOrigin { .origin = origin, }
-      );
-      registry.emplace<pul::util::ComponentHitboxAABB>(
-        moldEntity,
-        pul::util::ComponentHitboxAABB {
-          .dimensions = glm::i32vec2(15, 40),
-          .offset     = glm::i32vec2(0, -20),
-        }
-      );
-      registry.emplace<pul::core::ComponentDamageable>(
-        moldEntity,
-        pul::core::ComponentDamageable { .health = 100, }
-      );
+  /*     registry.emplace<pul::util::ComponentOrigin>( */
+  /*       moldEntity, */
+  /*       pul::util::ComponentOrigin { .origin = origin, } */
+  /*     ); */
+  /*     registry.emplace<pul::util::ComponentHitboxAABB>( */
+  /*       moldEntity, */
+  /*       pul::util::ComponentHitboxAABB { */
+  /*         .dimensions = glm::i32vec2(15, 40), */
+  /*         .offset     = glm::i32vec2(0, -20), */
+  /*       } */
+  /*     ); */
+  /*     registry.emplace<pul::core::ComponentDamageable>( */
+  /*       moldEntity, */
+  /*       pul::core::ComponentDamageable { .health = 100, } */
+  /*     ); */
 
-      pul::animation::Instance moldAnimationInstance;
-      plugin::animation::ConstructInstance(
-        scene, moldAnimationInstance, scene.AnimationSystem()
-      , "creature-moldwing"
-      );
+  /*     pul::animation::Instance moldAnimationInstance; */
+  /*     plugin::animation::ConstructInstance( */
+  /*       scene, moldAnimationInstance, scene.AnimationSystem() */
+  /*     , "creature-moldwing" */
+  /*     ); */
 
-      moldAnimationInstance.origin = origin;
-      moldAnimationInstance.pieceToState["body"].Apply("idle", true);
-      registry.emplace<pul::animation::ComponentInstance>(
-        moldEntity, std::move(moldAnimationInstance)
-      );
-    } else if (std::string{creatureLabel} == std::string{"vapivara"}) {
-      auto vapiEntity = registry.create();
-      registry.emplace<pul::core::ComponentCreatureVapivara>(
-        vapiEntity,
-        pul::core::ComponentCreatureVapivara { .origin = origin, }
-      );
+  /*     moldAnimationInstance.origin = origin; */
+  /*     moldAnimationInstance.pieceToState["body"].Apply("idle", true); */
+  /*     registry.emplace<pul::animation::ComponentInstance>( */
+  /*       moldEntity, std::move(moldAnimationInstance) */
+  /*     ); */
+  /*   } else if (std::string{creatureLabel} == std::string{"vapivara"}) { */
+  /*     auto vapiEntity = registry.create(); */
+  /*     registry.emplace<pul::core::ComponentCreatureVapivara>( */
+  /*       vapiEntity, */
+  /*       pul::core::ComponentCreatureVapivara { .origin = origin, } */
+  /*     ); */
 
-      registry.emplace<pul::util::ComponentOrigin>(
-        vapiEntity,
-        pul::util::ComponentOrigin { .origin = origin, }
-      );
-      registry.emplace<pul::util::ComponentHitboxAABB>(
-        vapiEntity,
-        pul::util::ComponentHitboxAABB {
-          .dimensions = glm::i32vec2(15, 40),
-          .offset     = glm::i32vec2(0, -20),
-        }
-      );
-      registry.emplace<pul::core::ComponentDamageable>(
-        vapiEntity,
-        pul::core::ComponentDamageable { .health = 100, }
-      );
+  /*     registry.emplace<pul::util::ComponentOrigin>( */
+  /*       vapiEntity, */
+  /*       pul::util::ComponentOrigin { .origin = origin, } */
+  /*     ); */
+  /*     registry.emplace<pul::util::ComponentHitboxAABB>( */
+  /*       vapiEntity, */
+  /*       pul::util::ComponentHitboxAABB { */
+  /*         .dimensions = glm::i32vec2(15, 40), */
+  /*         .offset     = glm::i32vec2(0, -20), */
+  /*       } */
+  /*     ); */
+  /*     registry.emplace<pul::core::ComponentDamageable>( */
+  /*       vapiEntity, */
+  /*       pul::core::ComponentDamageable { .health = 100, } */
+  /*     ); */
 
-      pul::animation::Instance vapiAnimationInstance;
-      plugin::animation::ConstructInstance(
-        scene, vapiAnimationInstance, scene.AnimationSystem()
-      , "creature-vapivara"
-      );
+  /*     pul::animation::Instance vapiAnimationInstance; */
+  /*     plugin::animation::ConstructInstance( */
+  /*       scene, vapiAnimationInstance, scene.AnimationSystem() */
+  /*     , "creature-vapivara" */
+  /*     ); */
 
-      vapiAnimationInstance.origin = origin;
-      vapiAnimationInstance.pieceToState["body"].Apply("idle", true);
-      registry.emplace<pul::animation::ComponentInstance>(
-        vapiEntity, std::move(vapiAnimationInstance)
-      );
-    }
-  }
+  /*     vapiAnimationInstance.origin = origin; */
+  /*     vapiAnimationInstance.pieceToState["body"].Apply("idle", true); */
+  /*     registry.emplace<pul::animation::ComponentInstance>( */
+  /*       vapiEntity, std::move(vapiAnimationInstance) */
+  /*     ); */
+  /*   } */
+  /* } */
 }
 
 void ParseLayerObject(pul::core::SceneBundle & scene , cJSON * layer) {
@@ -850,7 +850,7 @@ void plugin::map::LoadMap(
     );
 
     // create navigation map
-    plugin::bot::BuildNavigationMap(filename);
+    /* plugin::bot::BuildNavigationMap(filename); */
   }
 
   cJSON_Delete(map);

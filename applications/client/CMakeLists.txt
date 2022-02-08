@@ -18,7 +18,7 @@ set_target_properties(
 target_link_libraries(
   pulcher-client
   PRIVATE
-    argparse pulcher-core pulcher-gfx pulcher-plugin
+    argparse pulcher-core pulcher-gfx pulcher-plugin box2d
     pulcher-physics pulcher-audio pulcher-controls spdlog tiny-process-library
 )
 

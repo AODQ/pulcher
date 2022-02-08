@@ -144,7 +144,10 @@ std::vector<pul::animation::Component> JsonLoadComponents(
           {"dim-y", &component.hitboxes[numHitboxes].dimensions.y},
           {"off-x", &component.hitboxes[numHitboxes].offset.x},
           {"off-y", &component.hitboxes[numHitboxes].offset.y},
-          {"tag",   &Idx(component.hitboxes[numHitboxes].tag)},
+          {
+            "tag",
+            reinterpret_cast<int32_t *>(&component.hitboxes[numHitboxes].tag)
+          },
         }
       ) {
         *std::get<1>(hitboxPart) =
@@ -873,12 +876,12 @@ cJSON * SaveAnimationComponent(
 
     for (size_t it = 0; it < component.numHitboxes; ++ it) {
       for (auto & hitboxPart :
-        { std::tuple<std::string, int32_t *>
-          {"dim-x", &component.hitboxes[i].dimensions.x},
-          {"dim-y", &component.hitboxes[i].dimensions.y},
-          {"off-x", &component.hitboxes[i].offset.x},
-          {"off-y", &component.hitboxes[i].offset.y},
-          {"tag", &Idx(component.hitboxes[i].tag)},
+        { std::tuple<std::string, int32_t>
+          {"dim-x", component.hitboxes[it].dimensions.x},
+          {"dim-y", component.hitboxes[it].dimensions.y},
+          {"off-x", component.hitboxes[it].offset.x},
+          {"off-y", component.hitboxes[it].offset.y},
+          {"tag", Idx(component.hitboxes[it].tag)},
         }
       ) {
         cJSON * hitbox = cJSON_CreateObject();
@@ -886,14 +889,14 @@ cJSON * SaveAnimationComponent(
         cJSON_AddItemToObject(
           hitbox,
           std::get<0>(hitboxPart).c_str(),
-          static_cast<int32_t>(cJSON_CreateInt(std::get<1>(hitboxPart))
+          cJSON_CreateInt(std::get<1>(hitboxPart))
         );
 
         cJSON_AddItemToArray(hitboxArray, hitbox);
       }
     }
 
-    cJSON_AddItemToObject(componentJson, hitboxArray);
+    cJSON_AddItemToObject(componentJson, "hitboxes", hitboxArray);
   }
 
   return componentsJson;
@@ -2220,7 +2223,7 @@ void plugin::animation::DebugUiDispatch(
 
       // add/remove tags
       for (
-        auto const tagInfo : { std::tuple<pul::util::HitboxTag, char const *>
+        auto const & tagInfo : { std::tuple<pul::util::HitboxTag, char const *>
           { pul::util::HitboxTag::Damager,    "Damager"    },
           { pul::util::HitboxTag::Damageable, "Damageable" },
           { pul::util::HitboxTag::Collision,  "Collision"  },
